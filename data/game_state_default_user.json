@@ -1,19 +1,15 @@
 {
-  "current_location": "Forest Path",
-  "scene_description": "You walk along a winding path through a dense forest. Tall trees tower above you, and sunlight filters through the leaves.",
+  "current_location": "Village Square",
+  "scene_description": "You stand in the center of a small village. There's a tavern to the north, a blacksmith to the east, and the village gate to the south.",
   "npcs_present": [
-    "Wandering Merchant"
+    "Village Elder",
+    "Merchant"
   ],
   "events": [
-    "A gentle breeze rustles the leaves."
+    "A festival is being prepared in the village square."
   ],
   "messages": [
-    "Welcome to the village of Eldermist! Your adventure begins now.",
-    "You perform the action successfully.",
-    "The NPC greets you warmly and shares some information.",
-    "You move along the forest path.",
-    "You used Cajado de Aprendiz, but nothing happens.",
-    "You perform the action successfully."
+    "Welcome to the village of Eldermist! Your adventure begins now."
   ],
   "combat": null
 }
