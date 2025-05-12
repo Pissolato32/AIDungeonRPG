@@ -9,6 +9,7 @@ class Character:
                  strength=10, dexterity=10, constitution=10, 
                  intelligence=10, wisdom=10, charisma=10,
                  max_hp=20, current_hp=20, max_stamina=10, current_stamina=10,
+                 max_hunger=100, current_hunger=100, max_thirst=100, current_thirst=100,
                  inventory=None, gold=50, experience=0, level=1):
         
         self.name = name
@@ -25,6 +26,10 @@ class Character:
         self.max_stamina = max_stamina
         self.current_stamina = current_stamina
         self.inventory = inventory or ["Basic Sword", "Health Potion"]
+        self.max_hunger = max_hunger
+        self.current_hunger = current_hunger
+        self.max_thirst = max_thirst
+        self.current_thirst = current_thirst
         self.gold = gold
         self.experience = experience
         self.level = level
@@ -46,6 +51,10 @@ class Character:
             "current_hp": self.current_hp,
             "max_stamina": self.max_stamina,
             "current_stamina": self.current_stamina,
+            "max_hunger": self.max_hunger,
+            "current_hunger": self.current_hunger,
+            "max_thirst": self.max_thirst,
+            "current_thirst": self.current_thirst,
             "inventory": self.inventory,
             "gold": self.gold,
             "experience": self.experience,
