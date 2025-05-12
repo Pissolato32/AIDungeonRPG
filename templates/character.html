@@ -281,7 +281,20 @@
             const maxTotalPoints = 75;
 
             // Rolar atributos
+            let rollCount = 3;
+
             function rollAttributes() {
+                if (rollCount <= 0) {
+                    alert('Você já usou todas as suas tentativas de re-roll!');
+                    return;
+                }
+
+                rollCount--;
+                document.getElementById('rollDiceBtn').innerHTML = `<i class="bi bi-dice-6 me-1"></i> Re-roll (${rollCount})`;
+                if (rollCount === 0) {
+                    document.getElementById('rollDiceBtn').disabled = true;
+                }
+
                 const attributes = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
                 const totalPoints = 75;
                 let remainingPoints = totalPoints;
@@ -302,6 +315,10 @@
                         remainingPoints--;
                     }
                 }
+
+                // Atualiza o total de pontos
+                const total = attributes.reduce((sum, attr) => sum + parseInt(document.getElementById(attr).value), 0);
+                document.getElementById('totalPoints').textContent = total;
 
                 // Update modifiers and total points display
                 updateModifiers();
