@@ -1240,7 +1240,7 @@ class GameEngine:
         if not game_state.get("combat"):
             return {
                 "success": False,
-                "message": "You are not in combat!"
+                "message": "Você não está em combate!"
             }
         
         # Chance to flee based on dexterity
@@ -1251,7 +1251,7 @@ class GameEngine:
         if flee_roll <= flee_chance:
             # Successful flee
             enemy_name = game_state["combat"]["enemy"]["name"]
-            message = f"You successfully fled from the {enemy_name}!"
+            message = f"Você fugiu com sucesso do {enemy_name}!"
             game_state["messages"].append(message)
             
             # End combat
@@ -1264,7 +1264,7 @@ class GameEngine:
             }
         else:
             # Failed flee attempt
-            message = "You failed to escape!"
+            message = "Você falhou em escapar!"
             game_state["combat"]["log"].append(message)
             
             # Enemy gets a free attack
