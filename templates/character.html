@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Creation - WebChatRPG</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1>
+                        <i class="bi bi-person-badge me-2"></i>
+                        {% if character %}Edit Character{% else %}Create Character{% endif %}
+                    </h1>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-house-door me-1"></i> Home
+                    </a>
+                </div>
+                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <div class="card bg-dark mb-4">
+                    <div class="card-body">
+                        <form action="{{ url_for('character') }}" method="post">
+                            <div class="mb-4 row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="name" class="form-label">Character Name</label>
+                                    <input type="text" class="form-control" id="name" name="name" value="{{ character.name if character else '' }}" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="race" class="form-label">Race</label>
+                                    <select class="form-select" id="race" name="race" required>
+                                        <option value="">Select a race</option>
+                                        <option value="Human" {% if character and character.race == 'Human' %}selected{% endif %}>Human</option>
+                                        <option value="Elf" {% if character and character.race == 'Elf' %}selected{% endif %}>Elf</option>
+                                        <option value="Dwarf" {% if character and character.race == 'Dwarf' %}selected{% endif %}>Dwarf</option>
+                                        <option value="Halfling" {% if character and character.race == 'Halfling' %}selected{% endif %}>Halfling</option>
+                                        <option value="Orc" {% if character and character.race == 'Orc' %}selected{% endif %}>Orc</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="class" class="form-label">Class</label>
+                                    <select class="form-select" id="class" name="class" required>
+                                        <option value="">Select a class</option>
+                                        <option value="Warrior" {% if character and character.class == 'Warrior' %}selected{% endif %}>Warrior</option>
+                                        <option value="Mage" {% if character and character.class == 'Mage' %}selected{% endif %}>Mage</option>
+                                        <option value="Rogue" {% if character and character.class == 'Rogue' %}selected{% endif %}>Rogue</option>
+                                        <option value="Cleric" {% if character and character.class == 'Cleric' %}selected{% endif %}>Cleric</option>
+                                        <option value="Ranger" {% if character and character.class == 'Ranger' %}selected{% endif %}>Ranger</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <h4 class="mb-3"><i class="bi bi-bar-chart-line me-2"></i>Attributes</h4>
+                            <div class="row mb-4">
+                                <div class="col-md-4 mb-3">
+                                    <label for="strength" class="form-label">Strength</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-muscle"></i></span>
+                                        <input type="number" class="form-control" id="strength" name="strength" value="{{ character.strength if character else 10 }}" min="1" max="20">
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="dexterity" class="form-label">Dexterity</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-arrow-up-right"></i></span>
+                                        <input type="number" class="form-control" id="dexterity" name="dexterity" value="{{ character.dexterity if character else 10 }}" min="1" max="20">
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="constitution" class="form-label">Constitution</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-heart"></i></span>
+                                        <input type="number" class="form-control" id="constitution" name="constitution" value="{{ character.constitution if character else 10 }}" min="1" max="20">
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="intelligence" class="form-label">Intelligence</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-lightbulb"></i></span>
+                                        <input type="number" class="form-control" id="intelligence" name="intelligence" value="{{ character.intelligence if character else 10 }}" min="1" max="20">
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="wisdom" class="form-label">Wisdom</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-book"></i></span>
+                                        <input type="number" class="form-control" id="wisdom" name="wisdom" value="{{ character.wisdom if character else 10 }}" min="1" max="20">
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="charisma" class="form-label">Charisma</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-chat"></i></span>
+                                        <input type="number" class="form-control" id="charisma" name="charisma" value="{{ character.charisma if character else 10 }}" min="1" max="20">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h4 class="mb-3"><i class="bi bi-shield me-2"></i>Health & Stamina</h4>
+                            <div class="row mb-4">
+                                <div class="col-md-3 mb-3">
+                                    <label for="max_hp" class="form-label">Max HP</label>
+                                    <input type="number" class="form-control" id="max_hp" name="max_hp" value="{{ character.max_hp if character else 20 }}" min="1">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="current_hp" class="form-label">Current HP</label>
+                                    <input type="number" class="form-control" id="current_hp" name="current_hp" value="{{ character.current_hp if character else 20 }}" min="0">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="max_stamina" class="form-label">Max Stamina</label>
+                                    <input type="number" class="form-control" id="max_stamina" name="max_stamina" value="{{ character.max_stamina if character else 10 }}" min="1">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="current_stamina" class="form-label">Current Stamina</label>
+                                    <input type="number" class="form-control" id="current_stamina" name="current_stamina" value="{{ character.current_stamina if character else 10 }}" min="0">
+                                </div>
+                            </div>
+                            
+                            <h4 class="mb-3"><i class="bi bi-info-circle me-2"></i>Additional Info</h4>
+                            <div class="row mb-4">
+                                <div class="col-md-4 mb-3">
+                                    <label for="level" class="form-label">Level</label>
+                                    <input type="number" class="form-control" id="level" name="level" value="{{ character.level if character else 1 }}" min="1">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="experience" class="form-label">Experience</label>
+                                    <input type="number" class="form-control" id="experience" name="experience" value="{{ character.experience if character else 0 }}" min="0">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="gold" class="form-label">Gold</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-coin"></i></span>
+                                        <input type="number" class="form-control" id="gold" name="gold" value="{{ character.gold if character else 50 }}" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="inventory" class="form-label">Inventory (comma-separated)</label>
+                                <textarea class="form-control" id="inventory" name="inventory" rows="2">{{ ','.join(character.inventory) if character and character.inventory else 'Basic Sword,Health Potion' }}</textarea>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    {% if character %}Save Changes{% else %}Create Character{% endif %}
+                                </button>
+                                {% if character %}
+                                <a href="{{ url_for('game') }}" class="btn btn-success">Continue Game</a>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

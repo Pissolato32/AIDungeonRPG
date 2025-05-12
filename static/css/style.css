@@ -1,0 +1,155 @@
+/* General Styling */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    height: 100vh;
+}
+
+.game-content {
+    flex: 1;
+    overflow: hidden;
+}
+
+.game-scene, .character-panel {
+    height: calc(100vh - 56px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Game Output Styling */
+.game-output {
+    height: calc(100% - 100px);
+    overflow-y: auto;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.scene-description {
+    padding: 10px;
+    border-left: 3px solid var(--bs-primary);
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+.messages-container {
+    margin-top: 20px;
+}
+
+.message {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Combat Interface */
+.combat-interface {
+    height: calc(100% - 100px);
+    overflow-y: auto;
+    background-color: rgba(0, 0, 0, 0.15);
+}
+
+.combat-log {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+/* Character Status Panel */
+.character-info {
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-bars {
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.attribute {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+}
+
+.attribute-name {
+    font-weight: 500;
+}
+
+.attribute-value {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    padding: 2px 8px;
+}
+
+/* Inventory Styling */
+.inventory-list {
+    overflow-y: auto;
+    max-height: calc(100vh - 240px);
+}
+
+/* Input Form Styling */
+.game-input-container {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Landing Page Styling */
+.game-title {
+    color: var(--bs-primary);
+    text-shadow: 0 0 10px rgba(13, 110, 253, 0.5);
+}
+
+.feature-list {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.feature-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.feature-list li i {
+    color: var(--bs-primary);
+    margin-right: 10px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .game-content {
+        flex-direction: column;
+    }
+    
+    .game-scene, .character-panel {
+        height: auto;
+        max-height: none;
+    }
+    
+    .game-scene {
+        height: 60vh;
+    }
+    
+    .character-panel {
+        height: 40vh;
+    }
+    
+    .game-output {
+        height: calc(60vh - 156px);
+    }
+    
+    .combat-interface {
+        height: calc(60vh - 156px);
+    }
+    
+    .inventory-list {
+        max-height: 25vh;
+    }
+}

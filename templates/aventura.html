@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG Zumbi - Aventura</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+        integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            background-color: #212529;
+            color: white;
+        }
+
+        .adventure-log {
+            height: 450px;
+            overflow-y: auto;
+            background-color: #343a40;
+            color: #ccc;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #000000;
+            border-radius: 8px;
+        }
+
+        .character-summary {
+            background-color: #343a40;
+            color: white;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        .character-summary h5 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .attribute {
+            margin-bottom: 8px;
+        }
+
+        .items-list {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #3a3f47;
+            border-radius: 5px;
+        }
+
+        .dice-roll {
+            font-weight: bold;
+            color: #f8d24f;
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #495057;
+            border-radius: 5px;
+        }
+
+        /* Estilo para o botão de voltar */
+        .home-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+        }
+
+        /* Estilo para o input */
+        #user-input {
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <a href="/" class="home-button" title="Voltar para a tela inicial">
+        <i class="fas fa-home"></i>
+    </a>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="adventure-log" id="adventure-log">
+                    <p><strong>Mestre:</strong> {{ initial_prompt }}</p>
+                    {% if messages %}
+                    {% for message in messages %}
+                    <p><strong>{{ message.role }}:</strong> {{ message.content }}</p>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                <form id="chat-form" class="mt-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="user-input" placeholder="Digite sua ação...">
+                        <button type="submit" class="btn btn-primary">Enviar</button>
+                    </div>
+                </form>
+
+                {% if character['attributes'] %}
+                <div class="mt-4">
+                    <!-- Bloco de HP -->
+                    <div class="attribute mb-3">
+                        <strong>HP:</strong>
+                        {% set hp = (character['attributes'].get('constitution', 0)|int) * 10 %}
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: 100%;">
+                                {{ hp }} HP
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bloco de Vigor -->
+                    <div class="attribute">
+                        <strong>Vigor:</strong>
+                        {% set resistance = (character['attributes'].get('resistance', 0)|int) %}
+                        {% set level = (character.get('level', 1)|int) %}
+                        {% set experience = (character.get('experience', 0)|int) %}
+                        {% set vigor = resistance * 5 + level * 2 + (experience // 100) %}
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 100%;">
+                                {{ vigor }} Vigor
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-4">
+                <div class="character-summary">
+                    <h5>Ficha do Personagem</h5>
+                    <h6>{{ character['name'] }} - {{ character['role'] }}</h6>
+
+                    {% if character['attributes'] %}
+                    <div class="attribute">
+                        <span><strong>Constituição:</strong></span>
+                        <span>{{ character['attributes'].get('constitution', 'N/A')|int }}</span>
+                    </div>
+                    <div class="attribute">
+                        <span><strong>Destreza:</strong></span>
+                        <span>{{ character['attributes'].get('dexterity', 'N/A')|int }}</span>
+                    </div>
+                    <div class="attribute">
+                        <span><strong>Força:</strong></span>
+                        <span>{{ character['attributes'].get('strength', 'N/A')|int }}</span>
+                    </div>
+                    <div class="attribute">
+                        <span><strong>Percepção:</strong></span>
+                        <span>{{ character['attributes'].get('perception', 'N/A')|int }}</span>
+                    </div>
+                    <div class="attribute">
+                        <span><strong>Resistência:</strong></span>
+                        <span>{{ character['attributes'].get('resistance', 'N/A')|int }}</span>
+                    </div>
+                    <div class="attribute">
+                        <span><strong>Inteligência:</strong></span>
+                        <span>{{ character['attributes'].get('intelligence', 'N/A')|int }}</span>
+                    </div>
+                    <div class="attribute">
+                        <span><strong>Carisma:</strong></span>
+                        <span>{{ character['attributes'].get('charisma', 'N/A')|int }}</span>
+                    </div>
+                    {% else %}
+                    <p>Características não definidas.</p>
+                    {% endif %}
+
+                    <div class="items-list">
+                        <strong>Itens:</strong>
+                        {% if character['items'] %}
+                            <ul>
+                                {% for item in character['items'] %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p>Sem itens ainda...</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-3">
+                        <p><strong>Altura:</strong> {{ character.height }} m</p>
+                        <p><strong>Peso:</strong> {{ character.weight }} kg</p>
+                        <p><strong>Peso Total:</strong> {{ character.total_weight }} kg</p>
+                        <p><strong>Peso Máximo:</strong> {{ character.max_weight }} kg</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Função para rolar até o final do log de aventura
+        function scrollToBottom() {
+            const adventureLog = document.getElementById('adventure-log');
+            adventureLog.scrollTop = adventureLog.scrollHeight;
+        }
+
+        // Rolar para o final quando a página carregar
+        window.onload = scrollToBottom;
+
+        // Configurar o formulário de chat
+        document.getElementById('chat-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const userInput = document.getElementById('user-input').value.trim();
+            if (!userInput) return;
+            
+            // Adicionar a mensagem do usuário ao log
+            const adventureLog = document.getElementById('adventure-log');
+            adventureLog.innerHTML += `<p><strong>Você:</strong> ${userInput}</p>`;
+            
+            // Limpar o campo de entrada
+            document.getElementById('user-input').value = '';
+            
+            // Rolar para o final
+            scrollToBottom();
+            
+            // Obter o índice do personagem da URL
+            const urlParts = window.location.pathname.split('/');
+            const characterIndex = urlParts[urlParts.length - 1];
+            
+            // Enviar a mensagem para o servidor
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_input: userInput,
+                    character_index: characterIndex
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Adicionar a resposta do mestre ao log
+                adventureLog.innerHTML += `<p><strong>Mestre:</strong> ${data.response}</p>`;
+                
+                // Se houver um resultado de dados, mostrar
+                if (data.dice_roll) {
+                    adventureLog.innerHTML += `<div class="dice-roll">🎲 Rolagem de dados para ${data.roll_reason}: ${data.dice_roll}</div>`;
+                }
+                
+                // Rolar para o final
+                scrollToBottom();
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                adventureLog.innerHTML += `<p><strong>Erro:</strong> Ocorreu um problema ao processar sua ação. Tente novamente.</p>`;
+                scrollToBottom();
+            });
+        });
+    </script>
+
+</body>
+
+</html>

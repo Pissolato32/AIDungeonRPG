@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG Zumbi - Criar Personagem</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #212529;
+            color: white;
+        }
+        
+        .character-box {
+            background-color: #343a40;
+            color: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .character-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .attribute-box {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .attribute-box .form-label {
+            width: 150px;
+        }
+        .tooltip-inner {
+            max-width: 300px;
+        }
+        .d-none {
+            display: none;
+        }
+        .modifier {
+            margin-left: 10px;
+            font-weight: bold;
+        }
+        .modifier.red {
+            color: red;
+        }
+        .modifier.green {
+            color: green;
+        }
+    </style>
+</head>
+<body class="bg-dark text-white">
+
+    <div class="container mt-5">
+        <h1 class="text-center">RPG Zumbi</h1>
+
+        <!-- Exibição dos personagens criados -->
+        <div class="character-list">
+            {% for character in characters %}
+                <div class="character-box col-4">
+                    <h5>{{ character['name'] }}</h5>
+
+                    <!-- Botões para iniciar ou continuar a aventura -->
+                    {% if character.get('started_adventure') %}
+                        <a href="{{ url_for('continue_adventure', character_index=loop.index0) }}" class="btn btn-success">Continuar Aventura</a>
+                    {% else %}
+                        <a href="{{ url_for('start_adventure', character_index=loop.index0) }}" class="btn btn-primary">Iniciar Aventura</a>
+                    {% endif %}
+
+                    <!-- Botão para excluir o personagem -->
+                    <a href="{{ url_for('delete_character', character_index=loop.index0) }}" class="btn btn-danger">Excluir</a>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Formulário para criação de personagem -->
+        <div class="card bg-secondary">
+            <div class="card-body">
+                <h3 class="card-title">Criação de Personagem</h3>
+                <form id="character-form">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="name" required>
+                    </div>
+
+                    <!-- Descrição do personagem -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="description" rows="3" required></textarea>
+                    </div>
+
+                    <!-- Atributos do personagem -->
+                    <div id="attributes-section">
+                        <h5>Atributos</h5>
+
+                        <!-- Peso do Personagem -->
+                        <div class="attribute-box">
+                            <label class="form-label">Peso (kg)</label>
+                            <input type="number" class="form-control" id="weight" min="1" max="500" value="70" onchange="calculateTotalWeight()" step="1">
+                        </div>
+
+                        <!-- Altura do Personagem -->
+                        <div class="attribute-box">
+                            <label class="form-label">Altura (m)</label>
+                            <input type="number" class="form-control" id="height" min="1.2" max="3" value="1.75" step="0.01" onchange="calculateTotalWeight()">
+                        </div>
+
+                        <!-- Constituição -->
+                        <div class="attribute-box">
+                            <label class="form-label">Constituição</label>
+                            <input type="number" class="form-control" id="constitution" min="0" max="20" value="0" onchange="checkPoints()" step="1">
+                            <span id="constitution-modifier" class="modifier"></span>
+                        </div>
+
+                        <!-- Força -->
+                        <div class="attribute-box">
+                            <label class="form-label">Força</label>
+                            <input type="number" class="form-control" id="strength" min="0" max="20" value="0" onchange="checkPoints()" step="1">
+                            <span id="strength-modifier" class="modifier"></span>
+                        </div>
+
+                        <!-- Destreza -->
+                        <div class="attribute-box">
+                            <label class="form-label">Destreza</label>
+                            <input type="number" class="form-control" id="dexterity" min="0" max="20" value="0" onchange="checkPoints()" step="1">
+                            <span id="dexterity-modifier" class="modifier"></span>
+                        </div>
+
+                        <!-- Percepção -->
+                        <div class="attribute-box">
+                            <label class="form-label">Percepção</label>
+                            <input type="number" class="form-control" id="perception" min="0" max="20" value="0" onchange="checkPoints()" step="1">
+                            <span id="perception-modifier" class="modifier"></span>
+                        </div>
+
+                        <!-- Resistência -->
+                        <div class="attribute-box">
+                            <label class="form-label">Resistência</label>
+                            <input type="number" class="form-control" id="resistance" min="0" max="20" value="0" onchange="checkPoints()" step="1">
+                            <span id="resistance-modifier" class="modifier"></span>
+                        </div>
+
+                        <!-- Inteligência -->
+                        <div class="attribute-box">
+                            <label class="form-label">Inteligência</label>
+                            <input type="number" class="form-control" id="intelligence" min="0" max="20" value="0" onchange="checkPoints()" step="1">
+                            <span id="intelligence-modifier" class="modifier"></span>
+                        </div>
+
+                        <!-- Carisma -->
+                        <div class="attribute-box">
+                            <label class="form-label">Carisma</label>
+                            <input type="number" class="form-control" id="charisma" min="0" max="20" value="0" onchange="checkPoints()" step="1">
+                            <span id="charisma-modifier" class="modifier"></span>
+                        </div>
+
+                        <!-- Total de pontos disponíveis -->
+                        <div class="attribute-box">
+                            <label class="form-label">Pontos Disponíveis</label>
+                            <input type="text" class="form-control" id="totalPoints" value="100" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Botão para rolar todos os atributos -->
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-info" onclick="rollAttributes()">🎲 Rolar Atributos</button>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Criar Personagem</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Limite de pontos
+        const maxPoints = 100;
+        const maxAttributePoints = 20; // Máximo por atributo
+        let remainingPoints = maxPoints;
+
+        // Função para verificar os pontos disponíveis
+        function checkPoints() {
+            let totalUsed = 0;
+            const attributes = ['constitution', 'strength', 'dexterity', 'perception', 'resistance', 'intelligence', 'charisma'];
+            attributes.forEach(attribute => {
+                totalUsed += parseInt(document.getElementById(attribute).value) || 0;
+                updateModifier(attribute);
+            });
+
+            remainingPoints = maxPoints - totalUsed;
+            document.getElementById('totalPoints').value = remainingPoints;
+
+            if (remainingPoints < 0) {
+                alert('Você excedeu o limite de pontos!');
+            }
+            calculateTotalWeight();
+        }
+
+        // Função para atualizar os modificadores
+        function updateModifier(attribute) {
+            let value = parseInt(document.getElementById(attribute).value) || 0;
+            let modifierText = '';
+            let modifierClass = '';
+
+            if (value <= 5) {
+                modifierText = '-2';
+                modifierClass = 'red';
+            } else if (value <= 10) {
+                modifierText = '-1';
+                modifierClass = 'red';
+            } else if (value <= 15) {
+                modifierText = '+1';
+                modifierClass = 'green';
+            } else if (value <= 20) {
+                modifierText = '+2';
+                modifierClass = 'green';
+            }
+
+            document.getElementById(attribute + '-modifier').textContent = modifierText;
+            document.getElementById(attribute + '-modifier').className = 'modifier ' + modifierClass;
+        }
+
+        // Função para rolar os atributos
+        function rollAttributes() {
+            let totalPointsToDistribute = maxPoints;
+            const attributes = ['constitution', 'strength', 'dexterity', 'perception', 'resistance', 'intelligence', 'charisma'];
+
+            // Distribuir os pontos aleatoriamente entre os atributos
+            attributes.forEach(attribute => {
+                let points = Math.floor(Math.random() * (Math.min(totalPointsToDistribute, maxAttributePoints))) + 1;
+                document.getElementById(attribute).value = points;
+                updateModifier(attribute);
+                totalPointsToDistribute -= points;
+            });
+
+            // Se sobrar pontos, redistribuir entre os atributos
+            if (totalPointsToDistribute > 0) {
+                attributes.forEach(attribute => {
+                    if (totalPointsToDistribute > 0 && parseInt(document.getElementById(attribute).value) < maxAttributePoints) {
+                        let extraPoints = Math.min(totalPointsToDistribute, maxAttributePoints - parseInt(document.getElementById(attribute).value));
+                        document.getElementById(attribute).value = parseInt(document.getElementById(attribute).value) + extraPoints;
+                        updateModifier(attribute);
+                        totalPointsToDistribute -= extraPoints;
+                    }
+                });
+            }
+
+            // Atualizar os pontos restantes
+            remainingPoints = totalPointsToDistribute;
+            document.getElementById('totalPoints').value = remainingPoints;
+            alert('Você tem ' + remainingPoints + ' pontos restantes.');
+        }
+
+        // Função para calcular o peso total que o personagem pode carregar
+        function calculateTotalWeight() {
+            const strength = parseInt(document.getElementById('strength').value) || 0;
+            const dexterity = parseInt(document.getElementById('dexterity').value) || 0;
+            const height = parseFloat(document.getElementById('height').value) || 1.75;
+
+            // Fórmula: (força * 3 + destreza * 2) * (altura / 1.75)
+            let maxWeight = (strength * 3 + dexterity * 2) * (height / 1.75);
+            maxWeight = Math.round(maxWeight * 100) / 100;
+
+            // Exibir valor no campo correspondente (se existir)
+            const maxWeightElement = document.getElementById('max-weight');
+            if (maxWeightElement) {
+                maxWeightElement.value = maxWeight + ' kg';
+            }
+        }
+
+        document.getElementById('character-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            let name = document.getElementById('name').value;
+            let description = document.getElementById('description').value;
+            let role = 'Sobrevivente'; // fixo
+            let weight = document.getElementById('weight').value;
+            let height = document.getElementById('height').value;
+
+            let attributes = {
+                constitution: document.getElementById('constitution').value,
+                strength: document.getElementById('strength').value,
+                dexterity: document.getElementById('dexterity').value,
+                perception: document.getElementById('perception').value,
+                resistance: document.getElementById('resistance').value,
+                intelligence: document.getElementById('intelligence').value,
+                charisma: document.getElementById('charisma').value
+            };
+
+            fetch('/create_character', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name,
+                    description,
+                    weight,
+                    height,
+                    role,
+                    attributes
+                })
+            })
+            .then(() => location.reload())
+            .catch(error => console.log('Erro ao criar personagem:', error));
+        });
+    </script>
+</body>
+</html>
+            .then(() => location.reload())
+            .catch(error => console.log('Erro ao criar personagem:', error));
+        });
+    </script>
+</body>
+</html>

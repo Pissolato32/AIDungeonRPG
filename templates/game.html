@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebChatRPG - Adventure Game</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Top Navigation Bar -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="{{ url_for('index') }}">
+                    <i class="bi bi-controller me-2"></i>WebChatRPG
+                </a>
+                
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('character') }}">
+                                <i class="bi bi-person-badge me-1"></i> Character
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="restButton">
+                                <i class="bi bi-moon-stars me-1"></i> Rest
+                            </button>
+                        </li>
+                    </ul>
+                    <span class="navbar-text">
+                        <span class="me-3">
+                            <i class="bi bi-person-circle me-1"></i> {{ character.name }}
+                        </span>
+                        <span class="me-3">
+                            <i class="bi bi-star-fill me-1 text-warning"></i> Level {{ character.level }}
+                        </span>
+                        <span class="gold-display">
+                            <i class="bi bi-coin me-1 text-warning"></i> {{ character.gold }} Gold
+                        </span>
+                    </span>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Main Game Content -->
+        <div class="row game-content m-0">
+            <!-- Game Scene -->
+            <div class="col-md-8 game-scene p-0">
+                <div class="card h-100 border-0 rounded-0">
+                    <div class="card-header bg-dark border-bottom">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="bi bi-compass me-2"></i>{{ game_state.current_location }}
+                            </h5>
+                            <div>
+                                <button class="btn btn-sm btn-outline-danger" id="resetGameBtn">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Reset Game
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body p-0">
+                        <!-- Story Output -->
+                        <div id="gameOutput" class="game-output p-3">
+                            <div class="scene-description mb-3">
+                                {{ game_state.scene_description }}
+                            </div>
+                            
+                            {% if game_state.npcs_present %}
+                            <div class="npcs-present mb-3">
+                                <strong>NPCs Present:</strong> {{ ', '.join(game_state.npcs_present) }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if game_state.events %}
+                            <div class="events mb-3">
+                                <strong>Events:</strong> {{ ', '.join(game_state.events) }}
+                            </div>
+                            {% endif %}
+                            
+                            <div id="messagesContainer" class="messages-container">
+                                {% for message in game_state.messages %}
+                                <div class="message">{{ message }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Combat Interface -->
+                        <div id="combatInterface" class="combat-interface p-3 {% if not game_state.combat %}d-none{% endif %}">
+                            <div class="card bg-danger bg-opacity-25 mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title d-flex justify-content-between">
+                                        <span id="enemyName">{{ game_state.combat.enemy.name if game_state.combat else 'Enemy' }}</span>
+                                        <span>HP: <span id="enemyHp">{{ game_state.combat.enemy.current_hp if game_state.combat else 0 }}</span> / <span id="enemyMaxHp">{{ game_state.combat.enemy.max_hp if game_state.combat else 0 }}</span></span>
+                                    </h5>
+                                    <div class="progress mb-2">
+                                        <div id="enemyHpBar" class="progress-bar bg-danger" role="progressbar" 
+                                             style="width: {{ (game_state.combat.enemy.current_hp / game_state.combat.enemy.max_hp * 100) if game_state.combat else 0 }}%" 
+                                             aria-valuenow="{{ game_state.combat.enemy.current_hp if game_state.combat else 0 }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="{{ game_state.combat.enemy.max_hp if game_state.combat else 0 }}"></div>
+                                    </div>
+                                    <p id="enemyDescription" class="mb-1">{{ game_state.combat.enemy.description if game_state.combat else 'Enemy description' }}</p>
+                                    
+                                    <div class="combat-log mt-3">
+                                        <h6 class="border-top pt-2">Combat Log:</h6>
+                                        <div id="combatLog" class="small">
+                                            {% if game_state.combat and game_state.combat.log %}
+                                                {% for entry in game_state.combat.log %}
+                                                <div>{{ entry }}</div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="combat-actions d-flex gap-2">
+                                <button id="attackBasic" class="btn btn-outline-primary flex-grow-1">
+                                    <i class="bi bi-slash-circle me-1"></i>Basic Attack
+                                </button>
+                                <button id="attackLight" class="btn btn-outline-success flex-grow-1">
+                                    <i class="bi bi-wind me-1"></i>Light Attack
+                                </button>
+                                <button id="attackHeavy" class="btn btn-outline-danger flex-grow-1">
+                                    <i class="bi bi-lightning-charge me-1"></i>Heavy Attack
+                                </button>
+                                <button id="fleeButton" class="btn btn-outline-secondary">
+                                    <i class="bi bi-door-open me-1"></i>Flee
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Input Form -->
+                        <div class="game-input-container p-3 border-top">
+                            <form id="actionForm" class="{% if game_state.combat %}d-none{% endif %}">
+                                <div class="input-group">
+                                    <select id="actionType" class="form-select flex-grow-0" style="width: 120px;">
+                                        <option value="move">Move</option>
+                                        <option value="look">Look</option>
+                                        <option value="talk">Talk</option>
+                                        <option value="search">Search</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                    <input type="text" id="actionDetails" class="form-control" placeholder="Enter details...">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-send"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Character Status & Inventory -->
+            <div class="col-md-4 character-panel p-0">
+                <div class="card h-100 border-0 rounded-0">
+                    <div class="card-header bg-dark border-bottom">
+                        <ul class="nav nav-tabs card-header-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#statsTab">Stats</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#inventoryTab">Inventory</a>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card-body tab-content">
+                        <!-- Stats Tab -->
+                        <div class="tab-pane fade show active" id="statsTab">
+                            <div class="character-info mb-4">
+                                <h4>{{ character.name }}</h4>
+                                <div>Level {{ character.level }} {{ character.race }} {{ character.class }}</div>
+                                <div class="text-secondary">Experience: {{ character.experience }} / {{ character.level * 100 }}</div>
+                                
+                                <div class="progress mt-2 mb-3">
+                                    <div class="progress-bar bg-info" role="progressbar" 
+                                         style="width: {{ (character.experience / (character.level * 100) * 100) }}%" 
+                                         aria-valuenow="{{ character.experience }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="{{ character.level * 100 }}"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="status-bars mb-4">
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Health</span>
+                                        <span id="hpDisplay">{{ character.current_hp }} / {{ character.max_hp }}</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div id="hpBar" class="progress-bar bg-danger" role="progressbar" 
+                                             style="width: {{ (character.current_hp / character.max_hp * 100) }}%" 
+                                             aria-valuenow="{{ character.current_hp }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="{{ character.max_hp }}"></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Stamina</span>
+                                        <span id="staminaDisplay">{{ character.current_stamina }} / {{ character.max_stamina }}</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div id="staminaBar" class="progress-bar bg-success" role="progressbar" 
+                                             style="width: {{ (character.current_stamina / character.max_stamina * 100) }}%" 
+                                             aria-valuenow="{{ character.current_stamina }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="{{ character.max_stamina }}"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="attributes">
+                                <h5 class="mb-3">Attributes</h5>
+                                <div class="row">
+                                    <div class="col-6 mb-2">
+                                        <div class="attribute">
+                                            <span class="attribute-name"><i class="bi bi-muscle me-1"></i>STR</span>
+                                            <span class="attribute-value">{{ character.strength }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 mb-2">
+                                        <div class="attribute">
+                                            <span class="attribute-name"><i class="bi bi-arrow-up-right me-1"></i>DEX</span>
+                                            <span class="attribute-value">{{ character.dexterity }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 mb-2">
+                                        <div class="attribute">
+                                            <span class="attribute-name"><i class="bi bi-heart me-1"></i>CON</span>
+                                            <span class="attribute-value">{{ character.constitution }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 mb-2">
+                                        <div class="attribute">
+                                            <span class="attribute-name"><i class="bi bi-lightbulb me-1"></i>INT</span>
+                                            <span class="attribute-value">{{ character.intelligence }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 mb-2">
+                                        <div class="attribute">
+                                            <span class="attribute-name"><i class="bi bi-book me-1"></i>WIS</span>
+                                            <span class="attribute-value">{{ character.wisdom }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 mb-2">
+                                        <div class="attribute">
+                                            <span class="attribute-name"><i class="bi bi-chat me-1"></i>CHA</span>
+                                            <span class="attribute-value">{{ character.charisma }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Inventory Tab -->
+                        <div class="tab-pane fade" id="inventoryTab">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h5 class="mb-0">Inventory</h5>
+                                <span class="gold-display"><i class="bi bi-coin text-warning me-1"></i>{{ character.gold }} Gold</span>
+                            </div>
+                            
+                            <div class="inventory-list">
+                                {% if character.inventory %}
+                                    <div class="list-group" id="inventoryList">
+                                        {% for item in character.inventory %}
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>{{ item }}</span>
+                                            <button class="btn btn-sm btn-outline-primary use-item-btn" data-item="{{ item }}">Use</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="text-center text-secondary p-3">
+                                        <i class="bi bi-inbox-fill fs-4"></i>
+                                        <p class="mt-2">Your inventory is empty</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reset Game Confirmation Modal -->
+    <div class="modal fade" id="resetGameModal" tabindex="-1" aria-labelledby="resetGameModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="resetGameModalLabel">Reset Game</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to reset the game? This will delete your current game progress and character data.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmResetBtn">Reset Game</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+</body>
+</html>
