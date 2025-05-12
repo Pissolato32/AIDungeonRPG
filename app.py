@@ -570,7 +570,7 @@ class GameEngine:
         """Initialize game engine"""
         self.data_dir = "data"
         os.makedirs(self.data_dir, exist_ok=True)
-
+    
     def save_character(self, user_id, character_data):
         """Save character data to file"""
         if isinstance(character_data, Character):
@@ -653,9 +653,866 @@ class GameEngine:
                 logger.error(f"Error deleting game state: {str(e)}")
                 return False
         return True
+    
+    def process_action(self, action, action_details, character, game_state, groq_client):
+        """Process player action and update game state"""
+        # Ensure messages list exists
+        if "messages" not in game_state:
+            game_state["messages"] = []
+        
+        # Check if in combat
+        if game_state.get("combat"):
+            # Can't perform non-combat actions in combat
+            if action not in ["attack", "use_item", "flee"]:
+                return {
+                    "success": False,
+                    "message": "You are in combat! You must attack, use an item, or flee."
+                }
+        
+        # Check stamina for actions that require it
+        stamina_cost = self._get_stamina_cost(action)
+        if stamina_cost > 0:
+            if character["current_stamina"] < stamina_cost:
+                return {
+                    "success": False,
+                    "message": f"Not enough stamina to {action}. You need {stamina_cost} stamina."
+                }
+            # Deduct stamina
+            character["current_stamina"] -= stamina_cost
+        
+        # Process specific actions
+        if action == "move":
+            return self._process_move(action_details, character, game_state, groq_client)
+        elif action == "look":
+            return self._process_look(action_details, character, game_state, groq_client)
+        elif action == "talk":
+            return self._process_talk(action_details, character, game_state, groq_client)
+        elif action == "search":
+            return self._process_search(character, game_state, groq_client)
+        elif action == "attack":
+            return self._process_attack(action_details, character, game_state, groq_client)
+        elif action == "flee":
+            return self._process_flee(character, game_state)
+        elif action == "use_item":
+            return self._process_use_item(action_details, character, game_state)
+        else:
+            # For custom actions, use Groq API to determine outcome
+            return self._process_custom_action(action, action_details, character, game_state, groq_client)
+    
+    def _get_stamina_cost(self, action):
+        """Get stamina cost for an action"""
+        stamina_costs = {
+            "move": 1,
+            "search": 2,
+            "attack": 3,
+            "flee": 2
+        }
+        return stamina_costs.get(action, 0)
+    
+    def _process_move(self, direction, character, game_state, groq_client):
+        """Process move action"""
+        # Get current location
+        current_location = game_state.get("current_location", "Unknown")
+        
+        # Get possible directions from Groq
+        prompt = f"""
+        The player is currently at: {current_location}
+        Game state: {json.dumps(game_state)}
+        
+        The player wants to move {direction}.
+        
+        Generate a JSON response with:
+        1. Whether the move is possible (success: true/false)
+        2. A new location name if successful
+        3. A detailed description of what the player sees
+        4. Any NPCs present in the new location
+        5. Any events happening in the new location
+        6. A message to display to the player
+        7. Whether this should trigger a combat encounter (random chance, more likely in dangerous areas)
+        
+        JSON format:
+        {{
+            "success": true/false,
+            "new_location": "Location Name",
+            "description": "Detailed description of the new location",
+            "npcs": ["NPC1", "NPC2"],
+            "events": ["Event1", "Event2"],
+            "message": "Message to player",
+            "combat": true/false
+        }}
+        
+        If the move is not possible, only include:
+        {{
+            "success": false,
+            "message": "Reason why move is not possible"
+        }}
+        """
+        
+        # Get response from Groq
+        response = groq_client.generate_response(prompt, character["name"])
+        
+        try:
+            result = json.loads(response)
+            
+            if result.get("success"):
+                # Update game state with new location info
+                game_state["current_location"] = result.get("new_location")
+                game_state["scene_description"] = result.get("description")
+                game_state["npcs_present"] = result.get("npcs", [])
+                game_state["events"] = result.get("events", [])
+                
+                # Add message to history
+                game_state["messages"].append(result.get("message"))
+                
+                # Check if combat should be triggered
+                if result.get("combat"):
+                    combat_result = self._initiate_combat(character, game_state, groq_client)
+                    if combat_result.get("success"):
+                        result["message"] += " " + combat_result.get("message")
+                        result["combat_started"] = True
+                        result["enemy"] = combat_result.get("enemy")
+                
+                # Recover some stamina after successful move
+                character["current_stamina"] = min(character["max_stamina"], 
+                                                  character["current_stamina"] + 1)
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error processing move: {str(e)}")
+            return {
+                "success": False,
+                "message": "Sorry, there was an error processing your movement."
+            }
+    
+    def _process_look(self, target, character, game_state, groq_client):
+        """Process look action to examine something"""
+        current_location = game_state.get("current_location", "Unknown")
+        scene_description = game_state.get("scene_description", "")
+        npcs = game_state.get("npcs_present", [])
+        
+        prompt = f"""
+        The player is currently at: {current_location}
+        Scene description: {scene_description}
+        NPCs present: {', '.join(npcs)}
+        
+        The player wants to look at: {target}
+        
+        Generate a JSON response with:
+        1. Whether the target is found (success: true/false)
+        2. A detailed description of what the player sees when looking at the target
+        3. Any special observations or clues the player might notice
+        4. A message to display to the player
+        
+        JSON format:
+        {{
+            "success": true/false,
+            "description": "Detailed description of what the player sees",
+            "observations": ["Observation1", "Observation2"],
+            "message": "Message to player"
+        }}
+        
+        If the target is not found, only include:
+        {{
+            "success": false,
+            "message": "You don't see that here."
+        }}
+        """
+        
+        # Get response from Groq
+        response = groq_client.generate_response(prompt, character["name"])
+        
+        try:
+            result = json.loads(response)
+            
+            if result.get("success"):
+                # Add message to history
+                game_state["messages"].append(result.get("message"))
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error processing look: {str(e)}")
+            return {
+                "success": False,
+                "message": "Sorry, there was an error processing your action."
+            }
+    
+    def _process_talk(self, npc_name, character, game_state, groq_client):
+        """Process talking to an NPC"""
+        current_location = game_state.get("current_location", "Unknown")
+        npcs = game_state.get("npcs_present", [])
+        
+        # Check if NPC is present
+        npc_present = any(npc.lower() == npc_name.lower() for npc in npcs)
+        if not npc_present:
+            return {
+                "success": False,
+                "message": f"There is no {npc_name} here to talk to."
+            }
+        
+        prompt = f"""
+        The player is currently at: {current_location}
+        The player character is: {character["name"]}, a level {character["level"]} {character["race"]} {character["class"]}
+        
+        The player wants to talk to: {npc_name}
+        
+        Generate a JSON response with:
+        1. Success true
+        2. The NPC's response as dialogue
+        3. Any information or quests the NPC might offer
+        4. Any changes to the game state (new quests, information learned)
+        5. A message to display to the player
+        
+        JSON format:
+        {{
+            "success": true,
+            "dialogue": "NPC's dialogue response",
+            "information": ["Info1", "Info2"],
+            "quests": [{{
+                "name": "Quest Name",
+                "description": "Quest Description"
+            }}],
+            "message": "Message to player"
+        }}
+        """
+        
+        # Get response from Groq
+        response = groq_client.generate_response(prompt, character["name"])
+        
+        try:
+            result = json.loads(response)
+            
+            if result.get("success"):
+                # Add message to history
+                game_state["messages"].append(result.get("message"))
+                
+                # Add quests if provided
+                if "quests" in result and isinstance(result["quests"], list):
+                    if "quests" not in game_state:
+                        game_state["quests"] = []
+                    
+                    for quest in result["quests"]:
+                        if isinstance(quest, dict) and "name" in quest and "description" in quest:
+                            # Check if quest already exists
+                            existing = any(q.get("name") == quest["name"] for q in game_state.get("quests", []))
+                            if not existing:
+                                quest["status"] = "active"
+                                quest["progress"] = 0
+                                game_state["quests"].append(quest)
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error processing talk: {str(e)}")
+            return {
+                "success": False,
+                "message": "Sorry, there was an error processing your conversation."
+            }
+    
+    def _process_search(self, character, game_state, groq_client):
+        """Process searching the current location"""
+        current_location = game_state.get("current_location", "Unknown")
+        scene_description = game_state.get("scene_description", "")
+        
+        prompt = f"""
+        The player is currently at: {current_location}
+        Scene description: {scene_description}
+        
+        The player is searching the area thoroughly.
+        
+        Generate a JSON response with:
+        1. Whether the player finds anything (success: true/false)
+        2. A list of items found if successful
+        3. Any gold found
+        4. Any hidden passages or secrets discovered
+        5. A message to display to the player
+        6. Whether this should trigger a combat encounter (small random chance)
+        
+        JSON format:
+        {{
+            "success": true/false,
+            "items": ["Item1", "Item2"],
+            "gold": 0-25,
+            "secrets": ["Secret1", "Secret2"],
+            "message": "Message to player",
+            "combat": true/false
+        }}
+        
+        If nothing is found, set success to false and provide an appropriate message.
+        """
+        
+        # Get response from Groq
+        response = groq_client.generate_response(prompt, character["name"])
+        
+        try:
+            result = json.loads(response)
+            
+            if result.get("success"):
+                # Add found items to inventory
+                if "items" in result and isinstance(result["items"], list):
+                    for item in result["items"]:
+                        character["inventory"].append(item)
+                
+                # Add gold
+                if "gold" in result and isinstance(result["gold"], (int, float)):
+                    character["gold"] += result["gold"]
+                
+                # Add any secrets to game state
+                if "secrets" in result and isinstance(result["secrets"], list):
+                    if "secrets" not in game_state:
+                        game_state["secrets"] = []
+                    
+                    for secret in result["secrets"]:
+                        if secret not in game_state["secrets"]:
+                            game_state["secrets"].append(secret)
+                
+                # Add message to history
+                game_state["messages"].append(result.get("message"))
+                
+                # Check if combat should be triggered
+                if result.get("combat"):
+                    combat_result = self._initiate_combat(character, game_state, groq_client)
+                    if combat_result.get("success"):
+                        result["message"] += " " + combat_result.get("message")
+                        result["combat_started"] = True
+                        result["enemy"] = combat_result.get("enemy")
+            else:
+                # Add message to history
+                game_state["messages"].append(result.get("message"))
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error processing search: {str(e)}")
+            return {
+                "success": False,
+                "message": "Sorry, there was an error processing your search."
+            }
+    
+    def _initiate_combat(self, character, game_state, groq_client):
+        """Initiate a combat encounter"""
+        current_location = game_state.get("current_location", "Unknown")
+        
+        # Get location type based on current location
+        location_type = "wilderness"  # Default
+        if "village" in current_location.lower() or "town" in current_location.lower():
+            location_type = "village"
+        elif "dungeon" in current_location.lower() or "cave" in current_location.lower():
+            location_type = "dungeon"
+        
+        # Get random enemy based on character level and location
+        enemy_data = get_random_encounter(character["level"], location_type)
+        
+        # Alternative: Use Groq to generate an enemy
+        prompt = f"""
+        The player character is a level {character["level"]} {character["race"]} {character["class"]} at {current_location}.
+        
+        Generate a JSON response with a suitable enemy for a combat encounter.
+        
+        JSON format:
+        {{
+            "enemy": {{
+                "name": "Enemy Name",
+                "description": "Detailed description of the enemy",
+                "level": 1-10,
+                "max_hp": 10-50,
+                "current_hp": 10-50 (same as max_hp),
+                "attack_damage": [min_damage, max_damage],
+                "defense": 0-5,
+                "experience_reward": 20-100,
+                "gold_reward": [min_gold, max_gold],
+                "loot_table": ["Item1", "Item2", "Item3"]
+            }},
+            "message": "Message to display when the enemy appears"
+        }}
+        """
+        
+        # Try to get custom enemy from Groq
+        try:
+            response = groq_client.generate_response(prompt, character["name"])
+            groq_result = json.loads(response)
+            
+            if "enemy" in groq_result and isinstance(groq_result["enemy"], dict):
+                enemy_data = groq_result["enemy"]
+        except Exception as e:
+            logger.warning(f"Error getting enemy from Groq: {str(e)}. Using fallback enemy.")
+            # Continue with the random enemy generated earlier
+        
+        # Initialize combat state
+        game_state["combat"] = {
+            "enemy": enemy_data,
+            "turn": 1,
+            "player_turn": True,
+            "log": ["Combat has begun!"]
+        }
+        
+        return {
+            "success": True,
+            "message": f"You are attacked by a {enemy_data['name']}!",
+            "enemy": enemy_data
+        }
+    
+    def _process_attack(self, attack_type, character, game_state, groq_client):
+        """Process a combat attack"""
+        if not game_state.get("combat"):
+            return {
+                "success": False,
+                "message": "You are not in combat!"
+            }
+        
+        # Convert string representation to enemy object for easier handling
+        enemy_data = game_state["combat"]["enemy"]
+        enemy = Enemy.from_dict(enemy_data)
+        
+        # Calculate attack damage based on character attributes
+        strength_modifier = calculate_attribute_modifier(character["strength"])
+        dexterity_modifier = calculate_attribute_modifier(character["dexterity"])
+        
+        # Base damage based on attack type
+        if attack_type == "heavy":
+            base_damage = roll_dice(2, 6, strength_modifier + 2)
+            hit_chance = 60  # Lower hit chance for heavy attacks
+        elif attack_type == "light":
+            base_damage = roll_dice(1, 4, dexterity_modifier + 1)
+            hit_chance = 85  # Higher hit chance for light attacks
+        else:  # Basic attack
+            base_damage = roll_dice(1, 6, strength_modifier)
+            hit_chance = 75  # Average hit chance
+        
+        # Check if the attack hits
+        hit_roll = random.randint(1, 100)
+        if hit_roll > hit_chance:
+            return {
+                "success": False,
+                "message": f"Your {attack_type} attack misses the {enemy.name}!"
+            }
+        
+        # Apply damage to enemy
+        enemy_hp_before = enemy.current_hp
+        enemy_hp_after, damage_dealt = enemy.take_damage(base_damage)
+        
+        # Update enemy in game state
+        game_state["combat"]["enemy"] = enemy.to_dict()
+        
+        # Add to combat log
+        game_state["combat"]["log"].append(f"You hit the {enemy.name} for {damage_dealt} damage!")
+        
+        # Check if enemy is defeated
+        if enemy.is_defeated():
+            return self._process_combat_victory(character, game_state, enemy)
+        
+        # Enemy's turn - process enemy attack
+        enemy_attack_result = self._process_enemy_attack(character, game_state)
+        
+        return {
+            "success": True,
+            "message": f"You hit the {enemy.name} for {damage_dealt} damage!",
+            "enemy_hp_before": enemy_hp_before,
+            "enemy_hp_after": enemy_hp_after,
+            "enemy_attack": enemy_attack_result.get("message"),
+            "combat_over": enemy_attack_result.get("combat_over", False),
+            "victory": False
+        }
+    
+    def _process_enemy_attack(self, character, game_state):
+        """Process enemy's attack on player"""
+        enemy_data = game_state["combat"]["enemy"]
+        
+        # Calculate damage
+        min_damage, max_damage = enemy_data["attack_damage"]
+        damage = random.randint(min_damage, max_damage)
+        
+        # Apply damage to character
+        character_hp_before = character["current_hp"]
+        character["current_hp"] = max(0, character["current_hp"] - damage)
+        
+        # Add to combat log
+        message = f"The {enemy_data['name']} attacks you for {damage} damage!"
+        game_state["combat"]["log"].append(message)
+        
+        # Check if player is defeated
+        if character["current_hp"] <= 0:
+            game_state["combat"]["log"].append("You have been defeated!")
+            game_state["messages"].append(f"You have been defeated by the {enemy_data['name']}! You wake up later, badly wounded but alive.")
+            
+            # Consequences of defeat
+            character["current_hp"] = max(1, character["max_hp"] // 4)  # Restore to 25% health
+            character["current_stamina"] = max(1, character["max_stamina"] // 4)  # Restore to 25% stamina
+            
+            # Lose some gold if they have any
+            if character["gold"] > 0:
+                gold_lost = max(1, character["gold"] // 5)  # Lose 20% of gold
+                character["gold"] -= gold_lost
+                game_state["messages"].append(f"You lost {gold_lost} gold while unconscious.")
+            
+            # End combat
+            game_state["combat"] = None
+            
+            return {
+                "message": message,
+                "combat_over": True
+            }
+        
+        return {
+            "message": message,
+            "combat_over": False
+        }
+    
+    def _process_combat_victory(self, character, game_state, enemy):
+        """Process player victory in combat"""
+        # Get rewards
+        min_gold, max_gold = enemy.gold_reward
+        gold_reward = random.randint(min_gold, max_gold)
+        xp_reward = enemy.experience_reward
+        
+        # Choose a random item from the loot table if available
+        loot = None
+        if enemy.loot_table:
+            loot = random.choice(enemy.loot_table)
+        
+        # Update character
+        character["gold"] += gold_reward
+        character["experience"] += xp_reward
+        if loot:
+            character["inventory"].append(loot)
+        
+        # Check for level up
+        xp_for_next_level = character["level"] * 100
+        level_up = character["experience"] >= xp_for_next_level
+        
+        if level_up:
+            old_level = character["level"]
+            character["level"] += 1
+            
+            # Increase stats
+            hp_increase = 5 + (character["constitution"] // 3)
+            stamina_increase = 2 + (character["constitution"] // 5)
+            
+            character["max_hp"] += hp_increase
+            character["current_hp"] = character["max_hp"]
+            character["max_stamina"] += stamina_increase
+            character["current_stamina"] = character["max_stamina"]
+        
+        # Add messages
+        victory_message = f"You defeated the {enemy.name}!"
+        game_state["combat"]["log"].append(victory_message)
+        game_state["messages"].append(victory_message)
+        
+        reward_message = f"You gained {gold_reward} gold and {xp_reward} experience points."
+        game_state["messages"].append(reward_message)
+        
+        if loot:
+            loot_message = f"You found {loot}!"
+            game_state["messages"].append(loot_message)
+        
+        if level_up:
+            level_message = f"You leveled up to level {character['level']}!"
+            game_state["messages"].append(level_message)
+        
+        # End combat
+        game_state["combat"] = None
+        
+        return {
+            "success": True,
+            "message": victory_message,
+            "gold_reward": gold_reward,
+            "xp_reward": xp_reward,
+            "loot": loot,
+            "level_up": level_up,
+            "combat_over": True,
+            "victory": True
+        }
+    
+    def _process_flee(self, character, game_state):
+        """Process attempt to flee from combat"""
+        if not game_state.get("combat"):
+            return {
+                "success": False,
+                "message": "You are not in combat!"
+            }
+        
+        # Chance to flee based on dexterity
+        dexterity_modifier = calculate_attribute_modifier(character["dexterity"])
+        flee_chance = 50 + (dexterity_modifier * 5)
+        flee_roll = random.randint(1, 100)
+        
+        if flee_roll <= flee_chance:
+            # Successful flee
+            enemy_name = game_state["combat"]["enemy"]["name"]
+            message = f"You successfully fled from the {enemy_name}!"
+            game_state["messages"].append(message)
+            
+            # End combat
+            game_state["combat"] = None
+            
+            return {
+                "success": True,
+                "message": message,
+                "combat_over": True
+            }
+        else:
+            # Failed flee attempt
+            message = "You failed to escape!"
+            game_state["combat"]["log"].append(message)
+            
+            # Enemy gets a free attack
+            enemy_attack_result = self._process_enemy_attack(character, game_state)
+            
+            return {
+                "success": False,
+                "message": message,
+                "enemy_attack": enemy_attack_result.get("message"),
+                "combat_over": enemy_attack_result.get("combat_over", False)
+            }
+    
+    def _process_use_item(self, item_name, character, game_state):
+        """Process using an item from inventory"""
+        # Check if item is in inventory
+        if item_name not in character["inventory"]:
+            return {
+                "success": False,
+                "message": f"You don't have {item_name} in your inventory."
+            }
+        
+        # Process different item types
+        if "Health Potion" in item_name:
+            # Determine healing amount based on potion strength
+            if "Small" in item_name:
+                heal_amount = 10
+            elif "Medium" in item_name:
+                heal_amount = 25
+            elif "Large" in item_name:
+                heal_amount = 50
+            else:
+                heal_amount = 15  # Default
+            
+            # Apply healing
+            old_hp = character["current_hp"]
+            character["current_hp"] = min(character["max_hp"], character["current_hp"] + heal_amount)
+            actual_heal = character["current_hp"] - old_hp
+            
+            # Remove item from inventory
+            character["inventory"].remove(item_name)
+            
+            message = f"You used {item_name} and restored {actual_heal} health."
+            if game_state.get("combat"):
+                game_state["combat"]["log"].append(message)
+            game_state["messages"].append(message)
+            
+            return {
+                "success": True,
+                "message": message,
+                "health_restored": actual_heal
+            }
+            
+        elif "Stamina Potion" in item_name:
+            # Determine stamina amount based on potion strength
+            if "Minor" in item_name:
+                stamina_amount = 5
+            elif "Medium" in item_name:
+                stamina_amount = 10
+            elif "Major" in item_name:
+                stamina_amount = 15
+            else:
+                stamina_amount = 8  # Default
+            
+            # Apply stamina restoration
+            old_stamina = character["current_stamina"]
+            character["current_stamina"] = min(character["max_stamina"], character["current_stamina"] + stamina_amount)
+            actual_restore = character["current_stamina"] - old_stamina
+            
+            # Remove item from inventory
+            character["inventory"].remove(item_name)
+            
+            message = f"You used {item_name} and restored {actual_restore} stamina."
+            if game_state.get("combat"):
+                game_state["combat"]["log"].append(message)
+            game_state["messages"].append(message)
+            
+            return {
+                "success": True,
+                "message": message,
+                "stamina_restored": actual_restore
+            }
+            
+        elif "Antidote" in item_name:
+            # Remove poison status if implemented
+            character["inventory"].remove(item_name)
+            
+            message = f"You used {item_name} and cured poison."
+            if game_state.get("combat"):
+                game_state["combat"]["log"].append(message)
+            game_state["messages"].append(message)
+            
+            return {
+                "success": True,
+                "message": message
+            }
+            
+        else:
+            # For other items, provide a generic message
+            message = f"You used {item_name}, but nothing happens."
+            if game_state.get("combat"):
+                game_state["combat"]["log"].append(message)
+            game_state["messages"].append(message)
+            
+            return {
+                "success": True,
+                "message": message
+            }
+    
+    def process_combat_attack(self, attack_type, character, game_state):
+        """Process combat attack from API endpoint"""
+        return self._process_attack(attack_type, character, game_state, None)
+    
+    def process_rest(self, character, game_state):
+        """Process resting to recover HP and stamina"""
+        # Check if in combat
+        if game_state.get("combat"):
+            return {
+                "success": False,
+                "message": "You cannot rest while in combat!"
+            }
+        
+        # Calculate recovery amounts
+        constitution_modifier = calculate_attribute_modifier(character["constitution"])
+        hp_recovery = 5 + (constitution_modifier * 2)
+        stamina_recovery = 3 + constitution_modifier
+        
+        # Apply recovery
+        old_hp = character["current_hp"]
+        old_stamina = character["current_stamina"]
+        
+        character["current_hp"] = min(character["max_hp"], character["current_hp"] + hp_recovery)
+        character["current_stamina"] = min(character["max_stamina"], character["current_stamina"] + stamina_recovery)
+        
+        actual_hp_recovery = character["current_hp"] - old_hp
+        actual_stamina_recovery = character["current_stamina"] - old_stamina
+        
+        # Add message
+        message = f"You rest for a while, recovering {actual_hp_recovery} health and {actual_stamina_recovery} stamina."
+        game_state["messages"].append(message)
+        
+        # Small chance of random encounter while resting
+        encounter_chance = 15  # 15% chance
+        if random.randint(1, 100) <= encounter_chance:
+            # Set up a new message about being interrupted
+            interrupt_message = "Your rest is interrupted!"
+            game_state["messages"].append(interrupt_message)
+            
+            # Initiate combat
+            combat_result = self._initiate_combat(character, game_state, None)
+            if combat_result.get("success"):
+                return {
+                    "success": True,
+                    "message": message + " " + interrupt_message + " " + combat_result.get("message"),
+                    "hp_recovered": actual_hp_recovery,
+                    "stamina_recovered": actual_stamina_recovery,
+                    "combat_started": True,
+                    "enemy": combat_result.get("enemy")
+                }
+        
+        return {
+            "success": True,
+            "message": message,
+            "hp_recovered": actual_hp_recovery,
+            "stamina_recovered": actual_stamina_recovery
+        }
+    
+    def use_item(self, item_name, character, game_state):
+        """Use item from API endpoint"""
+        return self._process_use_item(item_name, character, game_state)
+    
+    def _process_custom_action(self, action, action_details, character, game_state, groq_client):
+        """Process a custom action using Groq API to determine outcome"""
+        current_location = game_state.get("current_location", "Unknown")
+        scene_description = game_state.get("scene_description", "")
+        
+        prompt = f"""
+        The player is currently at: {current_location}
+        Scene description: {scene_description}
+        Game state: {json.dumps(game_state)}
+        
+        The player wants to {action} {action_details}.
+        
+        Generate a JSON response with:
+        1. Whether the action is successful (success: true/false)
+        2. A detailed description of what happens
+        3. Any effects on the player or environment
+        4. A message to display to the player
+        
+        JSON format:
+        {{
+            "success": true/false,
+            "description": "Detailed description of what happens",
+            "effects": {{
+                "hp_change": 0,
+                "stamina_change": 0,
+                "gold_change": 0,
+                "items_gained": [],
+                "items_lost": []
+            }},
+            "message": "Message to player"
+        }}
+        """
+        
+        # Get response from Groq
+        response = groq_client.generate_response(prompt, character["name"])
+        
+        try:
+            result = json.loads(response)
+            
+            if result.get("success"):
+                # Process any effects on the character
+                effects = result.get("effects", {})
+                
+                # HP changes
+                hp_change = effects.get("hp_change", 0)
+                if hp_change > 0:
+                    character["current_hp"] = min(character["max_hp"], character["current_hp"] + hp_change)
+                elif hp_change < 0:
+                    character["current_hp"] = max(0, character["current_hp"] + hp_change)  # hp_change is negative
+                
+                # Stamina changes
+                stamina_change = effects.get("stamina_change", 0)
+                if stamina_change > 0:
+                    character["current_stamina"] = min(character["max_stamina"], character["current_stamina"] + stamina_change)
+                elif stamina_change < 0:
+                    character["current_stamina"] = max(0, character["current_stamina"] + stamina_change)  # stamina_change is negative
+                
+                # Gold changes
+                gold_change = effects.get("gold_change", 0)
+                character["gold"] = max(0, character["gold"] + gold_change)
+                
+                # Item changes
+                items_gained = effects.get("items_gained", [])
+                for item in items_gained:
+                    character["inventory"].append(item)
+                
+                items_lost = effects.get("items_lost", [])
+                for item in items_lost:
+                    if item in character["inventory"]:
+                        character["inventory"].remove(item)
+                
+                # Add message to history
+                game_state["messages"].append(result.get("message"))
+            else:
+                # Add message to history if provided
+                if "message" in result:
+                    game_state["messages"].append(result.get("message"))
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error processing custom action: {str(e)}")
+            return {
+                "success": False,
+                "message": "Sorry, there was an error processing your action."
+            }
 
-# Ensure data directory exists
-os.makedirs("data", exist_ok=True)
+# Initialize game engine and Groq client after classes are defined
+game_engine = GameEngine()
+groq_client = GroqClient()
+
+#------------------------------------------------------
+# FLASK ROUTES
+#------------------------------------------------------
 
 @app.route("/")
 def index():
@@ -862,3 +1719,6 @@ def reset_game():
     except Exception as e:
         logger.error(f"Error resetting game: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
