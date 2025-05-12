@@ -287,8 +287,6 @@
             const maxTotalPoints = 75;
 
             // Rolar atributos
-            let rollCount = 3;
-
             function rollAttributes() {
                 if (rollCount <= 0) {
                     alert('Você já usou todas as suas tentativas de re-roll!');
@@ -320,12 +318,9 @@
                         pointsToDistribute--;
                     }
                 }
-                
-                // Primeiro define todos os atributos como 8
-                attributes.forEach(attr => {
-                    document.getElementById(attr).value = 8;
-                    remainingPoints -= 8;
-                });
+
+                // Atualiza o total de pontos
+                updateTotalPoints();
                 
                 // Distribui os pontos restantes aleatoriamente
                 while (remainingPoints > 0) {
