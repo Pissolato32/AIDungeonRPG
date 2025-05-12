@@ -439,6 +439,12 @@ class GroqClient:
         # Initialize history for this character if not exists
         if character_id not in self.conversation_history:
             self.conversation_history[character_id] = []
+            
+            # Add system message to set language
+            self.conversation_history[character_id].append({
+                "role": "system",
+                "content": "Você é um assistente de RPG que gera conteúdo narrativo em Português Brasileiro. Responda apenas no formato solicitado. Seja descritivo, imersivo e criativo em suas respostas."
+            })
         
         # Add prompt to history
         self.conversation_history[character_id].append({
@@ -446,9 +452,10 @@ class GroqClient:
             "content": prompt
         })
         
-        # Keep history limited to last 10 messages
-        if len(self.conversation_history[character_id]) > 10:
-            self.conversation_history[character_id] = self.conversation_history[character_id][-10:]
+        # Keep history limited to last 10 messages, but preserve system message
+        if len(self.conversation_history[character_id]) > 11:  # 1 system + 10 conversation
+            system_message = self.conversation_history[character_id][0] 
+            self.conversation_history[character_id] = [system_message] + self.conversation_history[character_id][-10:]
         
         try:
             headers = {
@@ -717,35 +724,35 @@ class GameEngine:
         
         # Get possible directions from Groq
         prompt = f"""
-        The player is currently at: {current_location}
-        Game state: {json.dumps(game_state)}
+        O jogador está atualmente em: {current_location}
+        Estado do jogo: {json.dumps(game_state)}
         
-        The player wants to move {direction}.
+        O jogador quer se mover para {direction}.
         
-        Generate a JSON response with:
-        1. Whether the move is possible (success: true/false)
-        2. A new location name if successful
-        3. A detailed description of what the player sees
-        4. Any NPCs present in the new location
-        5. Any events happening in the new location
-        6. A message to display to the player
-        7. Whether this should trigger a combat encounter (random chance, more likely in dangerous areas)
+        Gere uma resposta JSON com:
+        1. Se o movimento é possível (success: true/false)
+        2. Um novo nome de localização se for bem-sucedido
+        3. Uma descrição detalhada do que o jogador vê
+        4. Quaisquer NPCs presentes no novo local
+        5. Quaisquer eventos acontecendo no novo local
+        6. Uma mensagem para exibir ao jogador
+        7. Se isso deve acionar um encontro de combate (chance aleatória, mais provável em áreas perigosas)
         
-        JSON format:
+        Formato JSON:
         {{
             "success": true/false,
-            "new_location": "Location Name",
-            "description": "Detailed description of the new location",
+            "new_location": "Nome do Local",
+            "description": "Descrição detalhada do novo local",
             "npcs": ["NPC1", "NPC2"],
-            "events": ["Event1", "Event2"],
-            "message": "Message to player",
+            "events": ["Evento1", "Evento2"],
+            "message": "Mensagem para o jogador",
             "combat": true/false
         }}
         
-        If the move is not possible, only include:
+        Se o movimento não for possível, inclua apenas:
         {{
             "success": false,
-            "message": "Reason why move is not possible"
+            "message": "Motivo pelo qual o movimento não é possível"
         }}
         """
         
@@ -792,30 +799,30 @@ class GameEngine:
         npcs = game_state.get("npcs_present", [])
         
         prompt = f"""
-        The player is currently at: {current_location}
-        Scene description: {scene_description}
-        NPCs present: {', '.join(npcs)}
+        O jogador está atualmente em: {current_location}
+        Descrição da cena: {scene_description}
+        NPCs presentes: {', '.join(npcs)}
         
-        The player wants to look at: {target}
+        O jogador quer olhar para: {target}
         
-        Generate a JSON response with:
-        1. Whether the target is found (success: true/false)
-        2. A detailed description of what the player sees when looking at the target
-        3. Any special observations or clues the player might notice
-        4. A message to display to the player
+        Gere uma resposta JSON com:
+        1. Se o alvo foi encontrado (success: true/false)
+        2. Uma descrição detalhada do que o jogador vê ao olhar para o alvo
+        3. Quaisquer observações especiais ou pistas que o jogador possa notar
+        4. Uma mensagem para exibir ao jogador
         
-        JSON format:
+        Formato JSON:
         {{
             "success": true/false,
-            "description": "Detailed description of what the player sees",
-            "observations": ["Observation1", "Observation2"],
-            "message": "Message to player"
+            "description": "Descrição detalhada do que o jogador vê",
+            "observations": ["Observação1", "Observação2"],
+            "message": "Mensagem para o jogador"
         }}
         
-        If the target is not found, only include:
+        Se o alvo não for encontrado, inclua apenas:
         {{
             "success": false,
-            "message": "You don't see that here."
+            "message": "Você não vê isso aqui."
         }}
         """
         
@@ -847,32 +854,32 @@ class GameEngine:
         if not npc_present:
             return {
                 "success": False,
-                "message": f"There is no {npc_name} here to talk to."
+                "message": f"Não há nenhum {npc_name} aqui para conversar."
             }
         
         prompt = f"""
-        The player is currently at: {current_location}
-        The player character is: {character["name"]}, a level {character["level"]} {character["race"]} {character["class"]}
+        O jogador está atualmente em: {current_location}
+        O personagem do jogador é: {character["name"]}, um {character["race"]} {character["class"]} de nível {character["level"]}
         
-        The player wants to talk to: {npc_name}
+        O jogador quer conversar com: {npc_name}
         
-        Generate a JSON response with:
-        1. Success true
-        2. The NPC's response as dialogue
-        3. Any information or quests the NPC might offer
-        4. Any changes to the game state (new quests, information learned)
-        5. A message to display to the player
+        Gere uma resposta JSON com:
+        1. Sucesso verdadeiro
+        2. A resposta do NPC como diálogo
+        3. Qualquer informação ou missões que o NPC possa oferecer
+        4. Quaisquer alterações no estado do jogo (novas missões, informações aprendidas)
+        5. Uma mensagem para exibir ao jogador
         
-        JSON format:
+        Formato JSON:
         {{
             "success": true,
-            "dialogue": "NPC's dialogue response",
+            "dialogue": "Resposta de diálogo do NPC",
             "information": ["Info1", "Info2"],
             "quests": [{{
-                "name": "Quest Name",
-                "description": "Quest Description"
+                "name": "Nome da Missão",
+                "description": "Descrição da Missão"
             }}],
-            "message": "Message to player"
+            "message": "Mensagem para o jogador"
         }}
         """
         
@@ -914,30 +921,30 @@ class GameEngine:
         scene_description = game_state.get("scene_description", "")
         
         prompt = f"""
-        The player is currently at: {current_location}
-        Scene description: {scene_description}
+        O jogador está atualmente em: {current_location}
+        Descrição da cena: {scene_description}
         
-        The player is searching the area thoroughly.
+        O jogador está procurando minuciosamente na área.
         
-        Generate a JSON response with:
-        1. Whether the player finds anything (success: true/false)
-        2. A list of items found if successful
-        3. Any gold found
-        4. Any hidden passages or secrets discovered
-        5. A message to display to the player
-        6. Whether this should trigger a combat encounter (small random chance)
+        Gere uma resposta JSON com:
+        1. Se o jogador encontra algo (success: true/false)
+        2. Uma lista de itens encontrados se for bem-sucedido
+        3. Qualquer ouro encontrado
+        4. Quaisquer passagens ocultas ou segredos descobertos
+        5. Uma mensagem para exibir ao jogador
+        6. Se isso deve acionar um encontro de combate (pequena chance aleatória)
         
-        JSON format:
+        Formato JSON:
         {{
             "success": true/false,
             "items": ["Item1", "Item2"],
             "gold": 0-25,
-            "secrets": ["Secret1", "Secret2"],
-            "message": "Message to player",
+            "secrets": ["Segredo1", "Segredo2"],
+            "message": "Mensagem para o jogador",
             "combat": true/false
         }}
         
-        If nothing is found, set success to false and provide an appropriate message.
+        Se nada for encontrado, defina success como false e forneça uma mensagem apropriada.
         """
         
         # Get response from Groq
