@@ -16,6 +16,22 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "default-secret-key-for-development")
 
+# Language support
+def get_user_language():
+    return session.get('language', 'pt-br')
+
+@app.before_request
+def before_request():
+    # Set default language if not set
+    if 'language' not in session:
+        session['language'] = 'pt-br'
+
+@app.route("/change-language/<lang>")
+def change_language(lang):
+    if lang in ['pt-br', 'en']:
+        session['language'] = lang
+    return redirect(request.referrer or url_for('index'))
+
 # Configure server-side session
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_PERMANENT"] = True
