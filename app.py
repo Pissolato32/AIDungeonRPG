@@ -1000,9 +1000,9 @@ class GameEngine:
         
         # Get location type based on current location
         location_type = "wilderness"  # Default
-        if "village" in current_location.lower() or "town" in current_location.lower():
+        if "vila" in current_location.lower() or "aldeia" in current_location.lower() or "cidade" in current_location.lower():
             location_type = "village"
-        elif "dungeon" in current_location.lower() or "cave" in current_location.lower():
+        elif "masmorra" in current_location.lower() or "caverna" in current_location.lower():
             location_type = "dungeon"
         
         # Get random enemy based on character level and location
@@ -1010,25 +1010,25 @@ class GameEngine:
         
         # Alternative: Use Groq to generate an enemy
         prompt = f"""
-        The player character is a level {character["level"]} {character["race"]} {character["class"]} at {current_location}.
+        O personagem do jogador é um {character["race"]} {character["class"]} de nível {character["level"]} em {current_location}.
         
-        Generate a JSON response with a suitable enemy for a combat encounter.
+        Gere uma resposta JSON com um inimigo adequado para um encontro de combate.
         
-        JSON format:
+        Formato JSON:
         {{
             "enemy": {{
-                "name": "Enemy Name",
-                "description": "Detailed description of the enemy",
+                "name": "Nome do Inimigo",
+                "description": "Descrição detalhada do inimigo",
                 "level": 1-10,
                 "max_hp": 10-50,
-                "current_hp": 10-50 (same as max_hp),
-                "attack_damage": [min_damage, max_damage],
+                "current_hp": 10-50 (mesmo valor que max_hp),
+                "attack_damage": [dano_mínimo, dano_máximo],
                 "defense": 0-5,
                 "experience_reward": 20-100,
-                "gold_reward": [min_gold, max_gold],
+                "gold_reward": [ouro_mínimo, ouro_máximo],
                 "loot_table": ["Item1", "Item2", "Item3"]
             }},
-            "message": "Message to display when the enemy appears"
+            "message": "Mensagem para exibir quando o inimigo aparecer"
         }}
         """
         
@@ -1048,12 +1048,12 @@ class GameEngine:
             "enemy": enemy_data,
             "turn": 1,
             "player_turn": True,
-            "log": ["Combat has begun!"]
+            "log": ["O combate começou!"]
         }
         
         return {
             "success": True,
-            "message": f"You are attacked by a {enemy_data['name']}!",
+            "message": f"Você é atacado por um {enemy_data['name']}!",
             "enemy": enemy_data
         }
     
@@ -1062,7 +1062,7 @@ class GameEngine:
         if not game_state.get("combat"):
             return {
                 "success": False,
-                "message": "You are not in combat!"
+                "message": "Você não está em combate!"
             }
         
         # Convert string representation to enemy object for easier handling
@@ -1072,6 +1072,13 @@ class GameEngine:
         # Calculate attack damage based on character attributes
         strength_modifier = calculate_attribute_modifier(character["strength"])
         dexterity_modifier = calculate_attribute_modifier(character["dexterity"])
+        
+        # Traduzir tipo de ataque para português
+        tipo_ataque = {
+            "heavy": "pesado",
+            "light": "leve",
+            "basic": "básico"
+        }.get(attack_type, "básico")
         
         # Base damage based on attack type
         if attack_type == "heavy":
@@ -1089,7 +1096,7 @@ class GameEngine:
         if hit_roll > hit_chance:
             return {
                 "success": False,
-                "message": f"Your {attack_type} attack misses the {enemy.name}!"
+                "message": f"Seu ataque {tipo_ataque} errou o {enemy.name}!"
             }
         
         # Apply damage to enemy
@@ -1100,7 +1107,7 @@ class GameEngine:
         game_state["combat"]["enemy"] = enemy.to_dict()
         
         # Add to combat log
-        game_state["combat"]["log"].append(f"You hit the {enemy.name} for {damage_dealt} damage!")
+        game_state["combat"]["log"].append(f"Você acertou o {enemy.name} e causou {damage_dealt} de dano!")
         
         # Check if enemy is defeated
         if enemy.is_defeated():
@@ -1111,7 +1118,7 @@ class GameEngine:
         
         return {
             "success": True,
-            "message": f"You hit the {enemy.name} for {damage_dealt} damage!",
+            "message": f"Você acertou o {enemy.name} e causou {damage_dealt} de dano!",
             "enemy_hp_before": enemy_hp_before,
             "enemy_hp_after": enemy_hp_after,
             "enemy_attack": enemy_attack_result.get("message"),
@@ -1132,13 +1139,13 @@ class GameEngine:
         character["current_hp"] = max(0, character["current_hp"] - damage)
         
         # Add to combat log
-        message = f"The {enemy_data['name']} attacks you for {damage} damage!"
+        message = f"O {enemy_data['name']} ataca você e causa {damage} de dano!"
         game_state["combat"]["log"].append(message)
         
         # Check if player is defeated
         if character["current_hp"] <= 0:
-            game_state["combat"]["log"].append("You have been defeated!")
-            game_state["messages"].append(f"You have been defeated by the {enemy_data['name']}! You wake up later, badly wounded but alive.")
+            game_state["combat"]["log"].append("Você foi derrotado!")
+            game_state["messages"].append(f"Você foi derrotado pelo {enemy_data['name']}! Você acorda mais tarde, gravemente ferido, mas vivo.")
             
             # Consequences of defeat
             character["current_hp"] = max(1, character["max_hp"] // 4)  # Restore to 25% health
@@ -1148,7 +1155,7 @@ class GameEngine:
             if character["gold"] > 0:
                 gold_lost = max(1, character["gold"] // 5)  # Lose 20% of gold
                 character["gold"] -= gold_lost
-                game_state["messages"].append(f"You lost {gold_lost} gold while unconscious.")
+                game_state["messages"].append(f"Você perdeu {gold_lost} de ouro enquanto estava inconsciente.")
             
             # End combat
             game_state["combat"] = None
@@ -1199,19 +1206,19 @@ class GameEngine:
             character["current_stamina"] = character["max_stamina"]
         
         # Add messages
-        victory_message = f"You defeated the {enemy.name}!"
+        victory_message = f"Você derrotou o {enemy.name}!"
         game_state["combat"]["log"].append(victory_message)
         game_state["messages"].append(victory_message)
         
-        reward_message = f"You gained {gold_reward} gold and {xp_reward} experience points."
+        reward_message = f"Você ganhou {gold_reward} de ouro e {xp_reward} pontos de experiência."
         game_state["messages"].append(reward_message)
         
         if loot:
-            loot_message = f"You found {loot}!"
+            loot_message = f"Você encontrou {loot}!"
             game_state["messages"].append(loot_message)
         
         if level_up:
-            level_message = f"You leveled up to level {character['level']}!"
+            level_message = f"Você subiu para o nível {character['level']}!"
             game_state["messages"].append(level_message)
         
         # End combat
