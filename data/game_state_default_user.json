@@ -9,7 +9,8 @@
     "A festival is being prepared in the village square."
   ],
   "messages": [
-    "Welcome to the village of Eldermist! Your adventure begins now."
+    "Welcome to the village of Eldermist! Your adventure begins now.",
+    "You perform the action successfully."
   ],
   "combat": null
 }

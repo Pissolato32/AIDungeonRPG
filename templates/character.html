@@ -65,94 +65,138 @@
                                 </div>
                             </div>
                             
+                            <div class="mb-4">
+                                <label for="description" class="form-label">Character Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" placeholder="Describe your character's appearance, personality, and background...">{{ character.description if character else '' }}</textarea>
+                                <small class="text-muted">Your character's description will influence their starting equipment.</small>
+                            </div>
+                            
                             <h4 class="mb-3"><i class="bi bi-bar-chart-line me-2"></i>Attributes</h4>
+                            <div class="mb-3">
+                                <button type="button" id="rollDiceBtn" class="btn btn-outline-primary mb-3">
+                                    <i class="bi bi-dice-6 me-1"></i> Roll Attributes
+                                </button>
+                                <p class="text-muted mb-2">Select two attributes to swap values:</p>
+                                <div class="btn-group mb-3" role="group" aria-label="Attribute swap buttons">
+                                    <button type="button" class="btn btn-outline-secondary attr-swap" data-attr="strength" disabled>STR</button>
+                                    <button type="button" class="btn btn-outline-secondary attr-swap" data-attr="dexterity" disabled>DEX</button>
+                                    <button type="button" class="btn btn-outline-secondary attr-swap" data-attr="constitution" disabled>CON</button>
+                                    <button type="button" class="btn btn-outline-secondary attr-swap" data-attr="intelligence" disabled>INT</button>
+                                    <button type="button" class="btn btn-outline-secondary attr-swap" data-attr="wisdom" disabled>WIS</button>
+                                    <button type="button" class="btn btn-outline-secondary attr-swap" data-attr="charisma" disabled>CHA</button>
+                                </div>
+                            </div>
                             <div class="row mb-4">
                                 <div class="col-md-4 mb-3">
                                     <label for="strength" class="form-label">Strength</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-muscle"></i></span>
-                                        <input type="number" class="form-control" id="strength" name="strength" value="{{ character.strength if character else 10 }}" min="1" max="20">
+                                        <input type="number" class="form-control attribute-field" id="strength" name="strength" value="{{ character.strength if character else 10 }}" min="1" max="20" readonly>
+                                        <span class="input-group-text modifier" id="strength-mod">+0</span>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="dexterity" class="form-label">Dexterity</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-arrow-up-right"></i></span>
-                                        <input type="number" class="form-control" id="dexterity" name="dexterity" value="{{ character.dexterity if character else 10 }}" min="1" max="20">
+                                        <input type="number" class="form-control attribute-field" id="dexterity" name="dexterity" value="{{ character.dexterity if character else 10 }}" min="1" max="20" readonly>
+                                        <span class="input-group-text modifier" id="dexterity-mod">+0</span>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="constitution" class="form-label">Constitution</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-heart"></i></span>
-                                        <input type="number" class="form-control" id="constitution" name="constitution" value="{{ character.constitution if character else 10 }}" min="1" max="20">
+                                        <input type="number" class="form-control attribute-field" id="constitution" name="constitution" value="{{ character.constitution if character else 10 }}" min="1" max="20" readonly>
+                                        <span class="input-group-text modifier" id="constitution-mod">+0</span>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="intelligence" class="form-label">Intelligence</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-lightbulb"></i></span>
-                                        <input type="number" class="form-control" id="intelligence" name="intelligence" value="{{ character.intelligence if character else 10 }}" min="1" max="20">
+                                        <input type="number" class="form-control attribute-field" id="intelligence" name="intelligence" value="{{ character.intelligence if character else 10 }}" min="1" max="20" readonly>
+                                        <span class="input-group-text modifier" id="intelligence-mod">+0</span>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="wisdom" class="form-label">Wisdom</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-book"></i></span>
-                                        <input type="number" class="form-control" id="wisdom" name="wisdom" value="{{ character.wisdom if character else 10 }}" min="1" max="20">
+                                        <input type="number" class="form-control attribute-field" id="wisdom" name="wisdom" value="{{ character.wisdom if character else 10 }}" min="1" max="20" readonly>
+                                        <span class="input-group-text modifier" id="wisdom-mod">+0</span>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="charisma" class="form-label">Charisma</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-chat"></i></span>
-                                        <input type="number" class="form-control" id="charisma" name="charisma" value="{{ character.charisma if character else 10 }}" min="1" max="20">
+                                        <input type="number" class="form-control attribute-field" id="charisma" name="charisma" value="{{ character.charisma if character else 10 }}" min="1" max="20" readonly>
+                                        <span class="input-group-text modifier" id="charisma-mod">+0</span>
                                     </div>
                                 </div>
                             </div>
                             
                             <h4 class="mb-3"><i class="bi bi-shield me-2"></i>Health & Stamina</h4>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                Health and Stamina are calculated automatically based on your Constitution and other attributes.
+                            </div>
                             <div class="row mb-4">
                                 <div class="col-md-3 mb-3">
                                     <label for="max_hp" class="form-label">Max HP</label>
-                                    <input type="number" class="form-control" id="max_hp" name="max_hp" value="{{ character.max_hp if character else 20 }}" min="1">
+                                    <input type="number" class="form-control" id="max_hp" name="max_hp" value="{{ character.max_hp if character else 20 }}" readonly>
                                 </div>
                                 <div class="col-md-3 mb-3">
                                     <label for="current_hp" class="form-label">Current HP</label>
-                                    <input type="number" class="form-control" id="current_hp" name="current_hp" value="{{ character.current_hp if character else 20 }}" min="0">
+                                    <input type="number" class="form-control" id="current_hp" name="current_hp" value="{{ character.current_hp if character else 20 }}" readonly>
                                 </div>
                                 <div class="col-md-3 mb-3">
                                     <label for="max_stamina" class="form-label">Max Stamina</label>
-                                    <input type="number" class="form-control" id="max_stamina" name="max_stamina" value="{{ character.max_stamina if character else 10 }}" min="1">
+                                    <input type="number" class="form-control" id="max_stamina" name="max_stamina" value="{{ character.max_stamina if character else 10 }}" readonly>
                                 </div>
                                 <div class="col-md-3 mb-3">
                                     <label for="current_stamina" class="form-label">Current Stamina</label>
-                                    <input type="number" class="form-control" id="current_stamina" name="current_stamina" value="{{ character.current_stamina if character else 10 }}" min="0">
+                                    <input type="number" class="form-control" id="current_stamina" name="current_stamina" value="{{ character.current_stamina if character else 10 }}" readonly>
                                 </div>
                             </div>
                             
                             <h4 class="mb-3"><i class="bi bi-info-circle me-2"></i>Additional Info</h4>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                All new characters start at Level 1 with 0 Experience. Gold is determined by a dice roll.
+                            </div>
                             <div class="row mb-4">
                                 <div class="col-md-4 mb-3">
                                     <label for="level" class="form-label">Level</label>
-                                    <input type="number" class="form-control" id="level" name="level" value="{{ character.level if character else 1 }}" min="1">
+                                    <input type="number" class="form-control" id="level" name="level" value="1" min="1" readonly>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="experience" class="form-label">Experience</label>
-                                    <input type="number" class="form-control" id="experience" name="experience" value="{{ character.experience if character else 0 }}" min="0">
+                                    <input type="number" class="form-control" id="experience" name="experience" value="0" min="0" readonly>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="gold" class="form-label">Gold</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-coin"></i></span>
-                                        <input type="number" class="form-control" id="gold" name="gold" value="{{ character.gold if character else 50 }}" min="0">
+                                        <input type="number" class="form-control" id="gold" name="gold" value="{{ character.gold if character else 50 }}" min="0" readonly>
+                                        <button type="button" class="btn btn-outline-primary" id="rollGoldBtn">
+                                            <i class="bi bi-dice-3 me-1"></i> Roll
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                             
                             <div class="mb-4">
-                                <label for="inventory" class="form-label">Inventory (comma-separated)</label>
-                                <textarea class="form-control" id="inventory" name="inventory" rows="2">{{ ','.join(character.inventory) if character and character.inventory else 'Basic Sword,Health Potion' }}</textarea>
+                                <label for="inventory" class="form-label">Inventory</label>
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle-fill me-2"></i>
+                                    Initial inventory is generated based on your character's class, race, attributes, and description.
+                                </div>
+                                <ul class="list-group" id="inventory-list">
+                                    <li class="list-group-item bg-dark text-light border-secondary">Loading inventory...</li>
+                                </ul>
+                                <input type="hidden" id="inventory" name="inventory" value="{{ ','.join(character.inventory) if character and character.inventory else '' }}">
                             </div>
                             
                             <div class="d-grid gap-2">

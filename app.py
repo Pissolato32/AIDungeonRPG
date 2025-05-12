@@ -32,7 +32,7 @@ os.makedirs("data", exist_ok=True)
 class Character:
     """Character model representing player character attributes and methods"""
     
-    def __init__(self, name, character_class, race, 
+    def __init__(self, name, character_class, race, description="",
                 strength=10, dexterity=10, constitution=10, 
                 intelligence=10, wisdom=10, charisma=10,
                 max_hp=20, current_hp=20, max_stamina=10, current_stamina=10,
@@ -41,6 +41,7 @@ class Character:
         self.name = name
         self.character_class = character_class
         self.race = race
+        self.description = description
         self.strength = strength
         self.dexterity = dexterity
         self.constitution = constitution
@@ -63,6 +64,7 @@ class Character:
             "name": self.name,
             "class": self.character_class,
             "race": self.race,
+            "description": self.description,
             "strength": self.strength,
             "dexterity": self.dexterity,
             "constitution": self.constitution,
@@ -90,6 +92,7 @@ class Character:
             name=data.get("name", "Unknown"),
             character_class=data.get("class", "Fighter"),
             race=data.get("race", "Human"),
+            description=data.get("description", ""),
             strength=data.get("strength", 10),
             dexterity=data.get("dexterity", 10),
             constitution=data.get("constitution", 10),

@@ -1,0 +1,22 @@
+{
+  "name": "Digao",
+  "class": "Mage",
+  "race": "Human",
+  "strength": 10,
+  "dexterity": 10,
+  "constitution": 10,
+  "intelligence": 10,
+  "wisdom": 10,
+  "charisma": 10,
+  "max_hp": 20,
+  "current_hp": 20,
+  "max_stamina": 10,
+  "current_stamina": 7,
+  "inventory": [
+    "Sword",
+    " Shield."
+  ],
+  "gold": 50,
+  "experience": 0,
+  "level": 1
+}
