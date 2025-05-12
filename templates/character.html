@@ -84,7 +84,7 @@
                                 <div class="col-md-4 mb-3">
                                     <label for="strength" class="form-label">Strength</label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-muscle"></i></span>
+                                        <span class="input-group-text"><i class="bi bi-shield-fill"></i></span>
                                         <input type="number" class="form-control attribute-field" id="strength" name="strength" value="{{ character.strength if character else 10 }}" min="8" max="18" step="1">
                                         <span class="input-group-text modifier" id="strength-mod">+0</span>
                                     </div>
@@ -93,7 +93,7 @@
                                     <label for="dexterity" class="form-label">Dexterity</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-arrow-up-right"></i></span>
-                                        <input type="number" class="form-control attribute-field" id="dexterity" name="dexterity" value="{{ character.dexterity if character else 10 }}" min="1" max="20" readonly>
+                                        <input type="number" class="form-control attribute-field" id="dexterity" name="dexterity" value="{{ character.dexterity if character else 10 }}" min="8" max="18" step="1">
                                         <span class="input-group-text modifier" id="dexterity-mod">+0</span>
                                     </div>
                                 </div>
@@ -101,7 +101,7 @@
                                     <label for="constitution" class="form-label">Constitution</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-heart"></i></span>
-                                        <input type="number" class="form-control attribute-field" id="constitution" name="constitution" value="{{ character.constitution if character else 10 }}" min="1" max="20" readonly>
+                                        <input type="number" class="form-control attribute-field" id="constitution" name="constitution" value="{{ character.constitution if character else 10 }}" min="8" max="18" step="1">
                                         <span class="input-group-text modifier" id="constitution-mod">+0</span>
                                     </div>
                                 </div>
@@ -109,7 +109,7 @@
                                     <label for="intelligence" class="form-label">Intelligence</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-lightbulb"></i></span>
-                                        <input type="number" class="form-control attribute-field" id="intelligence" name="intelligence" value="{{ character.intelligence if character else 10 }}" min="1" max="20" readonly>
+                                        <input type="number" class="form-control attribute-field" id="intelligence" name="intelligence" value="{{ character.intelligence if character else 10 }}" min="8" max="18" step="1">
                                         <span class="input-group-text modifier" id="intelligence-mod">+0</span>
                                     </div>
                                 </div>
@@ -117,7 +117,7 @@
                                     <label for="wisdom" class="form-label">Wisdom</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-book"></i></span>
-                                        <input type="number" class="form-control attribute-field" id="wisdom" name="wisdom" value="{{ character.wisdom if character else 10 }}" min="1" max="20" readonly>
+                                        <input type="number" class="form-control attribute-field" id="wisdom" name="wisdom" value="{{ character.wisdom if character else 10 }}" min="8" max="18" step="1">
                                         <span class="input-group-text modifier" id="wisdom-mod">+0</span>
                                     </div>
                                 </div>
@@ -125,7 +125,7 @@
                                     <label for="charisma" class="form-label">Charisma</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-chat"></i></span>
-                                        <input type="number" class="form-control attribute-field" id="charisma" name="charisma" value="{{ character.charisma if character else 10 }}" min="1" max="20" readonly>
+                                        <input type="number" class="form-control attribute-field" id="charisma" name="charisma" value="{{ character.charisma if character else 10 }}" min="8" max="18" step="1">
                                         <span class="input-group-text modifier" id="charisma-mod">+0</span>
                                     </div>
                                 </div>
