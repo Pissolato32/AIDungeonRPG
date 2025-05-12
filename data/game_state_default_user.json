@@ -9,7 +9,11 @@
     "A festival is being prepared in the village square."
   ],
   "messages": [
-    "Welcome to the village of Eldermist! Your adventure begins now."
+    "Welcome to the village of Eldermist! Your adventure begins now.",
+    "You used Espada Longa, but nothing happens.",
+    "You used Armadura de Couro, but nothing happens.",
+    "You used Kit de Viagem, but nothing happens.",
+    "You used Cantil, but nothing happens."
   ],
   "combat": null
 }
