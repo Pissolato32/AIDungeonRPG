@@ -10,7 +10,8 @@
   ],
   "messages": [
     "Welcome to the village of Eldermist! Your adventure begins now.",
-    "You perform the action successfully."
+    "You perform the action successfully.",
+    "The NPC greets you warmly and shares some information."
   ],
   "combat": null
 }

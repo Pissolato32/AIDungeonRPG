@@ -215,5 +215,300 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elementos
+            const rollDiceBtn = document.getElementById('rollDiceBtn');
+            const rollGoldBtn = document.getElementById('rollGoldBtn');
+            const attrSwapButtons = document.querySelectorAll('.attr-swap');
+            const attributeFields = document.querySelectorAll('.attribute-field');
+            const description = document.getElementById('description');
+            const characterClass = document.getElementById('class');
+            const race = document.getElementById('race');
+            const inventoryList = document.getElementById('inventory-list');
+            const inventoryField = document.getElementById('inventory');
+            
+            // Estado
+            let selectedAttributes = [];
+            let inventory = [];
+            
+            // Atualizar modificadores de atributo
+            function updateModifiers() {
+                attributeFields.forEach(field => {
+                    const attrValue = parseInt(field.value);
+                    const modifier = Math.floor((attrValue - 10) / 2);
+                    const modifierElement = document.getElementById(`${field.id}-mod`);
+                    if (modifierElement) {
+                        modifierElement.textContent = modifier >= 0 ? `+${modifier}` : modifier;
+                    }
+                });
+            }
+            
+            // Atualizar HP e Stamina com base nos atributos
+            function updateHpAndStamina() {
+                const constitution = parseInt(document.getElementById('constitution').value);
+                const strength = parseInt(document.getElementById('strength').value);
+                const classValue = document.getElementById('class').value;
+                
+                const conModifier = Math.floor((constitution - 10) / 2);
+                const strModifier = Math.floor((strength - 10) / 2);
+                
+                // HP base por classe
+                let baseHp = 10;
+                if (classValue === 'Warrior') baseHp = 15;
+                if (classValue === 'Barbarian') baseHp = 18;
+                if (classValue === 'Mage') baseHp = 8;
+                if (classValue === 'Rogue') baseHp = 10;
+                if (classValue === 'Cleric') baseHp = 12;
+                if (classValue === 'Ranger') baseHp = 12;
+                
+                // Stamina base por classe
+                let baseStamina = 8;
+                if (classValue === 'Warrior') baseStamina = 10;
+                if (classValue === 'Barbarian') baseStamina = 12;
+                if (classValue === 'Mage') baseStamina = 6;
+                if (classValue === 'Rogue') baseStamina = 12;
+                if (classValue === 'Cleric') baseStamina = 8;
+                if (classValue === 'Ranger') baseStamina = 10;
+                
+                // Calcular HP e Stamina
+                const maxHp = baseHp + (conModifier * 2);
+                const maxStamina = baseStamina + strModifier + conModifier;
+                
+                // Atualizar campos
+                document.getElementById('max_hp').value = maxHp;
+                document.getElementById('current_hp').value = maxHp;
+                document.getElementById('max_stamina').value = maxStamina;
+                document.getElementById('current_stamina').value = maxStamina;
+            }
+            
+            // Rolar atributos
+            function rollAttributes() {
+                // Habilitar botões de swap
+                attrSwapButtons.forEach(btn => {
+                    btn.disabled = false;
+                });
+                
+                // Rolar 4d6, descartar o menor resultado para cada atributo
+                attributeFields.forEach(field => {
+                    let rolls = [];
+                    for (let i = 0; i < 4; i++) {
+                        rolls.push(Math.floor(Math.random() * 6) + 1);
+                    }
+                    
+                    // Ordenar e remover o menor valor
+                    rolls.sort((a, b) => a - b);
+                    rolls.shift();
+                    
+                    // Somar os 3 maiores valores
+                    const total = rolls.reduce((sum, roll) => sum + roll, 0);
+                    field.value = total;
+                });
+                
+                // Atualizar modificadores e HP/Stamina
+                updateModifiers();
+                updateHpAndStamina();
+                generateInventory();
+            }
+            
+            // Rolar ouro
+            function rollGold() {
+                // 3d6 * 10 ouro inicial
+                const gold = (Math.floor(Math.random() * 6) + 1 + 
+                              Math.floor(Math.random() * 6) + 1 + 
+                              Math.floor(Math.random() * 6) + 1) * 10;
+                document.getElementById('gold').value = gold;
+            }
+            
+            // Manipular seleção de atributos para troca
+            function handleAttributeSelect(event) {
+                const attribute = event.target.dataset.attr;
+                
+                if (selectedAttributes.includes(attribute)) {
+                    // Desselecionar
+                    selectedAttributes = selectedAttributes.filter(attr => attr !== attribute);
+                    event.target.classList.remove('btn-primary');
+                    event.target.classList.add('btn-outline-secondary');
+                } else {
+                    // Selecionar
+                    selectedAttributes.push(attribute);
+                    event.target.classList.remove('btn-outline-secondary');
+                    event.target.classList.add('btn-primary');
+                    
+                    // Se tiver dois atributos selecionados, fazer a troca
+                    if (selectedAttributes.length === 2) {
+                        swapAttributes();
+                    }
+                }
+            }
+            
+            // Trocar valores de atributos
+            function swapAttributes() {
+                if (selectedAttributes.length !== 2) return;
+                
+                const attr1 = selectedAttributes[0];
+                const attr2 = selectedAttributes[1];
+                
+                const value1 = document.getElementById(attr1).value;
+                const value2 = document.getElementById(attr2).value;
+                
+                document.getElementById(attr1).value = value2;
+                document.getElementById(attr2).value = value1;
+                
+                // Resetar seleção
+                attrSwapButtons.forEach(btn => {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-secondary');
+                });
+                selectedAttributes = [];
+                
+                // Atualizar modificadores e HP/Stamina
+                updateModifiers();
+                updateHpAndStamina();
+            }
+            
+            // Gerar inventário inicial baseado no personagem
+            function generateInventory() {
+                const classValue = document.getElementById('class').value;
+                const raceValue = document.getElementById('race').value;
+                const strength = parseInt(document.getElementById('strength').value);
+                const dexterity = parseInt(document.getElementById('dexterity').value);
+                const intelligence = parseInt(document.getElementById('intelligence').value);
+                const descriptionText = description.value;
+                
+                // Resetar inventário
+                inventory = [];
+                
+                // Itens básicos por classe
+                if (classValue === 'Warrior') {
+                    inventory.push('Espada Longa', 'Escudo de Madeira', 'Armadura de Couro');
+                } else if (classValue === 'Mage') {
+                    inventory.push('Cajado de Aprendiz', 'Grimório Básico', 'Robe de Mago');
+                } else if (classValue === 'Rogue') {
+                    inventory.push('Adaga', 'Ferramentas de Ladrão', 'Capa Escura');
+                } else if (classValue === 'Cleric') {
+                    inventory.push('Maça', 'Símbolo Sagrado', 'Armadura Leve');
+                } else if (classValue === 'Ranger') {
+                    inventory.push('Arco Curto', 'Aljava com 20 Flechas', 'Armadura de Couro');
+                }
+                
+                // Itens adicionais por raça
+                if (raceValue === 'Human') {
+                    inventory.push('Kit de Viagem', 'Cantil');
+                } else if (raceValue === 'Elf') {
+                    inventory.push('Pão Élfico', 'Capa Élfica');
+                } else if (raceValue === 'Dwarf') {
+                    inventory.push('Cerveja Anã', 'Picareta');
+                } else if (raceValue === 'Halfling') {
+                    inventory.push('Cozido em Pote', 'Cachimbo');
+                } else if (raceValue === 'Orc') {
+                    inventory.push('Amuleto Tribal', 'Dente de Troféu');
+                }
+                
+                // Itens baseados em atributos altos
+                if (strength >= 14) {
+                    inventory.push('Machado de Batalha');
+                }
+                if (dexterity >= 14) {
+                    inventory.push('Kit de Armadilhas');
+                }
+                if (intelligence >= 14) {
+                    inventory.push('Pergaminho Mágico');
+                }
+                
+                // Poções básicas
+                inventory.push('Poção de Vida Pequena', 'Poção de Stamina Pequena');
+                
+                // Atualizar inventário com base na descrição
+                if (descriptionText) {
+                    let keywords = {
+                        'guerreiro': 'Espada Afiada',
+                        'nobre': 'Anel da Família',
+                        'fazendeiro': 'Enxada Robusta',
+                        'caçador': 'Faca de Caça',
+                        'montanha': 'Corda de Escalada',
+                        'floresta': 'Bússola',
+                        'mágico': 'Varinha da Sorte',
+                        'curandeiro': 'Ervas Medicinais',
+                        'artesão': 'Ferramentas de Artesão',
+                        'mercenário': 'Medalha de Veterano',
+                        'fogo': 'Pederneira',
+                        'água': 'Frasco de Água Benta',
+                        'comerciante': 'Balança de Comerciante',
+                        'sobrevivente': 'Kit de Sobrevivência',
+                        'antigo': 'Relíquia de Família',
+                        'academia': 'Livro de Conhecimento',
+                        'templo': 'Amuleto Religioso',
+                        'instrumento': 'Flauta de Madeira',
+                        'música': 'Ocarina',
+                        'arco': 'Arco Longo',
+                        'machado': 'Machado de Lenhador',
+                        'facas': 'Conjunto de Facas',
+                        'oculto': 'Amuleto Misterioso',
+                        'guerra': 'Insígnia Militar'
+                    };
+                    
+                    const lowerDesc = descriptionText.toLowerCase();
+                    for (const [keyword, item] of Object.entries(keywords)) {
+                        if (lowerDesc.includes(keyword) && !inventory.includes(item)) {
+                            inventory.push(item);
+                            // Limitar a 3 itens baseados em descrição
+                            if (inventory.length > 10) break;
+                        }
+                    }
+                }
+                
+                // Atualizar lista visual
+                updateInventoryDisplay();
+                
+                // Atualizar o campo oculto
+                inventoryField.value = inventory.join(',');
+            }
+            
+            // Atualizar display do inventário
+            function updateInventoryDisplay() {
+                inventoryList.innerHTML = '';
+                
+                if (inventory.length === 0) {
+                    inventoryList.innerHTML = '<li class="list-group-item bg-dark text-light border-secondary">No items</li>';
+                    return;
+                }
+                
+                inventory.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item bg-dark text-light border-secondary';
+                    li.innerHTML = `<i class="bi bi-box me-2"></i>${item}`;
+                    inventoryList.appendChild(li);
+                });
+            }
+            
+            // Inicializar
+            updateModifiers();
+            
+            // Event listeners
+            rollDiceBtn.addEventListener('click', rollAttributes);
+            rollGoldBtn.addEventListener('click', rollGold);
+            
+            attrSwapButtons.forEach(btn => {
+                btn.addEventListener('click', handleAttributeSelect);
+            });
+            
+            // Atualizar inventário quando a classe, raça ou descrição mudar
+            characterClass.addEventListener('change', function() {
+                updateHpAndStamina();
+                generateInventory();
+            });
+            race.addEventListener('change', generateInventory);
+            description.addEventListener('input', generateInventory);
+            
+            // Inicializar rolagem inicial se não for edição
+            if (!document.getElementById('strength').value || document.getElementById('strength').value == '10') {
+                rollAttributes();
+                rollGold();
+                generateInventory();
+            }
+        });
+    </script>
 </body>
 </html>
