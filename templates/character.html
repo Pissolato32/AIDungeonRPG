@@ -21,7 +21,7 @@
                         <i class="bi bi-house-door me-1"></i> Home
                     </a>
                 </div>
-                
+
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
@@ -32,7 +32,7 @@
                         {% endfor %}
                     {% endif %}
                 {% endwith %}
-                
+
                 <div class="card bg-dark mb-4">
                     <div class="card-body">
                         <form action="{{ url_for('character') }}" method="post">
@@ -64,13 +64,13 @@
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-4">
                                 <label for="description" class="form-label">Character Description</label>
                                 <textarea class="form-control" id="description" name="description" rows="3" placeholder="Describe your character's appearance, personality, and background...">{{ character.description if character else '' }}</textarea>
                                 <small class="text-muted">Your character's description will influence their starting equipment.</small>
                             </div>
-                            
+
                             <h4 class="mb-3"><i class="bi bi-bar-chart-line me-2"></i>Attributes</h4>
                             <div class="mb-3">
                                 <button type="button" id="rollDiceBtn" class="btn btn-outline-primary mb-3">
@@ -130,7 +130,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <h4 class="mb-3"><i class="bi bi-shield me-2"></i>Health & Stamina</h4>
                             <div class="alert alert-info">
                                 <i class="bi bi-info-circle-fill me-2"></i>
@@ -154,7 +154,7 @@
                                     <input type="number" class="form-control" id="current_stamina" name="current_stamina" value="{{ character.current_stamina if character else 10 }}" readonly>
                                 </div>
                             </div>
-                            
+
                             <h4 class="mb-3"><i class="bi bi-info-circle me-2"></i>Additional Info</h4>
                             <div class="alert alert-info">
                                 <i class="bi bi-info-circle-fill me-2"></i>
@@ -180,7 +180,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-4">
                                 <label for="inventory" class="form-label">Inventory</label>
                                 <div class="alert alert-info">
@@ -192,7 +192,7 @@
                                 </ul>
                                 <input type="hidden" id="inventory" name="inventory" value="{{ ','.join(character.inventory) if character and character.inventory else '' }}">
                             </div>
-                            
+
                             <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-primary btn-lg">
                                     {% if character %}Save Changes{% else %}Create Character{% endif %}
@@ -207,9 +207,9 @@
             </div>
         </div>
     </div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Elementos
@@ -222,11 +222,11 @@
             const race = document.getElementById('race');
             const inventoryList = document.getElementById('inventory-list');
             const inventoryField = document.getElementById('inventory');
-            
+
             // Estado
             let selectedAttributes = [];
             let inventory = [];
-            
+
             // Atualizar modificadores de atributo
             function updateModifiers() {
                 attributeFields.forEach(field => {
@@ -238,16 +238,16 @@
                     }
                 });
             }
-            
+
             // Atualizar HP e Stamina com base nos atributos
             function updateHpAndStamina() {
                 const constitution = parseInt(document.getElementById('constitution').value);
                 const strength = parseInt(document.getElementById('strength').value);
                 const classValue = document.getElementById('class').value;
-                
+
                 const conModifier = Math.floor((constitution - 10) / 2);
                 const strModifier = Math.floor((strength - 10) / 2);
-                
+
                 // HP base por classe
                 let baseHp = 10;
                 if (classValue === 'Warrior') baseHp = 15;
@@ -256,7 +256,7 @@
                 if (classValue === 'Rogue') baseHp = 10;
                 if (classValue === 'Cleric') baseHp = 12;
                 if (classValue === 'Ranger') baseHp = 12;
-                
+
                 // Stamina base por classe
                 let baseStamina = 8;
                 if (classValue === 'Warrior') baseStamina = 10;
@@ -265,49 +265,48 @@
                 if (classValue === 'Rogue') baseStamina = 12;
                 if (classValue === 'Cleric') baseStamina = 8;
                 if (classValue === 'Ranger') baseStamina = 10;
-                
+
                 // Calcular HP e Stamina
                 const maxHp = baseHp + (conModifier * 2);
                 const maxStamina = baseStamina + strModifier + conModifier;
-                
+
                 // Atualizar campos
                 document.getElementById('max_hp').value = maxHp;
                 document.getElementById('current_hp').value = maxHp;
                 document.getElementById('max_stamina').value = maxStamina;
                 document.getElementById('current_stamina').value = maxStamina;
             }
-            
+
             let rollCount = 3;
             const maxTotalPoints = 75;
-            
+
             // Rolar atributos
             function rollAttributes() {
-                if (rollCount <= 0) return;
-                
-                rollCount--;
-                document.getElementById('remainingRolls').textContent = rollCount;
-                if (rollCount === 0) {
-                    document.getElementById('rollDiceBtn').disabled = true;
-                }
-                
-                // Rolar 4d6, descartar o menor resultado para cada atributo
-                attributeFields.forEach(field => {
-                    let rolls = [];
-                    for (let i = 0; i < 4; i++) {
-                        rolls.push(Math.floor(Math.random() * 6) + 1);
-                    }
-                    
-                    // Ordenar e remover o menor valor
-                    rolls.sort((a, b) => a - b);
-                    rolls.shift();
-                    
-                    // Somar os 3 maiores valores
-                    const total = rolls.reduce((sum, roll) => sum + roll, 0);
-                    field.value = total;
+                const attributes = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+                let totalPoints = 75;
+
+                // Reset attributes to minimum value (8) and deduct from totalPoints
+                attributes.forEach(attr => {
+                    document.getElementById(attr).value = 8;
+                    totalPoints -= 8;
                 });
-                
-                updateTotalPoints();
+
+                // Randomly distribute remaining points
+                while (totalPoints > 0) {
+                    for (let i = 0; i < attributes.length; i++) {
+                        if (totalPoints <= 0) break;
+                        const attr = attributes[i];
+                        let currentValue = parseInt(document.getElementById(attr).value);
+                        if (currentValue < 18) {
+                            document.getElementById(attr).value = currentValue + 1;
+                            totalPoints--;
+                        }
+                    }
+                }
+
+                // Update modifiers and total points display
                 updateModifiers();
+                document.getElementById('totalPoints').textContent = 75 - totalPoints;
                 updateHpAndStamina();
                 generateInventory();
             }
@@ -323,22 +322,22 @@
                 field.addEventListener('change', function(e) {
                     const newValue = parseInt(e.target.value);
                     const currentTotal = updateTotalPoints();
-                    
+
                     if (currentTotal > maxTotalPoints) {
                         e.target.value = newValue - (currentTotal - maxTotalPoints);
                         updateTotalPoints();
                     }
-                    
+
                     updateModifiers();
                     updateHpAndStamina();
                 });
             });
-            
+
             // Auto-roll on first load
             if (!document.getElementById('strength').value || document.getElementById('strength').value == '10') {
                 rollAttributes();
             }
-            
+
             // Rolar ouro
             function rollGold() {
                 // 3d6 * 10 ouro inicial
@@ -347,11 +346,11 @@
                               Math.floor(Math.random() * 6) + 1) * 10;
                 document.getElementById('gold').value = gold;
             }
-            
+
             // Manipular seleção de atributos para troca
             function handleAttributeSelect(event) {
                 const attribute = event.target.dataset.attr;
-                
+
                 if (selectedAttributes.includes(attribute)) {
                     // Desselecionar
                     selectedAttributes = selectedAttributes.filter(attr => attr !== attribute);
@@ -362,39 +361,39 @@
                     selectedAttributes.push(attribute);
                     event.target.classList.remove('btn-outline-secondary');
                     event.target.classList.add('btn-primary');
-                    
+
                     // Se tiver dois atributos selecionados, fazer a troca
                     if (selectedAttributes.length === 2) {
                         swapAttributes();
                     }
                 }
             }
-            
+
             // Trocar valores de atributos
             function swapAttributes() {
                 if (selectedAttributes.length !== 2) return;
-                
+
                 const attr1 = selectedAttributes[0];
                 const attr2 = selectedAttributes[1];
-                
+
                 const value1 = document.getElementById(attr1).value;
                 const value2 = document.getElementById(attr2).value;
-                
+
                 document.getElementById(attr1).value = value2;
                 document.getElementById(attr2).value = value1;
-                
+
                 // Resetar seleção
                 attrSwapButtons.forEach(btn => {
                     btn.classList.remove('btn-primary');
                     btn.classList.add('btn-outline-secondary');
                 });
                 selectedAttributes = [];
-                
+
                 // Atualizar modificadores e HP/Stamina
                 updateModifiers();
                 updateHpAndStamina();
             }
-            
+
             // Gerar inventário inicial baseado no personagem
             function generateInventory() {
                 const classValue = document.getElementById('class').value;
@@ -403,10 +402,10 @@
                 const dexterity = parseInt(document.getElementById('dexterity').value);
                 const intelligence = parseInt(document.getElementById('intelligence').value);
                 const descriptionText = description.value;
-                
+
                 // Resetar inventário
                 inventory = [];
-                
+
                 // Itens básicos por classe
                 if (classValue === 'Warrior') {
                     inventory.push('Espada Longa', 'Escudo de Madeira', 'Armadura de Couro');
@@ -419,7 +418,7 @@
                 } else if (classValue === 'Ranger') {
                     inventory.push('Arco Curto', 'Aljava com 20 Flechas', 'Armadura de Couro');
                 }
-                
+
                 // Itens adicionais por raça
                 if (raceValue === 'Human') {
                     inventory.push('Kit de Viagem', 'Cantil');
@@ -432,7 +431,7 @@
                 } else if (raceValue === 'Orc') {
                     inventory.push('Amuleto Tribal', 'Dente de Troféu');
                 }
-                
+
                 // Itens baseados em atributos altos
                 if (strength >= 14) {
                     inventory.push('Machado de Batalha');
@@ -443,10 +442,10 @@
                 if (intelligence >= 14) {
                     inventory.push('Pergaminho Mágico');
                 }
-                
+
                 // Poções básicas
                 inventory.push('Poção de Vida Pequena', 'Poção de Stamina Pequena');
-                
+
                 // Atualizar inventário com base na descrição
                 if (descriptionText) {
                     let keywords = {
@@ -475,7 +474,7 @@
                         'oculto': 'Amuleto Misterioso',
                         'guerra': 'Insígnia Militar'
                     };
-                    
+
                     const lowerDesc = descriptionText.toLowerCase();
                     for (const [keyword, item] of Object.entries(keywords)) {
                         if (lowerDesc.includes(keyword) && !inventory.includes(item)) {
@@ -485,23 +484,23 @@
                         }
                     }
                 }
-                
+
                 // Atualizar lista visual
                 updateInventoryDisplay();
-                
+
                 // Atualizar o campo oculto
                 inventoryField.value = inventory.join(',');
             }
-            
+
             // Atualizar display do inventário
             function updateInventoryDisplay() {
                 inventoryList.innerHTML = '';
-                
+
                 if (inventory.length === 0) {
                     inventoryList.innerHTML = '<li class="list-group-item bg-dark text-light border-secondary">No items</li>';
                     return;
                 }
-                
+
                 inventory.forEach(item => {
                     const li = document.createElement('li');
                     li.className = 'list-group-item bg-dark text-light border-secondary';
@@ -509,18 +508,18 @@
                     inventoryList.appendChild(li);
                 });
             }
-            
+
             // Inicializar
             updateModifiers();
-            
+
             // Event listeners
             rollDiceBtn.addEventListener('click', rollAttributes);
             rollGoldBtn.addEventListener('click', rollGold);
-            
+
             attrSwapButtons.forEach(btn => {
                 btn.addEventListener('click', handleAttributeSelect);
             });
-            
+
             // Atualizar inventário quando a classe, raça ou descrição mudar
             characterClass.addEventListener('change', function() {
                 updateHpAndStamina();
@@ -528,7 +527,7 @@
             });
             race.addEventListener('change', generateInventory);
             description.addEventListener('input', generateInventory);
-            
+
             // Inicializar rolagem inicial se não for edição
             if (!document.getElementById('strength').value || document.getElementById('strength').value == '10') {
                 rollAttributes();
