@@ -231,10 +231,16 @@
             function updateModifiers() {
                 attributeFields.forEach(field => {
                     const attrValue = parseInt(field.value);
-                    const modifier = Math.floor((attrValue - 10) / 2);
+                    let modifier = 0;
+                    
+                    // Novo sistema: +1 apenas após nível 12
+                    if (attrValue > 12) {
+                        modifier = Math.floor((attrValue - 12) / 2);
+                    }
+                    
                     const modifierElement = document.getElementById(`${field.id}-mod`);
                     if (modifierElement) {
-                        modifierElement.textContent = modifier >= 0 ? `+${modifier}` : modifier;
+                        modifierElement.textContent = modifier > 0 ? `+${modifier}` : (modifier < 0 ? modifier : '+0');
                     }
                 });
             }
@@ -296,8 +302,24 @@
                 }
 
                 const attributes = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
-                const totalPoints = 75;
-                let remainingPoints = totalPoints;
+                let pointsToDistribute = 75;
+
+                // Primeiro define todos os atributos como 8
+                attributes.forEach(attr => {
+                    document.getElementById(attr).value = 8;
+                    pointsToDistribute -= 8;
+                });
+
+                // Distribui os pontos restantes aleatoriamente
+                while (pointsToDistribute > 0) {
+                    const randomAttr = attributes[Math.floor(Math.random() * attributes.length)];
+                    const currentValue = parseInt(document.getElementById(randomAttr).value);
+                    
+                    if (currentValue < 18) {
+                        document.getElementById(randomAttr).value = currentValue + 1;
+                        pointsToDistribute--;
+                    }
+                }
                 
                 // Primeiro define todos os atributos como 8
                 attributes.forEach(attr => {
