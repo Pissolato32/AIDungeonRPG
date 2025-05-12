@@ -283,24 +283,23 @@
             // Rolar atributos
             function rollAttributes() {
                 const attributes = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
-                let totalPoints = 75;
-
-                // Reset attributes to minimum value (8) and deduct from totalPoints
+                const totalPoints = 75;
+                let remainingPoints = totalPoints;
+                
+                // Primeiro define todos os atributos como 8
                 attributes.forEach(attr => {
                     document.getElementById(attr).value = 8;
-                    totalPoints -= 8;
+                    remainingPoints -= 8;
                 });
-
-                // Randomly distribute remaining points
-                while (totalPoints > 0) {
-                    for (let i = 0; i < attributes.length; i++) {
-                        if (totalPoints <= 0) break;
-                        const attr = attributes[i];
-                        let currentValue = parseInt(document.getElementById(attr).value);
-                        if (currentValue < 18) {
-                            document.getElementById(attr).value = currentValue + 1;
-                            totalPoints--;
-                        }
+                
+                // Distribui os pontos restantes aleatoriamente
+                while (remainingPoints > 0) {
+                    const randomAttr = attributes[Math.floor(Math.random() * attributes.length)];
+                    const currentValue = parseInt(document.getElementById(randomAttr).value);
+                    
+                    if (currentValue < 18) {
+                        document.getElementById(randomAttr).value = currentValue + 1;
+                        remainingPoints--;
                     }
                 }
 
