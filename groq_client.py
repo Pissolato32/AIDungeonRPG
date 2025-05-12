@@ -13,7 +13,7 @@ class GroqClient:
         """Initialize the Groq client with API key from environment"""
         self.api_key = os.environ.get("GROQ_API_KEY", "")
         self.api_url = "https://api.groq.com/openai/v1/chat/completions"
-        self.model = "mixtral-8x7b-32768"  # Updated to a model available in Groq
+        self.model = "meta-llama/llama-4-scout-17b-16e-instruct"  # Using Llama 4 Scout model
         self.conversation_history = {}  # Store conversation history per character
     
     def generate_response(self, prompt, character_id="default"):
