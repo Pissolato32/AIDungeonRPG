@@ -74,12 +74,10 @@
                             <h4 class="mb-3"><i class="bi bi-bar-chart-line me-2"></i>Attributes</h4>
                             <div class="mb-3">
                                 <button type="button" id="rollDiceBtn" class="btn btn-outline-primary mb-3">
-                                    <i class="bi bi-dice-6 me-1"></i> Roll Attributes
+                                    <i class="bi bi-dice-6 me-1"></i> Re-roll (<span id="remainingRolls">3</span>)
                                 </button>
-                                <div id="rolled-values-container" class="mb-3" style="display: none;">
-                                    <h5>Valores Rolados:</h5>
-                                    <div id="rolled-values" class="mb-2 d-flex flex-wrap gap-2"></div>
-                                    <p class="text-muted small">Clique em um valor rolado e depois em um atributo para alocar.</p>
+                                <div class="mb-2">
+                                    <small class="text-muted">Total Points: <span id="totalPoints">0</span>/75</small>
                                 </div>
                             </div>
                             <div class="row mb-4">
@@ -87,7 +85,7 @@
                                     <label for="strength" class="form-label">Strength</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-muscle"></i></span>
-                                        <input type="number" class="form-control attribute-field" id="strength" name="strength" value="{{ character.strength if character else 10 }}" min="1" max="20" readonly>
+                                        <input type="number" class="form-control attribute-field" id="strength" name="strength" value="{{ character.strength if character else 10 }}" min="8" max="18" step="1">
                                         <span class="input-group-text modifier" id="strength-mod">+0</span>
                                     </div>
                                 </div>
@@ -279,12 +277,18 @@
                 document.getElementById('current_stamina').value = maxStamina;
             }
             
+            let rollCount = 3;
+            const maxTotalPoints = 75;
+            
             // Rolar atributos
             function rollAttributes() {
-                // Habilitar botões de swap
-                attrSwapButtons.forEach(btn => {
-                    btn.disabled = false;
-                });
+                if (rollCount <= 0) return;
+                
+                rollCount--;
+                document.getElementById('remainingRolls').textContent = rollCount;
+                if (rollCount === 0) {
+                    document.getElementById('rollDiceBtn').disabled = true;
+                }
                 
                 // Rolar 4d6, descartar o menor resultado para cada atributo
                 attributeFields.forEach(field => {
@@ -302,10 +306,37 @@
                     field.value = total;
                 });
                 
-                // Atualizar modificadores e HP/Stamina
+                updateTotalPoints();
                 updateModifiers();
                 updateHpAndStamina();
                 generateInventory();
+            }
+
+            function updateTotalPoints() {
+                const total = Array.from(attributeFields).reduce((sum, field) => sum + parseInt(field.value), 0);
+                document.getElementById('totalPoints').textContent = total;
+                return total;
+            }
+
+            // Adicionar listeners para os inputs de atributos
+            attributeFields.forEach(field => {
+                field.addEventListener('change', function(e) {
+                    const newValue = parseInt(e.target.value);
+                    const currentTotal = updateTotalPoints();
+                    
+                    if (currentTotal > maxTotalPoints) {
+                        e.target.value = newValue - (currentTotal - maxTotalPoints);
+                        updateTotalPoints();
+                    }
+                    
+                    updateModifiers();
+                    updateHpAndStamina();
+                });
+            });
+            
+            // Auto-roll on first load
+            if (!document.getElementById('strength').value || document.getElementById('strength').value == '10') {
+                rollAttributes();
             }
             
             // Rolar ouro
