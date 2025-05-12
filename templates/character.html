@@ -76,14 +76,10 @@
                                 <button type="button" id="rollDiceBtn" class="btn btn-outline-primary mb-3">
                                     <i class="bi bi-dice-6 me-1"></i> Roll Attributes
                                 </button>
-                                <p class="text-muted mb-2">Select two attributes to swap values:</p>
-                                <div class="btn-group mb-3" role="group" aria-label="Attribute swap buttons">
-                                    <button type="button" class="btn btn-outline-secondary attr-swap" data-attr="strength" disabled>STR</button>
-                                    <button type="button" class="btn btn-outline-secondary attr-swap" data-attr="dexterity" disabled>DEX</button>
-                                    <button type="button" class="btn btn-outline-secondary attr-swap" data-attr="constitution" disabled>CON</button>
-                                    <button type="button" class="btn btn-outline-secondary attr-swap" data-attr="intelligence" disabled>INT</button>
-                                    <button type="button" class="btn btn-outline-secondary attr-swap" data-attr="wisdom" disabled>WIS</button>
-                                    <button type="button" class="btn btn-outline-secondary attr-swap" data-attr="charisma" disabled>CHA</button>
+                                <div id="rolled-values-container" class="mb-3" style="display: none;">
+                                    <h5>Valores Rolados:</h5>
+                                    <div id="rolled-values" class="mb-2 d-flex flex-wrap gap-2"></div>
+                                    <p class="text-muted small">Clique em um valor rolado e depois em um atributo para alocar.</p>
                                 </div>
                             </div>
                             <div class="row mb-4">
