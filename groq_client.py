@@ -8,69 +8,73 @@ logger = logging.getLogger(__name__)
 
 class GroqClient:
     """Client for interacting with the Groq API"""
-    
+
     def __init__(self):
         """Initialize the Groq client with API key from environment"""
         self.api_key = os.environ.get("GROQ_API_KEY", "")
         self.api_url = "https://api.groq.com/openai/v1/chat/completions"
         self.model = "meta-llama/llama-4-scout-17b-16e-instruct"  # Using Llama 4 Scout model
         self.conversation_history = {}  # Store conversation history per character
-    
+        self.system_message = {
+            "role": "system",
+            "content": "Você é um assistente de RPG que gera conteúdo narrativo em Português Brasileiro. Responda apenas no formato solicitado. Seja descritivo, imersivo e criativo em suas respostas."
+        }
+
     def generate_response(self, prompt, character_id="default"):
         """Generate a response using the Groq API"""
         if not self.api_key:
             logger.warning("GROQ_API_KEY not set. Using fallback response.")
             return self._generate_fallback_response(prompt)
-        
+
         # Initialize history for this character if not exists
         if character_id not in self.conversation_history:
-            self.conversation_history[character_id] = []
-        
+            self.conversation_history[character_id] = [self.system_message]
+
         # Add prompt to history
         self.conversation_history[character_id].append({
             "role": "user",
             "content": prompt
         })
-        
+
         # Keep history limited to last 10 messages
         if len(self.conversation_history[character_id]) > 10:
             self.conversation_history[character_id] = self.conversation_history[character_id][-10:]
-        
+
         try:
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
-            
+
             data = {
                 "model": self.model,
                 "messages": self.conversation_history[character_id],
                 "temperature": 0.7,
                 "max_tokens": 1024
             }
-            
+
             response = requests.post(self.api_url, headers=headers, json=data)
             response.raise_for_status()
-            
+
             response_data = response.json()
             if "choices" in response_data and len(response_data["choices"]) > 0:
                 result = response_data["choices"][0]["message"]["content"]
-                
+
                 # Add response to history
                 self.conversation_history[character_id].append({
                     "role": "assistant",
                     "content": result
                 })
-                
+
                 return result
             else:
                 logger.error(f"Unexpected response format: {response_data}")
                 return self._generate_fallback_response(prompt)
-                
+
         except Exception as e:
             logger.error(f"Error generating response from Groq API: {str(e)}")
             return self._generate_fallback_response(prompt)
-    
+
     def _generate_fallback_response(self, prompt):
         """Generate a fallback response when API is unavailable"""
         # Check if prompt is asking for JSON
