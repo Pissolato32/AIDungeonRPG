@@ -16,40 +16,40 @@ logger = logging.getLogger(__name__)
 class GameStateManager:
     """
     Manages game state creation and loading.
-    
+
     Features:
     - Initial game state creation
     - Language-specific game state loading
     - Game state initialization
     """
-    
+
     @staticmethod
     def create_initial_game_state(language: str) -> GameState:
         """
         Create an initial game state for a new character.
-        
+
         Args:
             language: The language to use for the game state
-            
+
         Returns:
             GameState: A newly initialized game state
         """
         game_state = GameState()
-        
+
         # Set initial location with unique name and coordinates
         game_state.current_location = "Aldeia de Rivenbrook"
         game_state.location_id = "village_center"
         game_state.coordinates = {"x": 0, "y": 0, "z": 0}
         game_state.scene_description = "Você está no centro de uma pequena aldeia chamada Rivenbrook. Há uma taverna ao norte chamada 'O Javali Dourado', uma ferraria a leste, e o portão da aldeia ao sul."
-        
+
         # Set NPCs and environmental elements
         game_state.npcs_present = ["Ancião da Aldeia", "Mercador Viajante"]
         game_state.events = ["Uma brisa suave sopra pela aldeia."]
-        
+
         # Set welcome message and language
         game_state.messages = ["Bem-vindo a Rivenbrook! Você pode explorar usando as ações abaixo."]
         game_state.language = language
-        
+
         # Initialize world map with the starting location
         game_state.world_map = {
             "village_center": {
@@ -84,7 +84,7 @@ class GameStateManager:
                 }
             }
         }
-        
+
         # Mark the starting location as visited
         game_state.visited_locations = {
             "village_center": {
@@ -95,30 +95,30 @@ class GameStateManager:
                 "events_seen": game_state.events.copy()
             }
         }
-        
+
         logger.info(f"Created initial game state with language: {language}")
         return game_state
-    
+
     @staticmethod
     def load_game_state_with_language(game_engine, user_id: str, language: str) -> Optional[GameState]:
         """
         Load game state for a user and set the current language.
-        
+
         Args:
             game_engine: Game engine instance
             user_id: The user's unique identifier
             language: Language to set
-            
+
         Returns:
             GameState object with language set from session
         """
         game_state = game_engine.load_game_state(user_id)
-        
+
         if game_state:
             # Update language
             game_state.language = language or TranslationManager.DEFAULT_LANGUAGE
             logger.debug(f"Loaded game state for user {user_id[:8]}... with language: {game_state.language}")
         else:
             logger.warning(f"No game state found for user {user_id[:8]}...")
-            
+
         return game_state

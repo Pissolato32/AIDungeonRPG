@@ -58,16 +58,16 @@ FALLBACK_RESPONSES = {
 def generate_fallback_response(prompt: str) -> Dict[str, Any]:
     """
     Generate a fallback response when the API is unavailable.
-    
+
     Args:
         prompt: Original prompt
-        
+
     Returns:
         Fallback response
     """
     # Identify prompt type
     prompt_type = identify_prompt_type(prompt)
-    
+
     # Log with structured information
     logger.warning(
         "API fallback triggered",
@@ -77,7 +77,7 @@ def generate_fallback_response(prompt: str) -> Dict[str, Any]:
             "timestamp": datetime.now().isoformat()
         }
     )
-    
+
     # Return appropriate fallback response
     return FALLBACK_RESPONSES.get(prompt_type, FALLBACK_RESPONSES["default"])
 
@@ -85,18 +85,18 @@ def generate_fallback_response(prompt: str) -> Dict[str, Any]:
 def identify_prompt_type(prompt: str) -> str:
     """
     Identify the type of prompt to provide appropriate fallback responses.
-    
+
     Args:
         prompt: Original prompt text
-        
+
     Returns:
         String identifying the prompt type
     """
     prompt_lower = prompt.lower()
-    
+
     # Check for each type of prompt
     for prompt_type, keywords in PROMPT_TYPE_INDICATORS.items():
         if any(keyword in prompt_lower for keyword in keywords):
             return prompt_type
-    
+
     return "default"

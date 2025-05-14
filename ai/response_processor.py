@@ -14,20 +14,20 @@ logger = logging.getLogger(__name__)
 def process_ai_response(response_text: str) -> Union[Dict[str, Any], str]:
     """
     Process AI response text, attempting to extract JSON if present.
-    
+
     Args:
         response_text: Raw response text from AI
-        
+
     Returns:
         Extracted JSON as dictionary or original text if not JSON
     """
     try:
         # Try to extract JSON from the response
         json_data = extract_json_from_text(response_text)
-        
+
         if json_data:
             return json_data
-        
+
         # If no JSON found, return as message
         return {"success": True, "message": response_text}
     except Exception as e:
@@ -38,16 +38,16 @@ def process_ai_response(response_text: str) -> Union[Dict[str, Any], str]:
 def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
     """
     Extract JSON from text that might contain markdown code blocks or other text.
-    
+
     Args:
         text: Text that might contain JSON
-        
+
     Returns:
         Extracted JSON as dictionary or None if no valid JSON found
     """
     # Try different JSON extraction strategies
     json_data = None
-    
+
     # Strategy 1: Try to parse the entire text as JSON
     try:
         json_data = json.loads(text.strip())
@@ -55,7 +55,7 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
         return json_data
     except json.JSONDecodeError:
         pass
-    
+
     # Strategy 2: Look for JSON in code blocks
     try:
         # Extract content from markdown code blocks
@@ -69,7 +69,7 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
                         json_data = json.loads(json_text)
                         logger.debug("Successfully extracted JSON from ```json block")
                         return json_data
-                
+
                 # Handle generic ``` blocks that might contain JSON
                 parts = text.split("```")
                 if len(parts) > 1:
@@ -84,7 +84,7 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
                 logger.warning("Error extracting JSON from code blocks", extra={"error": str(e)})
     except Exception as e:
         logger.warning("Error in JSON extraction strategy 2", extra={"error": str(e)})
-    
+
     # Strategy 3: Look for JSON-like structures with { }
     try:
         # Find content between curly braces
@@ -107,17 +107,17 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
                             break
     except Exception as e:
         logger.warning("Error in JSON extraction strategy 3", extra={"error": str(e)})
-        
+
     # No valid JSON found
     return None
 
 def create_error_response(error_message: str) -> Dict[str, Any]:
     """
     Create a standardized error response.
-    
+
     Args:
         error_message: Error message to include
-        
+
     Returns:
         Error response dictionary
     """

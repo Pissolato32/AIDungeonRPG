@@ -20,7 +20,7 @@ def format_datetime(
     Args:
         dt_string: Date string in ISO format
         format_str: Desired output format
-        
+
     Returns:
         Formatted date
     """

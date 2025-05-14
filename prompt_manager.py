@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class PromptManager:
     """Manager for creating AI prompts based on game state and actions."""
-    
+
     @staticmethod
     def create_action_prompt(
         action: str,
@@ -26,14 +26,14 @@ class PromptManager:
     ) -> str:
         """
         Create a prompt for the AI based on the action.
-        
+
         Args:
             action: Type of action
             action_details: Additional details for the action
             character: Player character
             game_state: Current game state
             get_character_attribute: Function to safely get character attributes
-            
+
         Returns:
             Formatted prompt string
         """
@@ -41,14 +41,14 @@ class PromptManager:
         char_name = get_character_attribute(character, "name", "Unknown")
         char_class = get_character_attribute(character, "character_class", "Warrior")
         char_level = get_character_attribute(character, "level", 1)
-        
+
         # Format basic prompt - use simple strings for NPCs and events
         npc_names = game_state.npcs_present if game_state.npcs_present else []
         event_descriptions = game_state.events if hasattr(game_state, 'events') and game_state.events else []
-        
+
         # Determine language for the prompt
         lang = game_state.language if hasattr(game_state, 'language') else TranslationManager.DEFAULT_LANGUAGE
-        
+
         # Select prompt based on language
         if lang.startswith("pt"):
             prompt_text = f"""
@@ -106,10 +106,10 @@ class PromptManager:
             - success: boolean indicating if the action succeeded
             - message: descriptive text of what happened
             """
-        
+
         # Add explicit instruction for correct JSON formatting
         prompt = prompt_text + """
-        
+
         IMPORTANT: Your response MUST be a valid JSON object. Do not include any text outside the JSON structure.
         Format your JSON properly with correct quotes and commas. Example:
         {
@@ -118,21 +118,21 @@ class PromptManager:
           "other_fields": "other values"
         }
         """
-        
+
         # Add action-specific instructions based on language
         prompt += PromptManager._get_action_specific_instructions(action, lang)
-        
+
         return prompt
-    
+
     @staticmethod
     def _get_action_specific_instructions(action: str, lang: str) -> str:
         """
         Get action-specific instructions for the prompt.
-        
+
         Args:
             action: Type of action
             lang: Language code
-            
+
         Returns:
             Action-specific instructions
         """
@@ -146,7 +146,7 @@ class PromptManager:
                 - interactables: array de objetos com os quais o jogador pode interagir, cada um como um objeto com campos "nome", "tipo" (mobilia, decoracao, item) e "descricao"
                 - ambient: objeto com campos "sons", "cheiros", "temperatura" e "iluminacao" descrevendo a experiência sensorial
                 """
-                
+
                 instructions += """
                 Se o local for uma taverna ou estalagem, inclua:
                 - Detalhes específicos sobre a atmosfera (música, cheiros, iluminação)
@@ -155,13 +155,13 @@ class PromptManager:
                 - Um evento aleatório como um bardo se apresentando, uma discussão acalorada, jogos de azar ou contação de histórias
                 - Alguma comida ou bebida notável sendo servida como objetos interativos
                 - Mobília como mesas, cadeiras, balcão do bar, lareira com os quais se pode interagir
-                
+
                 Se o local for uma loja ou mercado:
                 - Inclua um array "items_for_sale" com objetos contendo campos "nome", "descricao", "preco" e "raridade"
                 - Dê ao comerciante um traço de personalidade distintivo e uma história de fundo
                 - Inclua pelo menos um outro cliente com sua própria história
                 - Adicione móveis e decorações específicas da loja como interativos
-                
+
                 Se o local for ao ar livre:
                 - Inclua detalhes sobre o clima e hora do dia no objeto ambient
                 - Descreva os arredores naturais e qualquer vida selvagem como interativos
@@ -177,7 +177,7 @@ class PromptManager:
                 - interactables: array of objects that the player can interact with, each as an object with "nome", "tipo" (furniture, decoration, item), and "descricao" fields
                 - ambient: object with "sons", "cheiros", "temperatura", and "iluminacao" fields describing the sensory experience
                 """
-                
+
                 instructions += """
                 If the location is a tavern or inn, include:
                 - Specific details about the atmosphere (music, smells, lighting)
@@ -186,22 +186,22 @@ class PromptManager:
                 - A random event like a bard performing, a heated argument, gambling, or storytelling
                 - Some notable food or drink being served as interactable objects
                 - Furniture like tables, chairs, bar counter, fireplace that can be interacted with
-                
+
                 If the location is a shop or market:
                 - Include an "items_for_sale" array with objects containing "nome", "descricao", "preco", and "raridade" fields
                 - Give the shopkeeper a distinctive personality trait and background story
                 - Include at least one other customer with their own story
                 - Add shop-specific furniture and decorations as interactables
-                
+
                 If the location is outdoors:
                 - Include details about the weather and time of day in the ambient object
                 - Describe the natural surroundings and any wildlife as interactables
                 - Add an environmental element (rustling leaves, distant thunder, etc.)
                 - Include potential paths or directions the player can take
                 """
-            
+
             return instructions
-            
+
         elif action == "look":
             if lang.startswith("pt"):
                 return """
@@ -221,7 +221,7 @@ class PromptManager:
                 - people: array of people or creatures present, each as an object with "nome", "aparencia", and "acao" (what they're doing) fields
                 - interactions: object describing possible interactions with the environment, NPCs, and objects
                 """
-                
+
         elif action == "talk":
             if lang.startswith("pt"):
                 return """
@@ -247,7 +247,7 @@ class PromptManager:
                 - knowledge: array of topics this NPC knows about that might be useful to the player
                 - items: array of items this NPC might be willing to trade or give to the player
                 """
-                
+
         elif action == "search":
             if lang.startswith("pt"):
                 return """
@@ -267,6 +267,6 @@ class PromptManager:
                 - hidden_interactions: array of new interactions that become available after searching
                 - danger: optional warning if searching might trigger a trap or attract unwanted attention
                 """
-                
+
         # Default: return empty string for actions without specific instructions
         return ""

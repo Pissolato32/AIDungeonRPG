@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class EncounterGenerator:
     """Handles generation of random encounters and events."""
-    
+
     # Encounter types and their relative frequencies
     ENCOUNTER_TYPES = {
         "combat": 0.3,       # Combat encounters
@@ -23,7 +23,7 @@ class EncounterGenerator:
         "trap": 0.1,         # Traps or hazards
         "mystery": 0.1       # Mysterious events or phenomena
     }
-    
+
     # Difficulty levels and their modifiers
     DIFFICULTIES = {
         "trivial": {"modifier": 0.5, "xp_mult": 0.5, "chance": 0.1},
@@ -33,7 +33,7 @@ class EncounterGenerator:
         "challenging": {"modifier": 2.0, "xp_mult": 2.0, "chance": 0.07},
         "deadly": {"modifier": 3.0, "xp_mult": 3.0, "chance": 0.03}
     }
-    
+
     # Enemy types by environment
     ENEMIES_BY_ENVIRONMENT = {
         "forest": ["Wolf", "Bandit", "Bear", "Giant Spider", "Goblin"],
@@ -46,30 +46,30 @@ class EncounterGenerator:
         "city": ["Thug", "Guard", "Assassin", "Cultist", "Noble"],
         "dungeon": ["Skeleton", "Zombie", "Goblin", "Orc", "Minotaur"]
     }
-    
+
     # Trap types
     TRAP_TYPES = [
         "pit", "arrow", "poison", "spike", "falling", 
         "magical", "explosion", "cage", "net", "alarm"
     ]
-    
+
     # Obstacle types
     OBSTACLE_TYPES = [
         "river", "chasm", "wall", "locked door", "rubble",
         "thorns", "quicksand", "ice", "fire", "magical barrier"
     ]
-    
+
     def __init__(self):
         """Initialize the encounter generator."""
         self.ai_client = GroqClient()
-    
+
     def should_trigger_random_encounter(self, location_type: str) -> bool:
         """
         Determine if a random encounter should trigger.
-        
+
         Args:
             location_type: Type of location
-            
+
         Returns:
             True if encounter should trigger, False otherwise
         """
@@ -86,18 +86,18 @@ class EncounterGenerator:
             "ruins": 0.4,
             "dungeon": 0.5
         }.get(location_type.lower(), 0.15)
-        
+
         # Roll for encounter
         return random.random() < base_chance
-    
+
     def generate_random_encounter(self, character_level: int, location_type: str) -> Dict[str, Any]:
         """
         Generate a random encounter.
-        
+
         Args:
             character_level: Level of the character
             location_type: Type of location
-            
+
         Returns:
             Encounter data
         """
@@ -105,10 +105,10 @@ class EncounterGenerator:
         encounter_types = list(self.ENCOUNTER_TYPES.keys())
         weights = list(self.ENCOUNTER_TYPES.values())
         encounter_type = random.choices(encounter_types, weights=weights, k=1)[0]
-        
+
         # Select difficulty
         difficulty = self._select_difficulty()
-        
+
         # Generate encounter based on type
         if encounter_type == "combat":
             return self._generate_combat_encounter(character_level, location_type, difficulty)
@@ -122,40 +122,40 @@ class EncounterGenerator:
             return self._generate_npc_encounter(character_level, location_type, difficulty)
         else:  # mystery
             return self._generate_mystery_encounter(character_level, location_type, difficulty)
-    
+
     def _select_difficulty(self) -> str:
         """
         Select a random difficulty based on chances.
-        
+
         Returns:
             Difficulty string
         """
         difficulties = list(self.DIFFICULTIES.keys())
         chances = [self.DIFFICULTIES[d]["chance"] for d in difficulties]
         return random.choices(difficulties, weights=chances, k=1)[0]
-    
+
     def _generate_combat_encounter(self, character_level: int, location_type: str, difficulty: str) -> Dict[str, Any]:
         """
         Generate a combat encounter.
-        
+
         Args:
             character_level: Level of the character
             location_type: Type of location
             difficulty: Difficulty level
-            
+
         Returns:
             Combat encounter data
         """
         # Determine environment for enemy selection
         environment = self._location_to_environment(location_type)
-        
+
         # Select enemy type
         enemy_type = random.choice(self.ENEMIES_BY_ENVIRONMENT.get(environment, ["Bandit"]))
-        
+
         # Determine enemy level based on character level and difficulty
         difficulty_mod = self.DIFFICULTIES[difficulty]["modifier"]
         enemy_level = max(1, int(character_level * difficulty_mod))
-        
+
         # Determine number of enemies based on difficulty
         if difficulty in ["trivial", "easy"]:
             num_enemies = 1
@@ -167,14 +167,14 @@ class EncounterGenerator:
             num_enemies = random.randint(2, 4)
         else:  # deadly
             num_enemies = random.randint(3, 5)
-        
+
         # Generate encounter description using AI
         description = self._generate_encounter_description("combat", enemy_type, num_enemies, difficulty, location_type)
-        
+
         # Calculate XP reward
         xp_mult = self.DIFFICULTIES[difficulty]["xp_mult"]
         xp_reward = int(25 * character_level * xp_mult * num_enemies)
-        
+
         return {
             "type": "combat",
             "enemy_type": enemy_type,
@@ -187,37 +187,37 @@ class EncounterGenerator:
                 "gold": int(10 * character_level * difficulty_mod * num_enemies)
             }
         }
-    
+
     def _generate_obstacle_encounter(self, character_level: int, location_type: str, difficulty: str) -> Dict[str, Any]:
         """
         Generate an obstacle encounter.
-        
+
         Args:
             character_level: Level of the character
             location_type: Type of location
             difficulty: Difficulty level
-            
+
         Returns:
             Obstacle encounter data
         """
         # Select obstacle type
         obstacle_type = random.choice(self.OBSTACLE_TYPES)
-        
+
         # Determine difficulty check DC based on character level and difficulty
         difficulty_mod = self.DIFFICULTIES[difficulty]["modifier"]
         dc = 10 + int(character_level * difficulty_mod)
-        
+
         # Determine primary attribute for the check
         attributes = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
         primary_attribute = random.choice(attributes)
-        
+
         # Generate encounter description using AI
         description = self._generate_encounter_description("obstacle", obstacle_type, 1, difficulty, location_type)
-        
+
         # Calculate XP reward
         xp_mult = self.DIFFICULTIES[difficulty]["xp_mult"]
         xp_reward = int(15 * character_level * xp_mult)
-        
+
         return {
             "type": "obstacle",
             "obstacle_type": obstacle_type,
@@ -229,40 +229,40 @@ class EncounterGenerator:
                 "xp": xp_reward
             }
         }
-    
+
     def _generate_trap_encounter(self, character_level: int, location_type: str, difficulty: str) -> Dict[str, Any]:
         """
         Generate a trap encounter.
-        
+
         Args:
             character_level: Level of the character
             location_type: Type of location
             difficulty: Difficulty level
-            
+
         Returns:
             Trap encounter data
         """
         # Select trap type
         trap_type = random.choice(self.TRAP_TYPES)
-        
+
         # Determine difficulty check DC based on character level and difficulty
         difficulty_mod = self.DIFFICULTIES[difficulty]["modifier"]
         dc = 10 + int(character_level * difficulty_mod)
-        
+
         # Determine damage if triggered
         damage = int(character_level * 2 * difficulty_mod)
-        
+
         # Determine detection and disarm attributes
         detection_attribute = random.choice(["wisdom", "intelligence"])
         disarm_attribute = random.choice(["dexterity", "intelligence"])
-        
+
         # Generate encounter description using AI
         description = self._generate_encounter_description("trap", trap_type, 1, difficulty, location_type)
-        
+
         # Calculate XP reward
         xp_mult = self.DIFFICULTIES[difficulty]["xp_mult"]
         xp_reward = int(20 * character_level * xp_mult)
-        
+
         return {
             "type": "trap",
             "trap_type": trap_type,
@@ -277,38 +277,38 @@ class EncounterGenerator:
                 "xp": xp_reward
             }
         }
-    
+
     def _generate_treasure_encounter(self, character_level: int, location_type: str, difficulty: str) -> Dict[str, Any]:
         """
         Generate a treasure encounter.
-        
+
         Args:
             character_level: Level of the character
             location_type: Type of location
             difficulty: Difficulty level
-            
+
         Returns:
             Treasure encounter data
         """
         # Determine if treasure is guarded
         is_guarded = random.random() < 0.4  # 40% chance
-        
+
         # Determine treasure quality based on difficulty
         difficulty_mod = self.DIFFICULTIES[difficulty]["modifier"]
-        
+
         # Determine gold amount
         gold = int(25 * character_level * difficulty_mod * random.uniform(0.8, 1.2))
-        
+
         # Determine number of items
         num_items = max(1, int(difficulty_mod))
-        
+
         # Generate encounter description using AI
         description = self._generate_encounter_description("treasure", "chest" if is_guarded else "hidden", num_items, difficulty, location_type)
-        
+
         # Calculate XP reward
         xp_mult = self.DIFFICULTIES[difficulty]["xp_mult"]
         xp_reward = int(10 * character_level * xp_mult)
-        
+
         return {
             "type": "treasure",
             "is_guarded": is_guarded,
@@ -320,16 +320,16 @@ class EncounterGenerator:
                 "num_items": num_items
             }
         }
-    
+
     def _generate_npc_encounter(self, character_level: int, location_type: str, difficulty: str) -> Dict[str, Any]:
         """
         Generate an NPC encounter.
-        
+
         Args:
             character_level: Level of the character
             location_type: Type of location
             difficulty: Difficulty level
-            
+
         Returns:
             NPC encounter data
         """
@@ -337,7 +337,7 @@ class EncounterGenerator:
         dispositions = ["friendly", "neutral", "suspicious", "hostile"]
         weights = [0.3, 0.4, 0.2, 0.1]
         disposition = random.choices(dispositions, weights=weights, k=1)[0]
-        
+
         # Determine NPC type based on location
         npc_types = {
             "city": ["Merchant", "Guard", "Noble", "Beggar", "Artisan"],
@@ -352,17 +352,17 @@ class EncounterGenerator:
             "dungeon": ["Prisoner", "Guard", "Cultist", "Monster Hunter", "Adventurer"]
         }
         npc_type = random.choice(npc_types.get(location_type.lower(), ["Traveler"]))
-        
+
         # Generate NPC name using AI
         npc_name = self._generate_npc_name(npc_type)
-        
+
         # Generate encounter description using AI
         description = self._generate_encounter_description("npc", npc_type, 1, difficulty, location_type, npc_name, disposition)
-        
+
         # Calculate XP reward
         xp_mult = self.DIFFICULTIES[difficulty]["xp_mult"]
         xp_reward = int(15 * character_level * xp_mult)
-        
+
         return {
             "type": "npc",
             "npc_name": npc_name,
@@ -374,30 +374,30 @@ class EncounterGenerator:
                 "xp": xp_reward
             }
         }
-    
+
     def _generate_mystery_encounter(self, character_level: int, location_type: str, difficulty: str) -> Dict[str, Any]:
         """
         Generate a mystery encounter.
-        
+
         Args:
             character_level: Level of the character
             location_type: Type of location
             difficulty: Difficulty level
-            
+
         Returns:
             Mystery encounter data
         """
         # Determine mystery type
         mystery_types = ["strange phenomenon", "magical effect", "ancient relic", "mysterious sound", "vision", "omen"]
         mystery_type = random.choice(mystery_types)
-        
+
         # Generate encounter description using AI
         description = self._generate_encounter_description("mystery", mystery_type, 1, difficulty, location_type)
-        
+
         # Calculate XP reward
         xp_mult = self.DIFFICULTIES[difficulty]["xp_mult"]
         xp_reward = int(20 * character_level * xp_mult)
-        
+
         return {
             "type": "mystery",
             "mystery_type": mystery_type,
@@ -407,19 +407,19 @@ class EncounterGenerator:
                 "xp": xp_reward
             }
         }
-    
+
     def _location_to_environment(self, location_type: str) -> str:
         """
         Convert location type to environment for enemy selection.
-        
+
         Args:
             location_type: Type of location
-            
+
         Returns:
             Environment string
         """
         location_lower = location_type.lower()
-        
+
         if "forest" in location_lower or "wood" in location_lower:
             return "forest"
         elif "mountain" in location_lower or "hill" in location_lower:
@@ -440,14 +440,14 @@ class EncounterGenerator:
             return "dungeon"
         else:
             return "forest"  # Default
-    
+
     def _generate_encounter_description(self, encounter_type: str, entity_type: str, 
                                        num_entities: int, difficulty: str, 
                                        location_type: str, npc_name: str = None,
                                        disposition: str = None) -> str:
         """
         Generate a description for an encounter using AI.
-        
+
         Args:
             encounter_type: Type of encounter
             entity_type: Type of entity involved
@@ -456,7 +456,7 @@ class EncounterGenerator:
             location_type: Type of location
             npc_name: Name of NPC (for NPC encounters)
             disposition: Disposition of NPC (for NPC encounters)
-            
+
         Returns:
             Encounter description
         """
@@ -474,7 +474,7 @@ class EncounterGenerator:
                 context = f"{npc_name}, um(a) {entity_type} com disposição {disposition}"
             else:  # mystery
                 context = f"um(a) {entity_type} misterioso(a) de dificuldade {difficulty}"
-            
+
             prompt = f"""
             Gere uma descrição curta e atmosférica para um encontro em um RPG medieval fantástico.
             
@@ -492,13 +492,13 @@ class EncounterGenerator:
             
             Responda apenas com a descrição, sem explicações adicionais.
             """
-            
+
             response = self.ai_client.generate_response(prompt)
             if isinstance(response, str) and response.strip():
                 return response.strip()
         except Exception as e:
             logger.error(f"Error generating encounter description: {e}")
-        
+
         # Fallback descriptions
         fallbacks = {
             "combat": f"Você encontra {num_entities} {entity_type}(s) hostis. Eles parecem prontos para atacar.",
@@ -508,16 +508,16 @@ class EncounterGenerator:
             "npc": f"Você encontra {npc_name}, um(a) {entity_type}. Ele(a) parece {disposition}.",
             "mystery": f"Você testemunha um(a) {entity_type} estranho(a). É algo que você nunca viu antes."
         }
-        
+
         return fallbacks.get(encounter_type, "Você encontra algo interessante.")
-    
+
     def _generate_npc_name(self, npc_type: str) -> str:
         """
         Generate a name for an NPC using AI.
-        
+
         Args:
             npc_type: Type of NPC
-            
+
         Returns:
             NPC name
         """
@@ -527,27 +527,27 @@ class EncounterGenerator:
             O nome deve ser adequado para o tipo de personagem e soar fantástico.
             Responda apenas com o nome, sem explicações adicionais.
             """
-            
+
             response = self.ai_client.generate_response(prompt)
             if isinstance(response, str) and response.strip():
                 return response.strip()
         except Exception as e:
             logger.error(f"Error generating NPC name: {e}")
-        
+
         # Fallback names
         first_names = ["Thorne", "Elara", "Garrick", "Lyra", "Kael", "Seraphina", "Brom", "Isolde", "Darian", "Freya"]
         last_names = ["Ironheart", "Nightshade", "Stormborn", "Silverwood", "Blackthorn", "Frostbeard", "Sunseeker", "Moonshadow"]
-        
+
         return f"{random.choice(first_names)} {random.choice(last_names)}"
-    
+
     def generate_critical_failure(self, action_type: str, character_level: int) -> Dict[str, Any]:
         """
         Generate a critical failure outcome.
-        
+
         Args:
             action_type: Type of action (attack, skill, spell, etc.)
             character_level: Level of the character
-            
+
         Returns:
             Critical failure data
         """
@@ -555,10 +555,10 @@ class EncounterGenerator:
         severity_options = ["minor", "moderate", "major"]
         weights = [0.6, 0.3, 0.1]  # 60% minor, 30% moderate, 10% major
         severity = random.choices(severity_options, weights=weights, k=1)[0]
-        
+
         # Determine consequences based on action type and severity
         consequences = []
-        
+
         if action_type == "attack":
             if severity == "minor":
                 consequences = [
@@ -635,10 +635,10 @@ class EncounterGenerator:
                     "Perde item valioso",
                     "Cria perigo mortal"
                 ]
-        
+
         # Select a consequence
         consequence = random.choice(consequences)
-        
+
         # Determine mechanical effect
         effect = {}
         if severity == "minor":
@@ -659,10 +659,10 @@ class EncounterGenerator:
                 "status": "incapacitado",
                 "duration": 2
             }
-        
+
         # Generate description using AI
         description = self._generate_critical_failure_description(action_type, severity, consequence)
-        
+
         return {
             "type": "critical_failure",
             "action_type": action_type,
@@ -671,16 +671,16 @@ class EncounterGenerator:
             "effect": effect,
             "description": description
         }
-    
+
     def _generate_critical_failure_description(self, action_type: str, severity: str, consequence: str) -> str:
         """
         Generate a description for a critical failure using AI.
-        
+
         Args:
             action_type: Type of action
             severity: Severity of failure
             consequence: Consequence of failure
-            
+
         Returns:
             Critical failure description
         """
@@ -698,12 +698,12 @@ class EncounterGenerator:
             
             Responda apenas com a descrição, sem explicações adicionais.
             """
-            
+
             response = self.ai_client.generate_response(prompt)
             if isinstance(response, str) and response.strip():
                 return response.strip()
         except Exception as e:
             logger.error(f"Error generating critical failure description: {e}")
-        
+
         # Fallback description
         return f"Sua tentativa de {action_type} falha terrivelmente. {consequence}, causando problemas para você."
