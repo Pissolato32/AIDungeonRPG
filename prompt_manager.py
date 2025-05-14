@@ -8,7 +8,7 @@ import logging
 from typing import Dict, Any, Union, List
 
 from models import Character
-from translations import TranslationManager, get_text
+from translations import TranslationManager
 
 logger = logging.getLogger(__name__)
 

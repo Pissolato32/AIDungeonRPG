@@ -12,8 +12,6 @@ from abc import ABC, abstractmethod
 import json
 import os
 from models import Character, Enemy
-from translations import TranslationManager, get_text
-from utils import get_random_encounter
 from prompt_manager import PromptManager
 from groq_client import GroqClient
 

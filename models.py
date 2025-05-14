@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Union, Any, Tuple, TypeVar, Protocol
 from dataclasses import dataclass, field, asdict
-from abc import ABC, abstractmethod
+from abc import ABC
 from utils import calculate_attribute_modifier
 
 logger = logging.getLogger(__name__)
