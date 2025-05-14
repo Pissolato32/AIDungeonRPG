@@ -104,7 +104,7 @@ class GameUIManager {
         };
         
         for (const [key, bar] of Object.entries(progressBars)) {
-            if (bar && bar.dataset.width) {
+            if (bar?.dataset.width) {
                 bar.style.width = bar.dataset.width + '%';
             }
         }
