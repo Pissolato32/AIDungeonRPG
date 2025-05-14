@@ -5,19 +5,17 @@ This module defines the web routes for the RPG game.
 """
 
 import os
-import json
 import logging
 import uuid
 from typing import Dict, Any, Optional, Union
 from flask import (
-    Flask, render_template, request, redirect, url_for, 
-    session, jsonify, flash, Blueprint
+    render_template, request, redirect, url_for, 
+    session, jsonify, Blueprint
 )
 
 from models import Character
 from game_engine import GameEngine
 from utils.data_io import save_data, load_data
-from translations import get_text, TranslationManager
 
 # Configure logging
 logger = logging.getLogger(__name__)
