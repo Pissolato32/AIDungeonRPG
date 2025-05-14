@@ -56,11 +56,11 @@
                                     <label for="class" class="form-label">Class</label>
                                     <select class="form-select" id="class" name="class" required>
                                         <option value="">Select a class</option>
-                                        <option value="Warrior" {% if character and character.class == 'Warrior' %}selected{% endif %}>Warrior</option>
-                                        <option value="Mage" {% if character and character.class == 'Mage' %}selected{% endif %}>Mage</option>
-                                        <option value="Rogue" {% if character and character.class == 'Rogue' %}selected{% endif %}>Rogue</option>
-                                        <option value="Cleric" {% if character and character.class == 'Cleric' %}selected{% endif %}>Cleric</option>
-                                        <option value="Ranger" {% if character and character.class == 'Ranger' %}selected{% endif %}>Ranger</option>
+                                        <option value="Warrior" {% if character and character.character_class == 'Warrior' %}selected{% endif %}>Warrior</option>
+                                        <option value="Mage" {% if character and character.character_class == 'Mage' %}selected{% endif %}>Mage</option>
+                                        <option value="Rogue" {% if character and character.character_class == 'Rogue' %}selected{% endif %}>Rogue</option>
+                                        <option value="Cleric" {% if character and character.character_class == 'Cleric' %}selected{% endif %}>Cleric</option>
+                                        <option value="Ranger" {% if character and character.character_class == 'Ranger' %}selected{% endif %}>Ranger</option>
                                     </select>
                                 </div>
                             </div>
@@ -295,33 +295,45 @@
                 }
 
                 const attributes = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+                const totalPointsTarget = 75;
+                let totalPoints = 0;
+                let remainingPoints = totalPointsTarget;
                 
-                // Rola 4d6, remove o menor valor e soma os 3 maiores para cada atributo
+                // Primeiro, atribui um valor mínimo de 8 para cada atributo
                 attributes.forEach(attr => {
-                    const rolls = Array.from({length: 4}, () => Math.floor(Math.random() * 6) + 1);
-                    rolls.sort((a, b) => b - a); // Ordena em ordem decrescente
-                    const sum = rolls.slice(0, 3).reduce((a, b) => a + b, 0); // Soma os 3 maiores valores
-                    document.getElementById(attr).value = sum;
+                    document.getElementById(attr).value = 8;
                 });
-
+                
+                // Calcula quantos pontos já foram usados com o mínimo de 8 em cada atributo
+                const basePoints = 8 * attributes.length;
+                remainingPoints = totalPointsTarget - basePoints;
+                
+                // Distribui os pontos restantes aleatoriamente entre os atributos
+                while (remainingPoints > 0) {
+                    // Escolhe um atributo aleatório
+                    const randomIndex = Math.floor(Math.random() * attributes.length);
+                    const attr = attributes[randomIndex];
+                    const currentValue = parseInt(document.getElementById(attr).value);
+                    
+                    // Não permite que um atributo ultrapasse 18
+                    if (currentValue < 18) {
+                        document.getElementById(attr).value = currentValue + 1;
+                        remainingPoints--;
+                    }
+                }
+                
                 // Atualiza o total de pontos e modificadores
-                updateTotalPoints();
+                totalPoints = updateTotalPoints();
+                document.getElementById('totalPoints').textContent = totalPoints;
+                
+                // Atualiza modificadores e outros valores derivados
                 updateModifiers();
-                updateHpAndStamina();
-
-                // Atualiza o total de pontos
-                const total = attributes.reduce((sum, attr) => sum + parseInt(document.getElementById(attr).value), 0);
-                document.getElementById('totalPoints').textContent = total;
-
-                // Update modifiers and total points display
-                updateModifiers();
-                document.getElementById('totalPoints').textContent = 75 - totalPoints;
                 updateHpAndStamina();
                 generateInventory();
             }
 
             function updateTotalPoints() {
-                const total = Array.from(attributeFields).reduce((sum, field) => sum + parseInt(field.value), 0);
+                const total = Array.from(attributeFields).reduce((sum, field) => sum + parseInt(field.value || 0), 0);
                 document.getElementById('totalPoints').textContent = total;
                 return total;
             }
@@ -345,6 +357,7 @@
             // Auto-roll on first load
             if (!document.getElementById('strength').value || document.getElementById('strength').value == '10') {
                 rollAttributes();
+                updateTotalPoints(); // Garante atualização após rolagem automática
             }
 
             // Rolar ouro
@@ -520,6 +533,7 @@
 
             // Inicializar
             updateModifiers();
+            updateTotalPoints(); // Corrige o valor inicial de Total Points
 
             // Event listeners
             rollDiceBtn.addEventListener('click', rollAttributes);
@@ -540,6 +554,7 @@
             // Inicializar rolagem inicial se não for edição
             if (!document.getElementById('strength').value || document.getElementById('strength').value == '10') {
                 rollAttributes();
+                updateTotalPoints(); // Garante atualização após rolagem automática
                 rollGold();
                 generateInventory();
             }

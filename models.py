@@ -1,226 +1,421 @@
-import json
-import os
+import random
+import logging
 from datetime import datetime
+from typing import Dict, List, Optional, Union, Any, Tuple, TypeVar, Protocol
+from dataclasses import dataclass, field, asdict
+from abc import ABC, abstractmethod
+from utils import calculate_attribute_modifier
 
-class Character:
-    """Character model representing player character attributes and methods"""
+logger = logging.getLogger(__name__)
+
+# Type variables for generics
+T = TypeVar('T')
+
+class GameEntity(Protocol):
+    """Protocol defining common methods for game entities."""
     
-    def __init__(self, name, character_class, race, 
-                 strength=10, dexterity=10, constitution=10, 
-                 intelligence=10, wisdom=10, charisma=10,
-                 max_hp=20, current_hp=20, max_stamina=10, current_stamina=10,
-                 max_hunger=100, current_hunger=100, max_thirst=100, current_thirst=100,
-                 inventory=None, gold=50, experience=0, level=1):
-        
-        self.name = name
-        self.character_class = character_class
-        self.race = race
-        self.strength = strength
-        self.dexterity = dexterity
-        self.constitution = constitution
-        self.intelligence = intelligence
-        self.wisdom = wisdom
-        self.charisma = charisma
-        self.max_hp = max_hp
-        self.current_hp = current_hp
-        self.max_stamina = max_stamina
-        self.current_stamina = current_stamina
-        self.inventory = inventory or ["Basic Sword", "Health Potion"]
-        self.max_hunger = max_hunger
-        self.current_hunger = current_hunger
-        self.max_thirst = max_thirst
-        self.current_thirst = current_thirst
-        self.gold = gold
-        self.experience = experience
-        self.level = level
-        self.last_updated = datetime.now().isoformat()
-    
-    def to_dict(self):
-        """Convert character to dictionary for JSON serialization"""
-        return {
-            "name": self.name,
-            "class": self.character_class,
-            "race": self.race,
-            "strength": self.strength,
-            "dexterity": self.dexterity,
-            "constitution": self.constitution,
-            "intelligence": self.intelligence,
-            "wisdom": self.wisdom,
-            "charisma": self.charisma,
-            "max_hp": self.max_hp,
-            "current_hp": self.current_hp,
-            "max_stamina": self.max_stamina,
-            "current_stamina": self.current_stamina,
-            "max_hunger": self.max_hunger,
-            "current_hunger": self.current_hunger,
-            "max_thirst": self.max_thirst,
-            "current_thirst": self.current_thirst,
-            "inventory": self.inventory,
-            "gold": self.gold,
-            "experience": self.experience,
-            "level": self.level,
-            "last_updated": self.last_updated
-        }
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the object to a dictionary."""
+        ...
     
     @classmethod
-    def from_dict(cls, data):
-        """Create character from dictionary"""
-        if not data:
-            return None
-            
-        character = cls(
-            name=data.get("name", "Unknown"),
-            character_class=data.get("class", "Fighter"),
-            race=data.get("race", "Human"),
-            strength=data.get("strength", 10),
-            dexterity=data.get("dexterity", 10),
-            constitution=data.get("constitution", 10),
-            intelligence=data.get("intelligence", 10),
-            wisdom=data.get("wisdom", 10),
-            charisma=data.get("charisma", 10),
-            max_hp=data.get("max_hp", 20),
-            current_hp=data.get("current_hp", 20),
-            max_stamina=data.get("max_stamina", 10),
-            current_stamina=data.get("current_stamina", 10),
-            inventory=data.get("inventory", ["Basic Sword", "Health Potion"]),
-            gold=data.get("gold", 50),
-            experience=data.get("experience", 0),
-            level=data.get("level", 1)
-        )
-        
-        character.last_updated = data.get("last_updated", datetime.now().isoformat())
-        return character
-    
-    def take_damage(self, amount):
-        """Apply damage to character"""
-        self.current_hp = max(0, self.current_hp - amount)
-        self.last_updated = datetime.now().isoformat()
-        return self.current_hp
-    
-    def heal(self, amount):
-        """Heal character"""
-        self.current_hp = min(self.max_hp, self.current_hp + amount)
-        self.last_updated = datetime.now().isoformat()
-        return self.current_hp
-    
-    def use_stamina(self, amount):
-        """Use stamina for actions"""
-        if self.current_stamina < amount:
-            return False
-        
-        self.current_stamina -= amount
-        self.last_updated = datetime.now().isoformat()
-        return True
-    
-    def recover_stamina(self, amount):
-        """Recover stamina"""
-        self.current_stamina = min(self.max_stamina, self.current_stamina + amount)
-        self.last_updated = datetime.now().isoformat()
-        return self.current_stamina
-    
-    def add_to_inventory(self, item):
-        """Add item to inventory"""
-        self.inventory.append(item)
-        self.last_updated = datetime.now().isoformat()
-    
-    def remove_from_inventory(self, item):
-        """Remove item from inventory"""
-        if item in self.inventory:
-            self.inventory.remove(item)
-            self.last_updated = datetime.now().isoformat()
-            return True
-        return False
-    
-    def add_experience(self, amount):
-        """Add experience points and handle level up"""
-        self.experience += amount
-        
-        # Simple leveling logic: 100 * current level = XP needed for next level
-        xp_for_next_level = 100 * self.level
-        
-        if self.experience >= xp_for_next_level:
-            self.level_up()
-        
-        self.last_updated = datetime.now().isoformat()
-    
-    def level_up(self):
-        """Level up character, increasing stats"""
-        self.level += 1
-        
-        # Increase HP and stamina
-        hp_increase = 5 + (self.constitution // 3)
-        stamina_increase = 2 + (self.constitution // 5)
-        
-        self.max_hp += hp_increase
-        self.current_hp = self.max_hp
-        self.max_stamina += stamina_increase
-        self.current_stamina = self.max_stamina
-        
-        self.last_updated = datetime.now().isoformat()
-        return {
-            "new_level": self.level,
-            "hp_increase": hp_increase,
-            "stamina_increase": stamina_increase
-        }
+    def from_dict(cls, data: Dict[str, Any]) -> T:
+        """Create an object from a dictionary."""
+        ...
 
-class Enemy:
-    """Enemy model representing NPCs and monsters in combat"""
+
+@dataclass
+class BaseEntity(ABC):
+    """Base class for all game entities with common functionality."""
     
-    def __init__(self, name, description, level=1, max_hp=10, current_hp=10, 
-                 attack_damage=(1, 6), defense=0, experience_reward=25, 
-                 gold_reward=(5, 15), loot_table=None):
-        
-        self.name = name
-        self.description = description
-        self.level = level
-        self.max_hp = max_hp
-        self.current_hp = current_hp
-        self.attack_damage = attack_damage  # Tuple of (min_damage, max_damage)
-        self.defense = defense
-        self.experience_reward = experience_reward
-        self.gold_reward = gold_reward  # Tuple of (min_gold, max_gold)
-        self.loot_table = loot_table or []
+    name: str
+    description: str = ""
     
-    def to_dict(self):
-        """Convert enemy to dictionary for JSON serialization"""
-        return {
-            "name": self.name,
-            "description": self.description,
-            "level": self.level,
-            "max_hp": self.max_hp,
-            "current_hp": self.current_hp,
-            "attack_damage": self.attack_damage,
-            "defense": self.defense,
-            "experience_reward": self.experience_reward,
-            "gold_reward": self.gold_reward,
-            "loot_table": self.loot_table
-        }
+    # Metadata
+    last_updated: str = field(default_factory=lambda: datetime.now().isoformat())
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the object to a dictionary."""
+        return asdict(self)
     
     @classmethod
-    def from_dict(cls, data):
-        """Create enemy from dictionary"""
-        if not data:
-            return None
-            
-        return cls(
-            name=data.get("name", "Unknown Enemy"),
-            description=data.get("description", "A mysterious creature"),
-            level=data.get("level", 1),
-            max_hp=data.get("max_hp", 10),
-            current_hp=data.get("current_hp", 10),
-            attack_damage=data.get("attack_damage", (1, 6)),
-            defense=data.get("defense", 0),
-            experience_reward=data.get("experience_reward", 25),
-            gold_reward=data.get("gold_reward", (5, 15)),
-            loot_table=data.get("loot_table", [])
-        )
+    def from_dict(cls, data: Dict[str, Any]) -> T:
+        """
+        Create an entity from a dictionary.
+        
+        This is a basic implementation that should be overridden by subclasses
+        if they need special handling.
+        """
+        # Filter out keys that aren't in the class annotations
+        filtered_data = {k: v for k, v in data.items() if k in cls.__annotations__}
+        return cls(**filtered_data)
+
+
+@dataclass
+class CombatEntity(BaseEntity):
+    """Base class for entities that can engage in combat."""
     
-    def take_damage(self, amount):
-        """Apply damage to enemy"""
+    # Health and combat stats
+    level: int = 1
+    max_hp: int = 10
+    current_hp: int = 10
+    defense: int = 0
+    attack_damage: Tuple[int, int] = (1, 4)
+    
+    def is_alive(self) -> bool:
+        """Check if the entity is alive."""
+        return self.current_hp > 0
+    
+    def take_damage(self, amount: int) -> Tuple[int, int]:
+        """
+        Apply damage to the entity considering its defense.
+        
+        Args:
+            amount: Amount of damage to apply
+            
+        Returns:
+            Tuple with current HP and effective damage
+        """
         damage_after_defense = max(1, amount - self.defense)
         self.current_hp = max(0, self.current_hp - damage_after_defense)
         return self.current_hp, damage_after_defense
     
-    def is_defeated(self):
-        """Check if enemy is defeated"""
-        return self.current_hp <= 0
+    def heal(self, amount: int) -> int:
+        """
+        Heal the entity.
+        
+        Args:
+            amount: Amount of healing to apply
+            
+        Returns:
+            New current HP
+        """
+        self.current_hp = min(self.max_hp, self.current_hp + amount)
+        return self.current_hp
+
+
+@dataclass
+class Character(CombatEntity):
+    """
+    Represents a player character in the RPG game.
+    
+    Attributes cover basic stats, inventory, progression, and survival mechanics.
+    """
+    # Required attributes (must be provided at creation)
+    character_class: str = "Warrior"
+    race: str = "Human"
+    
+    # Base attributes
+    strength: int = 10
+    dexterity: int = 10
+    constitution: int = 10
+    intelligence: int = 10
+    wisdom: int = 10
+    charisma: int = 10
+    
+    # Attribute modifiers (calculated automatically)
+    strength_mod: int = field(init=False, default=0)
+    dexterity_mod: int = field(init=False, default=0)
+    constitution_mod: int = field(init=False, default=0)
+    intelligence_mod: int = field(init=False, default=0)
+    wisdom_mod: int = field(init=False, default=0)
+    charisma_mod: int = field(init=False, default=0)
+    
+    # Resource stats
+    max_stamina: int = 10
+    current_stamina: int = 10
+    
+    # Survival stats
+    max_hunger: int = 100
+    current_hunger: int = 100
+    max_thirst: int = 100
+    current_thirst: int = 100
+    
+    # Inventory and equipment
+    inventory: List[str] = field(default_factory=lambda: ["Basic Sword", "Health Potion"])
+    equipment: Dict[str, Optional[str]] = field(default_factory=lambda: {
+        "weapon": None, "armor": None, "helmet": None,
+        "gloves": None, "boots": None, "accessory": None
+    })
+    
+    # Progression and resources
+    gold: int = 50
+    experience: int = 0
+    
+    # Status effects
+    status_effects: List[Dict[str, Any]] = field(default_factory=list)
+    
+    # User identification
+    user_id: str = ""
+
+    def __post_init__(self):
+        """Post-initialization setup."""
+        # Calculate attribute modifiers
+        self._calculate_attribute_modifiers()
+        
+        # Set combat stats based on attributes
+        self._update_combat_stats()
+        
+        # Log character creation
+        logger.info(f"Character created: {self.name} (Level {self.level})")
+
+    def _calculate_attribute_modifiers(self) -> None:
+        """Calculate all attribute modifiers."""
+        self.strength_mod = calculate_attribute_modifier(self.strength)
+        self.dexterity_mod = calculate_attribute_modifier(self.dexterity)
+        self.constitution_mod = calculate_attribute_modifier(self.constitution)
+        self.intelligence_mod = calculate_attribute_modifier(self.intelligence)
+        self.wisdom_mod = calculate_attribute_modifier(self.wisdom)
+        self.charisma_mod = calculate_attribute_modifier(self.charisma)
+
+    def _update_combat_stats(self) -> None:
+        """Update combat stats based on attributes."""
+        # Attack damage based on strength
+        self.attack_damage = (1 + self.strength_mod, 4 + self.strength_mod * 2)
+        
+        # Defense based on dexterity
+        self.defense = self.dexterity_mod
+        
+        # Max HP based on constitution
+        constitution_bonus = self.constitution_mod * 2
+        self.max_hp = 20 + constitution_bonus
+        
+        # Max stamina based on constitution
+        stamina_bonus = max(0, self.constitution_mod)
+        self.max_stamina = 10 + stamina_bonus
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'Character':
+        """Create a character from a dictionary or return if already Character."""
+        if isinstance(data, cls):
+            return data  # Já é um Character, retorna direto
+        # Remove calculated fields that shouldn't be passed to the constructor
+        calculated_fields = [
+            'attack_damage', 'defense', 
+            'strength_mod', 'dexterity_mod', 'constitution_mod', 
+            'intelligence_mod', 'wisdom_mod', 'charisma_mod'
+        ]
+        
+        filtered_data = {k: v for k, v in data.items() if k not in calculated_fields}
+        
+        # Handle class field name difference
+        if 'class' in filtered_data and 'character_class' not in filtered_data:
+            filtered_data['character_class'] = filtered_data.pop('class')
+        
+        return cls(**filtered_data)
+    
+    def validate_action(self, action: str, cost: int) -> bool:
+        """
+        Validate if the character can perform an action based on stamina cost.
+        
+        Args:
+            action: Action name
+            cost: Stamina cost
+            
+        Returns:
+            Boolean indicating if the action is possible
+        """
+        if self.current_stamina < cost:
+            from translations import get_text
+            logger.warning(get_text("character.not_enough_stamina", None, self.name, action))
+            return False
+        return True
+    
+    def gain_experience(self, amount: int) -> bool:
+        """
+        Add experience to the character and check for level up.
+        
+        Args:
+            amount: Amount of experience to add
+            
+        Returns:
+            Boolean indicating if the character leveled up
+        """
+        self.experience += amount
+        
+        # Check for level up
+        level_before = self.level
+        self._update_level()
+        
+        # Return whether the character leveled up
+        return self.level > level_before
+    
+    def _update_level(self) -> None:
+        """Update character level based on experience."""
+        # Simple level formula: level * 100 experience needed for next level
+        while self.experience >= self.level * 100:
+            self.level += 1
+            self._on_level_up()
+    
+    def _on_level_up(self) -> None:
+        """Apply level up bonuses."""
+        # Increase max HP and stamina
+        self.max_hp += 5
+        self.max_stamina += 2
+        
+        # Restore to full
+        self.current_hp = self.max_hp
+        self.current_stamina = self.max_stamina
+        
+        # Update combat stats
+        self._update_combat_stats()
+        
+        logger.info(f"Character {self.name} leveled up to {self.level}")
+    
+    def rest(self) -> Dict[str, int]:
+        """
+        Rest to recover HP and stamina.
+        
+        Returns:
+            Dictionary with recovered amounts
+        """
+        hp_recovery = max(1, self.max_hp // 4)
+        stamina_recovery = max(1, self.max_stamina // 2)
+        
+        old_hp = self.current_hp
+        old_stamina = self.current_stamina
+        
+        self.current_hp = min(self.max_hp, self.current_hp + hp_recovery)
+        self.current_stamina = min(self.max_stamina, self.current_stamina + stamina_recovery)
+        
+        return {
+            "hp_recovered": self.current_hp - old_hp,
+            "stamina_recovered": self.current_stamina - old_stamina
+        }
+    
+    def attack(self, target: CombatEntity) -> Tuple[int, bool]:
+        """
+        Attack a target.
+        
+        Args:
+            target: The entity to attack
+            
+        Returns:
+            Tuple with damage dealt and hit success
+        """
+        # Roll for damage
+        min_damage, max_damage = self.attack_damage
+        damage = random.randint(min_damage, max_damage)
+        
+        # Apply damage to target
+        current_hp, effective_damage = target.take_damage(damage)
+        
+        return effective_damage, True
+    
+    @property
+    def class_(self) -> str:
+        """Return the character class (for compatibility)."""
+        return self.character_class
+
+
+@dataclass
+class Enemy(CombatEntity):
+    """
+    Represents an enemy in the RPG game.
+    
+    Attributes describe enemy characteristics for combat and progression.
+    """
+    # Combat rewards
+    experience_reward: int = 25
+    gold_reward: Tuple[int, int] = (5, 15)
+    
+    # Loot and abilities
+    loot_table: List[str] = field(default_factory=list)
+    abilities: List[str] = field(default_factory=list)
+    
+    def take_damage(self, amount: int) -> Tuple[int, int]:
+        """
+        Apply damage to the enemy considering its defense.
+        
+        Args:
+            amount: Amount of damage to apply
+            
+        Returns:
+            Tuple with current HP and effective damage
+        """
+        damage_after_defense = max(1, amount - self.defense)
+        self.current_hp = max(0, self.current_hp - damage_after_defense)
+        logger.info("Enemy took damage", extra={"enemy_name": self.name, "damage": damage_after_defense})
+        return self.current_hp, damage_after_defense
+    
+    def attack(self, target: CombatEntity) -> Tuple[int, bool]:
+        """
+        Attack a target.
+        
+        Args:
+            target: The entity to attack
+            
+        Returns:
+            Tuple with damage dealt and hit success
+        """
+        # Roll for damage
+        min_damage, max_damage = self.attack_damage
+        damage = random.randint(min_damage, max_damage)
+        
+        # Apply damage to target
+        current_hp, effective_damage = target.take_damage(damage)
+        
+        return effective_damage, True
+    
+    def get_gold_reward(self) -> int:
+        """
+        Get the gold reward for defeating this enemy.
+        
+        Returns:
+            Amount of gold
+        """
+        min_gold, max_gold = self.gold_reward
+        return random.randint(min_gold, max_gold)
+
+
+@dataclass
+class Quest(BaseEntity):
+    """
+    Represents a quest in the RPG game.
+    
+    Attributes describe objectives, rewards, and quest progress.
+    """
+    difficulty: int = 1
+    reward_gold: int = 50
+    reward_xp: int = 100
+    reward_items: List[str] = field(default_factory=list)
+    status: str = "active"
+    progress: int = 0
+    
+    def update_progress(self, amount: int) -> int:
+        """
+        Update quest progress.
+        
+        Args:
+            amount: Amount of progress to add
+            
+        Returns:
+            Current progress
+        """
+        self.progress = min(100, self.progress + amount)
+        if self.progress >= 100:
+            self.complete()
+        return self.progress
+    
+    def complete(self) -> None:
+        """Mark the quest as completed."""
+        self.status = "completed"
+        self.progress = 100
+        logger.info(f"Quest completed: {self.name}")
+    
+    def fail(self) -> None:
+        """Mark the quest as failed."""
+        self.status = "failed"
+        logger.warning(f"Quest failed: {self.name}")
+    
+    def is_completed(self) -> bool:
+        """Check if the quest is completed."""
+        return self.status == "completed"
+    
+    def is_failed(self) -> bool:
+        """Check if the quest is failed."""
+        return self.status == "failed"
+    
+    def is_active(self) -> bool:
+        """Check if the quest is active."""
+        return self.status == "active"

@@ -1,0 +1,54 @@
+.map-container {
+    border: 1px solid #444;
+    background-color: #1a1a1a;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+
+.game-map-canvas {
+    display: block;
+    margin: 0 auto;
+    background-color: #222;
+}
+
+.map-legend {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+    font-size: 0.8rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin: 0 10px;
+}
+
+.legend-color {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 5px;
+    border-radius: 2px;
+}
+
+.map-controls {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.map-controls button {
+    margin: 0 5px;
+    padding: 2px 8px;
+    background-color: #333;
+    border: 1px solid #555;
+    color: #fff;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.map-controls button:hover {
+    background-color: #444;
+}

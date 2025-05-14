@@ -1,0 +1,49 @@
+{
+  "name": "Unknown",
+  "description": "",
+  "last_updated": "2025-05-13T18:51:53.051047",
+  "level": 1,
+  "max_hp": 20,
+  "current_hp": 20,
+  "defense": 0,
+  "attack_damage": [
+    1,
+    4
+  ],
+  "character_class": "Warrior",
+  "race": "Human",
+  "strength": 10,
+  "dexterity": 10,
+  "constitution": 10,
+  "intelligence": 10,
+  "wisdom": 10,
+  "charisma": 10,
+  "strength_mod": 0,
+  "dexterity_mod": 0,
+  "constitution_mod": 0,
+  "intelligence_mod": 0,
+  "wisdom_mod": 0,
+  "charisma_mod": 0,
+  "max_stamina": 10,
+  "current_stamina": 10,
+  "max_hunger": 100,
+  "current_hunger": 100,
+  "max_thirst": 100,
+  "current_thirst": 100,
+  "inventory": [
+    "Basic Sword",
+    "Health Potion"
+  ],
+  "equipment": {
+    "weapon": null,
+    "armor": null,
+    "helmet": null,
+    "gloves": null,
+    "boots": null,
+    "accessory": null
+  },
+  "gold": 50,
+  "experience": 0,
+  "status_effects": [],
+  "user_id": ""
+}

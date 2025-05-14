@@ -1,0 +1,16 @@
+{
+  "current_location": "Start",
+  "location_id": "village_center",
+  "coordinates": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "scene_description": "You are in a mysterious place.",
+  "npcs_present": [],
+  "events": [],
+  "messages": [
+    "Você procurou por inimigos e encontrou um Ladrão! Combate iniciado!"
+  ],
+  "combat": {
+    "enemy": 

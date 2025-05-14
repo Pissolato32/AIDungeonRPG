@@ -1,58 +1,82 @@
-/* General Styling */
-body {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
+/* Main Game Container */
 .game-container {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    height: 100vh;
+    max-width: 1200px;
+    margin: 0 auto;
+    height: calc(100vh - 40px);
 }
 
+/* Language Selector */
+.language-selector {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+}
+
+/* Game Content */
 .game-content {
-    flex: 1;
-    overflow: hidden;
-}
-
-.game-scene, .character-panel {
     height: calc(100vh - 56px);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
 }
 
-/* Game Output Styling */
+/* Game Scene */
+.game-scene {
+    height: 100%;
+}
+
 .game-output {
-    height: calc(100% - 100px);
+    height: calc(100% - 120px);
     overflow-y: auto;
-    background-color: rgba(0, 0, 0, 0.1);
 }
 
 .scene-description {
-    padding: 10px;
-    border-left: 3px solid var(--bs-primary);
-    background-color: rgba(13, 110, 253, 0.05);
+    font-size: 1.1rem;
+    line-height: 1.5;
 }
 
+/* Messages Container */
 .messages-container {
     margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
 }
 
 .message {
-    padding: 10px;
     margin-bottom: 10px;
-    border-radius: 5px;
-    background-color: rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    max-width: 100%;
+}
+
+/* Dice roll styling */
+.dice-roll {
+    color: #ffc107;
+    font-weight: bold;
+    background-color: rgba(255, 193, 7, 0.1);
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+/* Quest styling */
+.quest-item {
+    border-left: 3px solid #0d6efd;
+    margin-bottom: 10px;
+}
+
+.quest-tasks li {
+    margin-bottom: 5px;
+}
+
+.quest-tasks i {
+    margin-right: 5px;
 }
 
 /* Combat Interface */
 .combat-interface {
-    height: calc(100% - 100px);
-    overflow-y: auto;
-    background-color: rgba(0, 0, 0, 0.15);
+    height: calc(100% - 56px);
+    display: flex;
+    flex-direction: column;
 }
 
 .combat-log {
@@ -60,69 +84,49 @@ body {
     overflow-y: auto;
 }
 
-/* Character Status Panel */
-.character-info {
-    padding-bottom: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+/* Character Panel */
+.character-panel {
+    height: 100%;
+    overflow-y: auto;
 }
 
-.status-bars {
-    padding-bottom: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+.inventory-list {
+    max-height: 400px;
+    overflow-y: auto;
 }
 
+/* Attributes */
 .attribute {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
+    padding: 5px 10px;
     background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 5px;
+    border-radius: 4px;
 }
 
 .attribute-name {
-    font-weight: 500;
+    font-weight: bold;
 }
 
 .attribute-value {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-    padding: 2px 8px;
+    font-family: monospace;
 }
 
-/* Inventory Styling */
-.inventory-list {
-    overflow-y: auto;
-    max-height: calc(100vh - 240px);
-}
-
-/* Input Form Styling */
+/* Game Input */
 .game-input-container {
-    background-color: rgba(0, 0, 0, 0.2);
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background-color: rgba(33, 37, 41, 0.8);
 }
 
-/* Landing Page Styling */
-.game-title {
-    color: var(--bs-primary);
-    text-shadow: 0 0 10px rgba(13, 110, 253, 0.5);
+/* Thinking indicator */
+.thinking-dots {
+    display: inline-block;
+    min-width: 20px;
 }
 
-.feature-list {
-    list-style-type: none;
-    padding-left: 0;
-}
-
-.feature-list li {
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.feature-list li i {
-    color: var(--bs-primary);
-    margin-right: 10px;
-}
-
-/* Responsive Adjustments */
+/* Responsive adjustments */
 @media (max-width: 768px) {
     .game-content {
         flex-direction: column;
@@ -130,26 +134,13 @@ body {
     
     .game-scene, .character-panel {
         height: auto;
-        max-height: none;
     }
     
-    .game-scene {
-        height: 60vh;
+    .game-output {
+        height: 50vh;
     }
     
     .character-panel {
         height: 40vh;
-    }
-    
-    .game-output {
-        height: calc(60vh - 156px);
-    }
-    
-    .combat-interface {
-        height: calc(60vh - 156px);
-    }
-    
-    .inventory-list {
-        max-height: 25vh;
     }
 }

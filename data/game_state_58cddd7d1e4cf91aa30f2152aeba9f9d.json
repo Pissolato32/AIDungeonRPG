@@ -1,0 +1,21 @@
+{
+  "current_location": "Village Center",
+  "scene_description": "You stand in the center of a small village. There's a tavern to the north, a blacksmith to the east, and the village gate to the south.",
+  "npcs_present": [
+    "Village Elder",
+    "Merchant"
+  ],
+  "events": [
+    "A gentle breeze blows through the village."
+  ],
+  "messages": [
+    "Welcome to the village! You can explore by using the actions below.",
+    "Your voice echoes through the village, startling the Village Elder, who looks up from his daily tasks, and a few villagers, who peek out of their windows to see what all the commotion is about. The gentle breeze picks up slightly, rustling the leaves of the nearby trees.",
+    "You quickly remove your armor and clothes, and with a burst of adrenaline, you sprint out of the village, leaving the curious gaze of the villagers behind. The gentle breeze picks up speed as you run, whipping your hair and clothes wildly. The villagers point and laugh, but you don't look back. You're free, and the thrill of the unknown is exhilarating.",
+    "Você olha em volta e não vê nenhuma pessoa bonita à frente. Em vez disso, você vê o Village Elder conversando com o Merchant, e ambos parecem estar muito ocupados para notar sua presença. Além disso, você percebe que a tavern ao norte está começando a se encher de pessoas, e você ouve risadas e conversas animadas vindas de lá."
+  ],
+  "combat": false,
+  "quests": [],
+  "secrets": [],
+  "language": "pt-br"
+}

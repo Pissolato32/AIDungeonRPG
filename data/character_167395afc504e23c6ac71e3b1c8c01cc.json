@@ -1,0 +1,53 @@
+{
+  "name": "Digao",
+  "character_class": "Mage",
+  "race": "Orc",
+  "strength": 10,
+  "dexterity": 14,
+  "constitution": 9,
+  "intelligence": 12,
+  "wisdom": 16,
+  "charisma": 8,
+  "strength_mod": 0,
+  "dexterity_mod": 2,
+  "constitution_mod": -1,
+  "intelligence_mod": 1,
+  "wisdom_mod": 3,
+  "charisma_mod": -1,
+  "max_hp": 6,
+  "current_hp": 6,
+  "max_stamina": 5,
+  "current_stamina": 5,
+  "max_hunger": 100,
+  "current_hunger": 100,
+  "max_thirst": 100,
+  "current_thirst": 100,
+  "inventory": [
+    "Cajado de Aprendiz",
+    "Grimório Básico",
+    "Robe de Mago",
+    "Amuleto Tribal",
+    "Dente de Troféu",
+    "Kit de Armadilhas",
+    "Poção de Vida Pequena",
+    "Poção de Stamina Pequena"
+  ],
+  "equipment": {
+    "weapon": null,
+    "armor": null,
+    "helmet": null,
+    "gloves": null,
+    "boots": null,
+    "accessory": null
+  },
+  "gold": 50,
+  "experience": 0,
+  "level": 1,
+  "attack_damage": [
+    1,
+    4
+  ],
+  "defense": 2,
+  "status_effects": [],
+  "last_updated": "2025-05-12T23:13:55.551619"
+}

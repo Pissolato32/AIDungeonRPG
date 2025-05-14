@@ -1,0 +1,18 @@
+{
+  "current_location": "Village Center",
+  "scene_description": "You stand in the center of a small village. There's a tavern to the north, a blacksmith to the east, and the village gate to the south.",
+  "npcs_present": [
+    "Village Elder",
+    "Merchant"
+  ],
+  "events": [
+    "A gentle breeze blows through the village."
+  ],
+  "messages": [
+    "Welcome to the village! You can explore by using the actions below."
+  ],
+  "combat": false,
+  "quests": [],
+  "secrets": [],
+  "language": "pt-br"
+}
