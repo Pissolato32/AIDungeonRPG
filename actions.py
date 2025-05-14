@@ -89,8 +89,6 @@ class ActionHandler(ABC):
 
                 # Adiciona o encontro ao resultado
                 if encounter["type"] == "combat":
-                    # Cria um inimigo baseado no encontro
-                    from models import Enemy
                     enemy = Enemy(
                         name=encounter["enemy_type"],
                         level=encounter["enemy_level"],
