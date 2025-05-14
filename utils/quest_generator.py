@@ -36,17 +36,17 @@ def generate_quest(
         location: Quest location
         difficulty: Quest difficulty
         lang: Language for translation
-        
+
     Returns:
         Dictionary with quest details
     """
     try:
         # Select random quest type
         quest_type = random.choice(QUEST_TYPES)
-        
+
         # Generate quest details based on type
         quest_details = _generate_quest_details(quest_type, location, lang)
-        
+
         # Create quest data
         quest = {
             "name": quest_details["name"],
@@ -71,12 +71,12 @@ def generate_quest(
 def _generate_quest_details(quest_type: str, location: str, lang: str) -> Dict[str, str]:
     """
     Generate quest name and description based on type.
-    
+
     Args:
         quest_type: Quest type
         location: Quest location
         lang: Language for translation
-        
+
     Returns:
         Dictionary with quest name and description
     """
@@ -101,17 +101,17 @@ def _generate_quest_details(quest_type: str, location: str, lang: str) -> Dict[s
 def _generate_kill_quest(location: str, lang: str) -> Dict[str, str]:
     """
     Generate a kill quest.
-    
+
     Args:
         location: Quest location
         lang: Language for translation
-        
+
     Returns:
         Dictionary with quest name and description
     """
     target_key = random.choice(QUEST_TARGETS["kill"])
     target = get_text(f"quest_targets.{target_key}", lang)
-    
+
     return {
         "name": get_text("quest_names.kill", lang, target),
         "description": get_text("quest_descriptions.kill", lang, target.lower(), location)
@@ -121,17 +121,17 @@ def _generate_kill_quest(location: str, lang: str) -> Dict[str, str]:
 def _generate_collect_quest(location: str, lang: str) -> Dict[str, str]:
     """
     Generate a collection quest.
-    
+
     Args:
         location: Quest location
         lang: Language for translation
-        
+
     Returns:
         Dictionary with quest name and description
     """
     target_key = random.choice(QUEST_TARGETS["collect"])
     target = get_text(f"quest_targets.{target_key}", lang)
-    
+
     return {
         "name": get_text("quest_names.collect", lang, target),
         "description": get_text("quest_descriptions.collect", lang, target.lower(), location)
@@ -141,17 +141,17 @@ def _generate_collect_quest(location: str, lang: str) -> Dict[str, str]:
 def _generate_deliver_quest(location: str, lang: str) -> Dict[str, str]:
     """
     Generate a delivery quest.
-    
+
     Args:
         location: Quest location
         lang: Language for translation
-        
+
     Returns:
         Dictionary with quest name and description
     """
     target_key = random.choice(QUEST_TARGETS["deliver"])
     target = get_text(f"quest_targets.{target_key}", lang)
-    
+
     return {
         "name": get_text("quest_names.deliver", lang, target),
         "description": get_text("quest_descriptions.deliver", lang, target.lower(), location)
@@ -161,17 +161,17 @@ def _generate_deliver_quest(location: str, lang: str) -> Dict[str, str]:
 def _generate_escort_quest(location: str, lang: str) -> Dict[str, str]:
     """
     Generate an escort quest.
-    
+
     Args:
         location: Quest location
         lang: Language for translation
-        
+
     Returns:
         Dictionary with quest name and description
     """
     target_key = random.choice(QUEST_TARGETS["escort"])
     target = get_text(f"quest_targets.{target_key}", lang)
-    
+
     return {
         "name": get_text("quest_names.escort", lang, target),
         "description": get_text("quest_descriptions.escort", lang, target.lower(), location)
@@ -181,17 +181,17 @@ def _generate_escort_quest(location: str, lang: str) -> Dict[str, str]:
 def _generate_investigate_quest(location: str, lang: str) -> Dict[str, str]:
     """
     Generate an investigation quest.
-    
+
     Args:
         location: Quest location
         lang: Language for translation
-        
+
     Returns:
         Dictionary with quest name and description
     """
     target_key = random.choice(QUEST_TARGETS["investigate"])
     target = get_text(f"quest_targets.{target_key}", lang)
-    
+
     return {
         "name": get_text("quest_names.investigate", lang, target),
         "description": get_text("quest_descriptions.investigate", lang, target.lower(), location)
@@ -201,37 +201,37 @@ def _generate_investigate_quest(location: str, lang: str) -> Dict[str, str]:
 def _generate_quest_rewards(difficulty: int, lang: str) -> List[str]:
     """
     Generate quest rewards based on difficulty.
-    
+
     Args:
         difficulty: Quest difficulty
         lang: Language for translation
-        
+
     Returns:
         List of reward items
     """
     rewards = []
-    
+
     # Add basic rewards for difficulty > 1
     if difficulty > 1:
         rewards.append(get_text("items.health_potion", lang))
-    
+
     # Add better rewards for higher difficulties
     if difficulty > 2:
         rewards.append(get_text("items.stamina_potion", lang))
-    
+
     if difficulty > 3:
         rewards.append(get_text("items.rare_item", lang))
-        
+
     return rewards
 
 
 def _get_default_quest(location: str) -> Dict[str, Any]:
     """
     Get a default quest for fallback.
-    
+
     Args:
         location: Quest location
-        
+
     Returns:
         Default quest data
     """

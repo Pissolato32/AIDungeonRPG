@@ -19,14 +19,14 @@ def save_json_data(data: Dict[str, Any], filename: str) -> bool:
     Args:
         data: Data to save
         filename: File path
-        
+
     Returns:
         Boolean indicating success of the operation
     """
     try:
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-        
+
         # Write data to file with proper formatting
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
@@ -44,7 +44,7 @@ def load_json_data(filename: str) -> Optional[Dict[str, Any]]:
 
     Args:
         filename: File path
-        
+
     Returns:
         Loaded data or None if there's an error
     """
@@ -52,7 +52,7 @@ def load_json_data(filename: str) -> Optional[Dict[str, Any]]:
     if not os.path.exists(filename):
         logger.warning(f"File not found: {filename}")
         return None
-        
+
     try:
         # Read and parse JSON data
         with open(filename, 'r', encoding='utf-8') as f:

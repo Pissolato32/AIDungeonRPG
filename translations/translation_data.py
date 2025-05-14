@@ -32,7 +32,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
         "stats": "Estatísticas",
         "quests": "Missões",
         "empty_inventory": "Seu inventário está vazio",
-        
+
         # Character attributes
         "strength": "Força",
         "dexterity": "Destreza",
@@ -40,7 +40,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
         "intelligence": "Inteligência",
         "wisdom": "Sabedoria",
         "charisma": "Carisma",
-        
+
         # Character creation
         "create_character": "Criar Personagem",
         "edit_character": "Editar Personagem",
@@ -54,21 +54,21 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
         "remaining_rolls": "Jogadas Restantes",
         "total_points": "Pontos Totais",
         "character_info": "Informações do Personagem",
-        
+
         # Classes
         "warrior": "Guerreiro",
         "mage": "Mago",
         "rogue": "Ladino",
         "cleric": "Clérigo",
         "ranger": "Patrulheiro",
-        
+
         # Races
         "human": "Humano",
         "elf": "Elfo",
         "dwarf": "Anão",
         "halfling": "Halfling",
         "orc": "Orc",
-        
+
         # Game UI
         "game_title": "WebChatRPG - Jogo de Aventura",
         "reset_game": "Reiniciar Jogo",
@@ -80,7 +80,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
         "npcs_present": "NPCs Presentes",
         "events": "Eventos",
         "combat_log": "Registro de Combate",
-        
+
         # Actions
         "move": "Mover",
         "look": "Olhar",
@@ -89,7 +89,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
         "custom": "Personalizado",
         "rest": "Descansar",
         "enter_details": "Digite os detalhes...",
-        
+
         # Combat
         "combat": {
             "attack": "Atacar",
@@ -113,7 +113,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "defeated_while_fleeing": "O {} derrotou você enquanto tentava escapar!",
             "not_enough_stamina": "Você não tem energia suficiente para {}. Você precisa de {} de energia."
         },
-        
+
         # Items
         "items": {
             "use": "Usar",
@@ -148,7 +148,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "must_specify": "Você deve especificar um item para usar.",
             "cannot_use": "Você não pode usar esse item."
         },
-        
+
         # Locations
         "locations": {
             "village_center": "Centro da Vila",
@@ -167,7 +167,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "frozen_tundra": "Tundra Congelada",
             "volcanic_region": "Região Vulcânica"
         },
-        
+
         # NPCs
         "npcs": {
             "village_elder": "Ancião da Vila",
@@ -186,7 +186,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "noble": "Nobre",
             "bandit": "Bandido"
         },
-        
+
         # Enemies
         "enemies": {
             "wild_wolf": "Lobo Selvagem",
@@ -205,7 +205,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "bear": "Urso",
             "wolf_pack": "Alcateia de Lobos"
         },
-        
+
         # Action responses
         "action_responses": {
             "move_success": "Você se move para {}.",
@@ -222,7 +222,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "rest_success": "Você descansa por um tempo e se sente revigorado. Você recupera alguma vida e energia.",
             "level_up": "Você subiu para o nível {}!"
         },
-        
+
         # Custom actions
         "custom_actions": {
             "climb": "Você escala {} com sucesso, embora exija algum esforço.",
@@ -232,7 +232,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "sing": "Você canta {}. Sua voz ecoa nos arredores.",
             "generic": "Você {} {} com algum esforço."
         },
-        
+
         # Error messages
         "errors": {
             "no_active_session": "Nenhuma sessão ativa",
@@ -241,7 +241,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "reset_error": "Erro ao reiniciar o jogo: {}"
         }
     },
-    
+
     # English translations
     "en": {
         "character": {
@@ -261,7 +261,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
         "stats": "Stats",
         "quests": "Quests",
         "empty_inventory": "Your inventory is empty",
-        
+
         # Character attributes
         "strength": "Strength",
         "dexterity": "Dexterity",
@@ -269,7 +269,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
         "intelligence": "Intelligence",
         "wisdom": "Wisdom",
         "charisma": "Charisma",
-        
+
         # Character creation
         "create_character": "Create Character",
         "edit_character": "Edit Character",
@@ -283,21 +283,21 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
         "remaining_rolls": "Remaining Rolls",
         "total_points": "Total Points",
         "character_info": "Character Info",
-        
+
         # Classes
         "warrior": "Warrior",
         "mage": "Mage",
         "rogue": "Rogue",
         "cleric": "Cleric",
         "ranger": "Ranger",
-        
+
         # Races
         "human": "Human",
         "elf": "Elf",
         "dwarf": "Dwarf",
         "halfling": "Halfling",
         "orc": "Orc",
-        
+
         # Game UI
         "game_title": "WebChatRPG - Adventure Game",
         "reset_game": "Reset Game",
@@ -309,7 +309,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
         "npcs_present": "NPCs Present",
         "events": "Events",
         "combat_log": "Combat Log",
-        
+
         # Actions
         "move": "Move",
         "look": "Look",
@@ -318,7 +318,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
         "custom": "Custom",
         "rest": "Rest",
         "enter_details": "Enter details...",
-        
+
         # Combat
         "combat": {
             "attack": "Attack",
@@ -342,7 +342,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "defeated_while_fleeing": "The {} defeated you as you tried to escape!",
             "not_enough_stamina": "You don't have enough stamina to {}. You need {} stamina."
         },
-        
+
         # Items
         "items": {
             "use": "Use",
@@ -377,7 +377,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "must_specify": "You must specify an item to use.",
             "cannot_use": "You cannot use that item."
         },
-        
+
         # Locations
         "locations": {
             "village_center": "Village Center",
@@ -396,7 +396,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "frozen_tundra": "Frozen Tundra",
             "volcanic_region": "Volcanic Region"
         },
-        
+
         # NPCs
         "npcs": {
             "village_elder": "Village Elder",
@@ -415,7 +415,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "noble": "Noble",
             "bandit": "Bandit"
         },
-        
+
         # Enemies
         "enemies": {
             "wild_wolf": "Wild Wolf",
@@ -434,7 +434,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "bear": "Bear",
             "wolf_pack": "Wolf Pack"
         },
-        
+
         # Action responses
         "action_responses": {
             "move_success": "You move to {}.",
@@ -451,7 +451,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "rest_success": "You rest for a while and feel refreshed. You recover some health and stamina.",
             "level_up": "You leveled up to level {}!"
         },
-        
+
         # Custom actions
         "custom_actions": {
             "climb": "You climb {} successfully, though it takes some effort.",
@@ -461,7 +461,7 @@ TRANSLATIONS: Dict[str, Dict[str, Any]] = {
             "sing": "You sing {}. Your voice echoes in the surroundings.",
             "generic": "You {} {} with some effort."
         },
-        
+
         # Error messages
         "errors": {
             "no_active_session": "No active session",

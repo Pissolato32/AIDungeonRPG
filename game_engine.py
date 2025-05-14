@@ -16,7 +16,7 @@ T = TypeVar('T', bound='GameState')
 class GameState:
     """
     Represents the current state of the game.
-    
+
     Attributes:
         current_location (str): Name of the current location
         location_id (str): Unique identifier for the location
@@ -34,7 +34,7 @@ class GameState:
         world_map (Dict[str, Dict[str, Any]]): World map with discovered locations
         summary (str): Incremental summary of relevant interactions
     """
-    
+
     def __init__(self) -> None:
         """Initialize a new game state with default values."""
         self.current_location: str = "Start"
@@ -56,7 +56,7 @@ class GameState:
     def add_to_summary(self, interaction_type: str, details: str) -> None:
         """
         Add an interaction to the incremental summary.
-        
+
         Args:
             interaction_type: Type of interaction (quest, dialogue, combat, etc.)
             details: Details of the interaction
@@ -70,27 +70,27 @@ class GameState:
     def get_relevant_summary(self, context_type: Optional[str] = None) -> str:
         """
         Get relevant summary based on context.
-        
+
         Args:
             context_type: Type of context to filter (quest, dialogue, etc.)
-            
+
         Returns:
             Filtered summary string
         """
         if not context_type:
             return self.summary
-            
+
         interactions = self.summary.split('\n') if self.summary else []
         relevant = [
             interaction for interaction in interactions 
             if interaction.startswith(f'[{context_type}]')
         ]
         return '\n'.join(relevant)
-        
+
     def update_quest_summary(self, quest_name: str, action: str, progress: int) -> None:
         """
         Update the summary with quest-related interactions.
-        
+
         Args:
             quest_name: Name of the quest
             action: Action taken (started, updated, completed)
@@ -102,10 +102,10 @@ class GameState:
     def from_dict(cls, data: Dict[str, Any]) -> 'GameState':
         """
         Create a GameState instance from a dictionary.
-        
+
         Args:
              game state data
-            
+
         Returns:
             GameState instance
         """
@@ -119,7 +119,7 @@ class GameState:
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert the game state to a dictionary.
-        
+
         Returns:
             Dictionary representation of the game state
         """
@@ -352,47 +352,47 @@ class GameEngine:
                 "message": f"An error occurred: {str(e)}",
                 "error": str(e)
             }
-            
+
     def initialize_game_world(self, game_state: 'GameState', groq_client: Any = None, language: str = 'pt-br') -> Dict[str, Any]:
         """
         Inicializa o mundo do jogo com um cenário procedural.
-        
+
         Args:
             game_state: Estado atual do jogo
             groq_client: Cliente da API Groq para geração de texto
             language: Idioma para geração do texto
-            
+
         Returns:
             Dicionário com informações do cenário inicial
         """
         # Importa o gerador de mundo
         from world_generator import WorldGenerator
-        
+
         # Inicializa o gerador de mundo
         world_generator = WorldGenerator(self.data_dir)
-        
+
         # Carrega ou cria o mapa do mundo
         world_data = world_generator.load_world()
-        
+
         # Verifica se já existe um local inicial
         starting_location = None
         for loc_id, loc_data in world_data.get("locations", {}).items():
             if loc_data.get("coordinates", {}).get("x") == 0 and loc_data.get("coordinates", {}).get("y") == 0:
                 starting_location = loc_data
                 break
-        
+
         # Se não existir, gera um novo local inicial
         if not starting_location:
             starting_location = world_generator.generate_starting_location()
-            
+
             # Adiciona o local ao mapa do mundo
             if "locations" not in world_data:
                 world_data["locations"] = {}
             world_data["locations"][starting_location["id"]] = starting_location
-            
+
             # Salva o mapa do mundo
             world_generator.save_world(world_data)
-        
+
         # Atualiza o estado do jogo
         game_state.current_location = starting_location["name"]
         game_state.location_id = starting_location["id"]
@@ -400,14 +400,14 @@ class GameEngine:
         game_state.npcs_present = starting_location["npcs"]
         game_state.events = starting_location["events"]
         game_state.coordinates = starting_location["coordinates"]
-        
+
         # Inicializa o mapa do mundo no estado do jogo
         game_state.world_map = world_data
-        
+
         # Adiciona o local aos locais visitados
         if not hasattr(game_state, 'visited_locations'):
             game_state.visited_locations = {}
-            
+
         game_state.visited_locations[game_state.location_id] = {
             "name": starting_location["name"],
             "description": starting_location["description"],
@@ -415,7 +415,7 @@ class GameEngine:
             "npcs_seen": starting_location["npcs"].copy(),
             "events_seen": starting_location["events"].copy()
         }
-        
+
         # Formata a resposta para exibição
         formatted_response = {
             "success": True,
@@ -425,17 +425,17 @@ class GameEngine:
             "events": " ".join(starting_location["events"]),
             "message": f"Bem-vindo a {starting_location['name']}! Você pode explorar usando as ações disponíveis."
         }
-        
+
         return formatted_response
 
     def generate_random_start_prompt(self, groq_client=None, language='pt-br'):
         """
         Gera um prompt inicial randômico e criativo para o início do jogo, usando IA se disponível.
-        
+
         Args:
             groq_client: Cliente da API Groq para geração de texto
             language: Idioma para geração do texto (padrão: pt-br)
-            
+
         Returns:
             Dict com informações do cenário inicial
         """
@@ -472,7 +472,7 @@ class GameEngine:
             "Fumaça colorida sai da torre do mago local.",
             "Um grupo de anões discute sobre uma mina recém-descoberta."
         ]
-        
+
         # Tenta usar a API da Groq para gerar um cenário criativo
         if groq_client:
             try:
@@ -500,7 +500,7 @@ class GameEngine:
                     "eventos": ["Descrição do evento ou situação atual"]
                 }}
                 """
-                
+
                 # Chamada para a API da Groq
                 response = groq_client.chat.completions.create(
                     model="llama3-70b-8192",  # ou outro modelo disponível
@@ -512,34 +512,34 @@ class GameEngine:
                     max_tokens=800,
                     response_format={"type": "json_object"}
                 )
-                
+
                 # Extrai o conteúdo da resposta
                 content = response.choices[0].message.content
                 scenario = json.loads(content)
-                
+
                 # Verifica se o cenário tem todos os campos necessários
                 if all(key in scenario for key in ["local", "descricao", "npcs_presentes", "eventos"]):
                     return scenario
-                    
+
             except Exception as e:
                 logger.error(f"Erro ao gerar cenário com API Groq: {str(e)}")
                 # Continua para o fallback em caso de erro
-        
+
         # Fallback: geração aleatória local
         local = random.choice(locais)
         taverna = random.choice(tavernas)
         ferraria = random.choice(ferrarias)
-        
+
         # Seleciona 2-3 NPCs aleatórios sem repetição
         npcs_presentes = random.sample(npcs, k=min(random.randint(2, 3), len(npcs)))
-        
+
         # Seleciona 1-2 eventos aleatórios sem repetição
         eventos_atuais = random.sample(eventos, k=min(random.randint(1, 2), len(eventos)))
-        
+
         # Gera descrições baseadas nas escolhas
         direcoes = ["norte", "sul", "leste", "oeste"]
         random.shuffle(direcoes)
-        
+
         # Cria uma descrição mais elaborada
         descricoes_locais = [
             f"Você está no centro de {local}. Há uma taverna chamada '{taverna}' ao {direcoes[0]}, uma ferraria chamada '{ferraria}' ao {direcoes[1]}, e o portão da aldeia ao {direcoes[2]}.",
@@ -547,9 +547,9 @@ class GameEngine:
             f"As ruas de pedra de {local} se estendem ao seu redor. A taverna '{taverna}' com seu letreiro rangendo ao vento fica ao {direcoes[0]}. A fumaça da fornalha da ferraria '{ferraria}' sobe ao {direcoes[1]}.",
             f"Você acaba de chegar a {local}, um lugar cheio de histórias e mistérios. A taverna local '{taverna}' está ao {direcoes[0]}, com o som de música e risos. A ferraria '{ferraria}' emite o som de metal sendo trabalhado ao {direcoes[1]}."
         ]
-        
+
         descricao = random.choice(descricoes_locais)
-        
+
         # Monta o cenário final
         scenario = {
             "local": local,
@@ -557,5 +557,5 @@ class GameEngine:
             "npcs_presentes": npcs_presentes,
             "eventos": eventos_atuais
         }
-        
+
         return scenario

@@ -55,13 +55,13 @@ def get_random_encounter(
         character_level: Character level
         location_type: Location type (wilderness, dungeon, village)
         lang: Language for translation
-        
+
     Returns:
         Dictionary with enemy data
     """
     # Validate location type
     enemies = LOCATION_ENEMIES.get(location_type, LOCATION_ENEMIES["wilderness"])
-    
+
     try:
         # Select random enemy
         enemy_key = random.choice(enemies)
@@ -72,10 +72,10 @@ def get_random_encounter(
 
         # Calculate enemy stats
         enemy_stats = _calculate_enemy_stats(enemy_level)
-        
+
         # Generate enemy description
         description = _generate_enemy_description(enemy_type, lang)
-            
+
         # Create enemy data
         enemy = {
             "name": enemy_type,
@@ -106,19 +106,19 @@ def generate_loot_table(
 ) -> List[str]:
     """
     Generate a list of loot items for an enemy.
-    
+
     Args:
         enemy_key: Enemy type identifier
         enemy_level: Enemy level
         lang: Language for translation
-        
+
     Returns:
         List of loot items
     """
     try:
         # Get specific or generic loot
         specific_loot = ENEMY_LOOT.get(enemy_key, ["unknown_item"])
-        
+
         # Add better items for higher level enemies
         enhanced_loot = _enhance_loot_by_level(specific_loot, enemy_level)
 
@@ -140,10 +140,10 @@ def generate_loot_table(
 def _scale_enemy_level(character_level: int) -> int:
     """
     Scale enemy level based on character level.
-    
+
     Args:
         character_level: Character level
-        
+
     Returns:
         Scaled enemy level
     """
@@ -154,10 +154,10 @@ def _scale_enemy_level(character_level: int) -> int:
 def _calculate_enemy_stats(enemy_level: int) -> Dict[str, Any]:
     """
     Calculate enemy statistics based on level.
-    
+
     Args:
         enemy_level: Enemy level
-        
+
     Returns:
         Dictionary with enemy statistics
     """
@@ -165,7 +165,7 @@ def _calculate_enemy_stats(enemy_level: int) -> Dict[str, Any]:
     hp_base = 8 + (enemy_level * 2)
     hp_variance = random.randint(-3, 3)
     max_hp = hp_base + hp_variance
-    
+
     return {
         "max_hp": max_hp,
         "attack_damage": [1 + (enemy_level // 3), 4 + enemy_level],
@@ -178,11 +178,11 @@ def _calculate_enemy_stats(enemy_level: int) -> Dict[str, Any]:
 def _generate_enemy_description(enemy_type: str, lang: str) -> str:
     """
     Generate a description for an enemy.
-    
+
     Args:
         enemy_type: Enemy type
         lang: Language for translation
-        
+
     Returns:
         Enemy description
     """
@@ -195,16 +195,16 @@ def _generate_enemy_description(enemy_type: str, lang: str) -> str:
 def _enhance_loot_by_level(specific_loot: List[str], enemy_level: int) -> List[str]:
     """
     Enhance loot based on enemy level.
-    
+
     Args:
         specific_loot: Base loot list
         enemy_level: Enemy level
-        
+
     Returns:
         Enhanced loot list
     """
     enhanced_loot = specific_loot.copy()
-    
+
     # Add medium items for level 5+
     if enemy_level >= 5:
         enhanced_loot.extend(["medium_health_potion", "medium_stamina_potion"])
@@ -212,14 +212,14 @@ def _enhance_loot_by_level(specific_loot: List[str], enemy_level: int) -> List[s
     # Add high-quality items for level 8+
     if enemy_level >= 8:
         enhanced_loot.extend(["large_health_potion", "enchanted_item"])
-        
+
     return enhanced_loot
 
 
 def _get_default_enemy() -> Dict[str, Any]:
     """
     Get a default enemy for fallback.
-    
+
     Returns:
         Default enemy data
     """

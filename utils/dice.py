@@ -19,26 +19,26 @@ def roll_dice(num_dice: int, sides: int, modifier: int = 0) -> Dict[str, any]:
         num_dice: Number of dice to roll
         sides: Number of sides on each die
         modifier: Modifier to add to the result
-        
+
     Returns:
         Dictionary with roll results including individual dice, total, and formatted string
     """
     try:
         individual_rolls = [random.randint(1, sides) for _ in range(num_dice)]
         total = sum(individual_rolls) + modifier
-        
+
         # Create formatted string representation
         roll_str = f"{num_dice}d{sides}"
         if modifier > 0:
             roll_str += f"+{modifier}"
         elif modifier < 0:
             roll_str += f"{modifier}"
-            
+
         result_str = f"{roll_str} = {total} ({'+'.join(map(str, individual_rolls))}"
         if modifier != 0:
             result_str += f"{'+' if modifier > 0 else ''}{modifier}"
         result_str += ")"
-        
+
         result = {
             "dice": individual_rolls,
             "total": total,
@@ -47,7 +47,7 @@ def roll_dice(num_dice: int, sides: int, modifier: int = 0) -> Dict[str, any]:
             "result_string": result_str,
             "success": True
         }
-        
+
         logger.debug(f"Dice roll: {result_str}")
         return result
     except Exception as e:
@@ -68,7 +68,7 @@ def calculate_attribute_modifier(attribute_score: int) -> int:
 
     Args:
         attribute_score: Attribute score
-        
+
     Returns:
         Calculated modifier
     """
@@ -87,7 +87,7 @@ def calculate_damage(
         attacker_stats: Attacker statistics
         defender_stats: Defender statistics
         attack_type: Attack type (basic, light, heavy)
-        
+
     Returns:
         Tuple with damage dealt and hit indicator
     """
@@ -95,19 +95,19 @@ def calculate_damage(
         # Get attack parameters based on attack type
         attack_params = _get_attack_parameters(attack_type, attacker_stats)
         min_damage, max_damage, hit_chance = attack_params
-        
+
         # Determine if the attack hits
         if random.random() > hit_chance:
             logger.info(f"{attack_type.capitalize()} attack missed")
             return 0, False
-        
+
         # Calculate damage
         damage = random.randint(min_damage, max_damage)
-        
+
         # Apply defense
         defense = defender_stats.get("defense", 0)
         final_damage = max(1, damage - defense)
-        
+
         logger.debug(f"{attack_type.capitalize()} attack: {final_damage} damage")
         return final_damage, True
 
@@ -119,16 +119,16 @@ def calculate_damage(
 def _get_attack_parameters(attack_type: str, attacker_stats: Dict[str, int]) -> Tuple[int, int, float]:
     """
     Get attack parameters based on attack type.
-    
+
     Args:
         attack_type: Attack type (basic, light, heavy)
         attacker_stats: Attacker statistics
-        
+
     Returns:
         Tuple with min damage, max damage, and hit chance
     """
     strength = attacker_stats.get("strength", 10)
-    
+
     if attack_type == "light":
         min_damage = max(1, strength // 4)
         max_damage = max(3, strength // 2)
@@ -141,5 +141,5 @@ def _get_attack_parameters(attack_type: str, attacker_stats: Dict[str, int]) -> 
         min_damage = max(1, strength // 3)
         max_damage = max(4, strength // 2 + 2)
         hit_chance = 0.8
-        
+
     return min_damage, max_damage, hit_chance
