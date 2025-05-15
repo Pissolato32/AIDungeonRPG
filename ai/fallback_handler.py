@@ -31,7 +31,8 @@ FALLBACK_RESPONSES = {
         "new_location": "Caminho da Floresta",
         "description": "Você caminha por um caminho sinuoso através de uma floresta densa.",
         "npcs": [],
-        "events": ["Uma suave brisa agita as folhas"]
+        "events": ["Uma suave brisa agita as folhas"],
+        "message": "Você caminha por um caminho sinuoso através de uma floresta densa."
     },
     "combat": {
         "success": True,
@@ -41,12 +42,14 @@ FALLBACK_RESPONSES = {
         "success": True,
         "npc_name": "Aldeão Local",
         "dialogue": "Olá viajante! Desculpe, não posso conversar agora.",
-        "options": [{"texto": "Continuar explorando", "tema": "exploração"}]
+        "options": [{"texto": "Continuar explorando", "tema": "exploração"}],
+        "message": "Olá viajante! Desculpe, não posso conversar agora."
     },
     "search": {
         "success": True,
         "findings": "Você examina a área, mas não encontra nada de especial no momento.",
-        "items": []
+        "items": [],
+        "message": "Você examina a área, mas não encontra nada de especial no momento."
     },
     "use_item": {
         "success": False,

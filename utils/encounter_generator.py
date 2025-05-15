@@ -1,237 +1,259 @@
 """
-Random encounter generator.
+Encounter generator module.
 
-This module provides functions for generating random encounters and loot.
+This module provides functionality for generating random encounters.
 """
 
 import random
 import logging
-from typing import Dict, List, Any
+from typing import Dict, Any, List, Optional, Union
 
-from translations import get_text
+from ai.groq_client import GroqClient
+from core.enemy import Enemy
 
 logger = logging.getLogger(__name__)
 
-
-# Enemy types by location
-LOCATION_ENEMIES = {
-    "wilderness": [
-        "wild_wolf", "bear", "bandit", "goblin", "wild_boar", 
-        "giant_spider", "dire_wolf", "ogre", "troll"
-    ],
-    "dungeon": [
-        "skeleton", "zombie", "goblin", "orc", "kobold", 
-        "ghoul", "minotaur", "troll", "gelatinous_cube"
-    ],
-    "village": [
-        "thief", "bandit", "drunk_brawler", "guard", "cultist"
-    ]
-}
-
-# Loot tables
-COMMON_LOOT = ["health_potion", "gold_coin", "stamina_potion"]
-ENEMY_LOOT = {
-    "wild_wolf": ["wolf_pelt", "sharp_tooth", "wolf_meat"],
-    "bear": ["bear_pelt", "bear_claw", "bear_meat"],
-    "goblin": ["rusty_dagger", "stolen_coin_purse", "goblin_ear"],
-    "skeleton": ["bone_fragment", "rusty_weapon", "tattered_cloth"],
-    "zombie": ["rotting_flesh", "tattered_clothing", "broken_jewelry"],
-    "giant_spider": ["spider_silk", "venom_sac", "spider_eye"],
-    "bandit": ["stolen_goods", "leather_pouch", "cheap_jewelry"],
-    "orc": ["crude_weapon", "orc_tooth", "tribal_symbol"],
-    "troll": ["troll_hide", "large_tooth", "crude_club"]
-}
-
-
-def get_random_encounter(
-    character_level: int,
-    location_type: str = "wilderness",
-    lang: str = None
-) -> Dict[str, Any]:
+def get_random_encounter(character_level: int, location: str = None) -> Dict[str, Any]:
     """
     Generate a random encounter based on character level and location.
-
+    
     Args:
-        character_level: Character level
-        location_type: Location type (wilderness, dungeon, village)
-        lang: Language for translation
-
+        character_level: The character's level
+        location: Optional location name for themed encounters
+        
     Returns:
-        Dictionary with enemy data
+        Dictionary with encounter details
     """
-    # Validate location type
-    enemies = LOCATION_ENEMIES.get(location_type, LOCATION_ENEMIES["wilderness"])
+    # Determine encounter type
+    encounter_type = _determine_encounter_type(location)
+    
+    if encounter_type == "combat":
+        return _generate_combat_encounter(character_level, location)
+    elif encounter_type == "npc":
+        return _generate_npc_encounter(character_level, location)
+    else:
+        return _generate_environmental_encounter(character_level, location)
 
-    try:
-        # Select random enemy
-        enemy_key = random.choice(enemies)
-        enemy_type = get_text(f"enemies.{enemy_key}", lang)
-
-        # Scale enemy level
-        enemy_level = _scale_enemy_level(character_level)
-
-        # Calculate enemy stats
-        enemy_stats = _calculate_enemy_stats(enemy_level)
-
-        # Generate enemy description
-        description = _generate_enemy_description(enemy_type, lang)
-
-        # Create enemy data
-        enemy = {
-            "name": enemy_type,
-            "description": description,
-            "level": enemy_level,
-            "max_hp": enemy_stats["max_hp"],
-            "current_hp": enemy_stats["max_hp"],
-            "attack_damage": enemy_stats["attack_damage"],
-            "defense": enemy_stats["defense"],
-            "experience_reward": enemy_stats["experience_reward"],
-            "gold_reward": enemy_stats["gold_reward"],
-            "loot_table": generate_loot_table(enemy_key, enemy_level, lang)
-        }
-
-        logger.info(f"Encounter generated: {enemy['name']} (Level {enemy_level})")
-        return enemy
-
-    except Exception as e:
-        logger.error(f"Error generating encounter: {e}")
-        # Return default enemy in case of error
-        return _get_default_enemy()
-
-
-def generate_loot_table(
-    enemy_key: str,
-    enemy_level: int,
-    lang: str = None
-) -> List[str]:
+def _determine_encounter_type(location: Optional[str] = None) -> str:
     """
-    Generate a list of loot items for an enemy.
-
+    Determine the type of encounter based on location.
+    
     Args:
-        enemy_key: Enemy type identifier
-        enemy_level: Enemy level
-        lang: Language for translation
-
+        location: Optional location name
+        
     Returns:
-        List of loot items
+        Encounter type: "combat", "npc", or "environmental"
     """
-    try:
-        # Get specific or generic loot
-        specific_loot = ENEMY_LOOT.get(enemy_key, ["unknown_item"])
+    # Base probabilities
+    combat_chance = 0.5  # 50% chance of combat
+    npc_chance = 0.3     # 30% chance of NPC encounter
+    
+    # Adjust based on location
+    if location:
+        location_lower = location.lower()
+        
+        if "floresta" in location_lower or "caverna" in location_lower:
+            combat_chance = 0.7  # More combat in dangerous areas
+            npc_chance = 0.2
+        elif "cidade" in location_lower or "aldeia" in location_lower:
+            combat_chance = 0.3  # Less combat in civilized areas
+            npc_chance = 0.5
+    
+    # Roll for encounter type
+    roll = random.random()
+    
+    if roll < combat_chance:
+        return "combat"
+    elif roll < combat_chance + npc_chance:
+        return "npc"
+    else:
+        return "environmental"
 
-        # Add better items for higher level enemies
-        enhanced_loot = _enhance_loot_by_level(specific_loot, enemy_level)
-
-        # Select 2-4 random items
-        loot_count = random.randint(2, 4)
-        combined_loot = COMMON_LOOT + enhanced_loot
-        loot_keys = random.sample(combined_loot, min(loot_count, len(combined_loot)))
-
-        # Translate items
-        loot_table = [get_text(f"items.{item}", lang) for item in loot_keys]
-
-        logger.debug(f"Loot generated for {enemy_key}: {loot_table}")
-        return loot_table
-    except Exception as e:
-        logger.error(f"Error generating loot: {e}")
-        return []
-
-
-def _scale_enemy_level(character_level: int) -> int:
+def _generate_combat_encounter(character_level: int, location: Optional[str] = None) -> Dict[str, Any]:
     """
-    Scale enemy level based on character level.
-
+    Generate a combat encounter.
+    
     Args:
-        character_level: Character level
-
+        character_level: The character's level
+        location: Optional location name
+        
     Returns:
-        Scaled enemy level
+        Dictionary with combat encounter details
     """
-    # Enemy level is character level +/- 2, minimum 1, maximum 10
-    return max(1, min(character_level + random.randint(-2, 2), 10))
-
-
-def _calculate_enemy_stats(enemy_level: int) -> Dict[str, Any]:
-    """
-    Calculate enemy statistics based on level.
-
-    Args:
-        enemy_level: Enemy level
-
-    Returns:
-        Dictionary with enemy statistics
-    """
-    # Calculate HP
-    hp_base = 8 + (enemy_level * 2)
-    hp_variance = random.randint(-3, 3)
-    max_hp = hp_base + hp_variance
-
+    # Determine enemy type based on location and level
+    enemy_type = _select_enemy_type(character_level, location)
+    
+    # Create enemy instance
+    enemy = _create_enemy(enemy_type, character_level)
+    
+    # Create encounter result
     return {
-        "max_hp": max_hp,
-        "attack_damage": [1 + (enemy_level // 3), 4 + enemy_level],
-        "defense": enemy_level // 2,
-        "experience_reward": 20 + (enemy_level * 10),
-        "gold_reward": [enemy_level, 5 + (enemy_level * 3)]
+        "type": "combat",
+        "enemy": enemy.to_dict(),
+        "message": f"Um {enemy.name} aparece!",
+        "combat": True
     }
 
-
-def _generate_enemy_description(enemy_type: str, lang: str) -> str:
+def _select_enemy_type(character_level: int, location: Optional[str] = None) -> str:
     """
-    Generate a description for an enemy.
-
+    Select an appropriate enemy type based on level and location.
+    
     Args:
-        enemy_type: Enemy type
-        lang: Language for translation
-
+        character_level: The character's level
+        location: Optional location name
+        
     Returns:
-        Enemy description
+        Enemy type name
     """
-    try:
-        return f"{get_text('enemies.description_prefix', lang)} {enemy_type.lower()} {get_text('enemies.description_suffix', lang)}"
-    except Exception:
-        return f"A hostile {enemy_type.lower()}"
+    # Basic enemies for low levels
+    tier1_enemies = ["Lobo Selvagem", "Bandido", "Goblin", "Aranha Gigante"]
+    
+    # Medium difficulty enemies
+    tier2_enemies = ["Guerreiro Orc", "Esqueleto", "Zumbi", "Ladrão"]
+    
+    # Harder enemies
+    tier3_enemies = ["Troll", "Ogro", "Elemental", "Cultista"]
+    
+    # Boss-level enemies
+    tier4_enemies = ["Dragão Jovem", "Lich", "Demônio Menor", "Gigante"]
+    
+    # Select tier based on level
+    if character_level <= 3:
+        enemy_pool = tier1_enemies
+    elif character_level <= 6:
+        enemy_pool = tier1_enemies + tier2_enemies
+    elif character_level <= 10:
+        enemy_pool = tier2_enemies + tier3_enemies
+    else:
+        enemy_pool = tier3_enemies + tier4_enemies
+    
+    # Adjust based on location if provided
+    if location:
+        location_lower = location.lower()
+        
+        if "floresta" in location_lower:
+            forest_enemies = ["Lobo Selvagem", "Urso", "Aranha Gigante", "Druida Corrompido"]
+            enemy_pool = [e for e in enemy_pool if e in forest_enemies] or enemy_pool
+        elif "caverna" in location_lower:
+            cave_enemies = ["Goblin", "Troll", "Morcego Gigante", "Slime"]
+            enemy_pool = [e for e in enemy_pool if e in cave_enemies] or enemy_pool
+    
+    # Select random enemy from pool
+    return random.choice(enemy_pool)
 
-
-def _enhance_loot_by_level(specific_loot: List[str], enemy_level: int) -> List[str]:
+def _create_enemy(enemy_type: str, character_level: int) -> Enemy:
     """
-    Enhance loot based on enemy level.
-
+    Create an enemy instance based on type and level.
+    
     Args:
-        specific_loot: Base loot list
-        enemy_level: Enemy level
-
+        enemy_type: The type of enemy
+        character_level: The character's level
+        
     Returns:
-        Enhanced loot list
+        Enemy instance
     """
-    enhanced_loot = specific_loot.copy()
+    # Base stats
+    base_hp = 10
+    base_damage = (1, 4)
+    
+    # Adjust level based on character level
+    enemy_level = max(1, character_level - 1 + random.randint(-1, 1))
+    
+    # Scale stats based on level
+    hp = base_hp + (enemy_level * 5)
+    min_damage, max_damage = base_damage
+    damage = (min_damage + enemy_level // 2, max_damage + enemy_level)
+    
+    # Create enemy
+    enemy = Enemy(
+        name=enemy_type,
+        description=f"Um {enemy_type} hostil.",
+        level=enemy_level,
+        max_hp=hp,
+        current_hp=hp,
+        attack_damage=damage,
+        defense=enemy_level // 2,
+        xp_reward=10 * enemy_level,
+        gold_reward=(5 * enemy_level, 15 * enemy_level)
+    )
+    
+    return enemy
 
-    # Add medium items for level 5+
-    if enemy_level >= 5:
-        enhanced_loot.extend(["medium_health_potion", "medium_stamina_potion"])
-
-    # Add high-quality items for level 8+
-    if enemy_level >= 8:
-        enhanced_loot.extend(["large_health_potion", "enchanted_item"])
-
-    return enhanced_loot
-
-
-def _get_default_enemy() -> Dict[str, Any]:
+def _generate_npc_encounter(character_level: int, location: Optional[str] = None) -> Dict[str, Any]:
     """
-    Get a default enemy for fallback.
-
+    Generate an NPC encounter.
+    
+    Args:
+        character_level: The character's level
+        location: Optional location name
+        
     Returns:
-        Default enemy data
+        Dictionary with NPC encounter details
     """
+    # NPC types
+    npc_types = [
+        "Mercador Viajante", "Aventureiro Ferido", "Peregrino", 
+        "Caçador", "Refugiado", "Bardo", "Eremita"
+    ]
+    
+    # Select NPC type
+    npc_type = random.choice(npc_types)
+    
+    # Generate message
+    messages = [
+        f"Você encontra um {npc_type} no caminho.",
+        f"Um {npc_type} acena para você à distância.",
+        f"Um {npc_type} se aproxima cautelosamente."
+    ]
+    
     return {
-        "name": "Goblin",
-        "description": "A small, malicious goblin",
-        "level": 1,
-        "max_hp": 10,
-        "current_hp": 10,
-        "attack_damage": [1, 4],
-        "defense": 0,
-        "experience_reward": 20,
-        "gold_reward": [1, 5],
-        "loot_table": []
+        "type": "npc",
+        "npc": npc_type,
+        "message": random.choice(messages),
+        "combat": False
+    }
+
+def _generate_environmental_encounter(character_level: int, location: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Generate an environmental encounter.
+    
+    Args:
+        character_level: The character's level
+        location: Optional location name
+        
+    Returns:
+        Dictionary with environmental encounter details
+    """
+    # Environmental events
+    events = [
+        "Você encontra pegadas estranhas no chão.",
+        "Uma brisa fria sopra, trazendo um cheiro peculiar.",
+        "Você ouve sons distantes que não consegue identificar.",
+        "O céu escurece repentinamente, mas logo volta ao normal.",
+        "Você encontra os restos de um acampamento abandonado."
+    ]
+    
+    # Adjust based on location
+    if location:
+        location_lower = location.lower()
+        
+        if "floresta" in location_lower:
+            forest_events = [
+                "Os pássaros silenciam repentinamente.",
+                "Você nota marcas de garras em uma árvore próxima.",
+                "Uma névoa estranha começa a se formar entre as árvores."
+            ]
+            events.extend(forest_events)
+        elif "caverna" in location_lower:
+            cave_events = [
+                "Você ouve o som de água pingando nas profundezas.",
+                "Cristais estranhos brilham nas paredes.",
+                "Um vento inexplicável apaga momentaneamente sua tocha."
+            ]
+            events.extend(cave_events)
+    
+    return {
+        "type": "environmental",
+        "message": random.choice(events),
+        "combat": False
     }

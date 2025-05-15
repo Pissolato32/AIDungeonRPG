@@ -1,5 +1,3 @@
-// static/js/game.js
-
 /**
  * Game UI Manager - Handles all UI updates and interactions
  */
@@ -10,7 +8,6 @@ class GameUIManager {
         this.initializeEventListeners();
         this.updateProgressBars();
         this.isProcessing = false;
-        this.addAttackButton();
     }
 
     /**
@@ -37,36 +34,22 @@ class GameUIManager {
     }
 
     /**
-     * Add attack button to the UI
-     */
-    addAttackButton() {
-        const actionTypeSelect = document.getElementById('actionType');
-        if (actionTypeSelect) {
-            // Check if attack option already exists
-            let attackExists = false;
-            for (let i = 0; i < actionTypeSelect.options.length; i++) {
-                if (actionTypeSelect.options[i].value === 'attack') {
-                    attackExists = true;
-                    break;
-                }
-            }
-            
-            // Add attack option if it doesn't exist
-            if (!attackExists) {
-                const attackOption = document.createElement('option');
-                attackOption.value = 'attack';
-                attackOption.textContent = 'Attack';
-                actionTypeSelect.appendChild(attackOption);
-            }
-        }
-    }
-
-    /**
      * Update all progress bars on the page
      */
     updateProgressBars() {
         this.updateEnemyHpBar();
         this.updateCharacterBars();
+    }
+
+    /**
+     * Set up mutation observers to watch for dynamic content changes
+     */
+    setupMutationObservers() {
+        const enemyHp = document.getElementById('enemyHp');
+        if (enemyHp) {
+            const observer = new MutationObserver(() => this.updateEnemyHpBar());
+            observer.observe(enemyHp, { childList: true, characterData: true, subtree: true });
+        }
     }
 
     /**
@@ -111,17 +94,6 @@ class GameUIManager {
     }
 
     /**
-     * Set up mutation observers to watch for dynamic content changes
-     */
-    setupMutationObservers() {
-        const enemyHp = document.getElementById('enemyHp');
-        if (enemyHp) {
-            const observer = new MutationObserver(() => this.updateEnemyHpBar());
-            observer.observe(enemyHp, { childList: true, characterData: true, subtree: true });
-        }
-    }
-
-    /**
      * Set up the action form submission handler
      */
     setupActionForm() {
@@ -130,23 +102,17 @@ class GameUIManager {
         
         actionForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            
             if (this.isProcessing) return; // Prevent multiple submissions
             
             const actionTypeElement = document.querySelector('#actionType');
             if (!actionTypeElement) {
-                console.error('Action type element not found');
+                this.displayErrorMessage('Action type element not found');
                 return;
             }
             
             const actionType = actionTypeElement.value;
             const actionDetailsElement = document.getElementById('actionDetails');
-            const actionDetails = actionDetailsElement.value;
-            
-            if (!actionDetails.trim()) {
-                alert('Please enter details for your action');
-                return;
-            }
+            const actionDetails = actionDetailsElement ? actionDetailsElement.value : '';
             
             // Show loading state
             this.isProcessing = true;
@@ -170,7 +136,7 @@ class GameUIManager {
                     this.removeThinkingIndicator();
                     
                     // Reset form
-                    actionDetailsElement.value = '';
+                    if (actionDetailsElement) actionDetailsElement.value = '';
                     
                     // Reset button state
                     submitButton.disabled = false;
@@ -179,6 +145,9 @@ class GameUIManager {
                     
                     // Handle the response
                     this.handleActionResponse(data);
+                    
+                    // Update bars after response
+                    this.updateProgressBars();
                 },
                 (error) => {
                     // Remove thinking indicator
@@ -261,34 +230,7 @@ class GameUIManager {
                                button.id === 'attackLight' ? 'light' : 
                                button.id === 'attackHeavy' ? 'heavy' : '';
                 
-                // Add player's action to the message container
-                this.addPlayerMessage(`${action}: ${details}`);
-                
-                // Show "thinking" indicator
-                this.showThinkingIndicator();
-                
-                // Disable all combat buttons
-                combatButtons.forEach(btn => btn.disabled = true);
-                
-                // Send action to server
-                this.sendGameAction(
-                    action, 
-                    details,
-                    () => {
-                        // Remove thinking indicator
-                        this.removeThinkingIndicator();
-                        
-                        // Reload page to update game state
-                        window.location.reload();
-                    },
-                    () => {
-                        // Remove thinking indicator
-                        this.removeThinkingIndicator();
-                        
-                        // Re-enable combat buttons
-                        combatButtons.forEach(btn => btn.disabled = false);
-                    }
-                );
+                this.handleButtonAction(action, details, combatButtons);
             });
         });
     }
@@ -301,34 +243,7 @@ class GameUIManager {
         if (!restButton) return;
         
         restButton.addEventListener('click', () => {
-            // Add player's action to the message container
-            this.addPlayerMessage('rest');
-            
-            // Show "thinking" indicator
-            this.showThinkingIndicator();
-            
-            // Disable button
-            restButton.disabled = true;
-            
-            // Send rest action to server
-            this.sendGameAction(
-                'rest', 
-                '',
-                () => {
-                    // Remove thinking indicator
-                    this.removeThinkingIndicator();
-                    
-                    // Reload page to update game state
-                    window.location.reload();
-                },
-                () => {
-                    // Remove thinking indicator
-                    this.removeThinkingIndicator();
-                    
-                    // Re-enable button
-                    restButton.disabled = false;
-                }
-            );
+            this.handleButtonAction('rest', '', restButton);
         });
     }
 
@@ -340,37 +255,59 @@ class GameUIManager {
         useItemButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const item = button.getAttribute('data-item');
-                
-                // Add player's action to the message container
-                this.addPlayerMessage(`use item: ${item}`);
-                
-                // Show "thinking" indicator
-                this.showThinkingIndicator();
-                
-                // Disable all use item buttons
-                useItemButtons.forEach(btn => btn.disabled = true);
-                
-                // Send use item action to server
-                this.sendGameAction(
-                    'use_item', 
-                    item,
-                    () => {
-                        // Remove thinking indicator
-                        this.removeThinkingIndicator();
-                        
-                        // Reload page to update game state
-                        window.location.reload();
-                    },
-                    () => {
-                        // Remove thinking indicator
-                        this.removeThinkingIndicator();
-                        
-                        // Re-enable use item buttons
-                        useItemButtons.forEach(btn => btn.disabled = false);
-                    }
-                );
+                this.handleButtonAction('use_item', item, useItemButtons);
             });
         });
+    }
+
+    /**
+     * Helper method to handle common button action flow
+     * @param {string} action - The action to perform
+     * @param {string} details - Additional details for the action
+     * @param {NodeList|Array|HTMLElement} buttons - Buttons to disable during processing
+     * @param {boolean} reloadOnSuccess - Whether to reload the page on success
+     */
+    handleButtonAction(action, details, buttons, reloadOnSuccess = true) {
+        // Add player's action to the message container
+        this.addPlayerMessage(`${action}${details ? ': ' + details : ''}`);
+        
+        // Show "thinking" indicator
+        this.showThinkingIndicator();
+        
+        // Disable buttons
+        const buttonArray = buttons instanceof NodeList || Array.isArray(buttons) ? Array.from(buttons) : [buttons];
+        buttonArray.forEach(btn => { btn.disabled = true; });
+        
+        // Send action to server
+        this.sendGameAction(
+            action,
+            details,
+            (data) => {
+                // Remove thinking indicator
+                this.removeThinkingIndicator();
+                
+                // Handle the response
+                this.handleActionResponse(data);
+                
+                // Reload page or continue
+                if (reloadOnSuccess && data.success && (data.combat || data.new_location)) {
+                    window.location.reload();
+                } else {
+                    // Re-enable buttons
+                    buttonArray.forEach(btn => { btn.disabled = false; });
+                }
+            },
+            (error) => {
+                // Remove thinking indicator
+                this.removeThinkingIndicator();
+                
+                // Re-enable buttons
+                buttonArray.forEach(btn => { btn.disabled = false; });
+                
+                // Display error message
+                this.displayErrorMessage('An error occurred while processing your action. Please try again.');
+            }
+        );
     }
 
     /**
@@ -379,13 +316,16 @@ class GameUIManager {
     setupResetGameButton() {
         const resetGameBtn = document.getElementById('resetGameBtn');
         const confirmResetBtn = document.getElementById('confirmResetBtn');
-        
         if (!resetGameBtn || !confirmResetBtn) return;
         
         resetGameBtn.addEventListener('click', () => {
             // Show confirmation modal
-            const resetModal = new bootstrap.Modal(document.getElementById('resetGameModal'));
-            resetModal.show();
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const resetModal = new bootstrap.Modal(document.getElementById('resetGameModal'));
+                resetModal.show();
+            } else {
+                alert('Bootstrap JS não carregado.');
+            }
         });
         
         confirmResetBtn.addEventListener('click', () => {
@@ -410,9 +350,8 @@ class GameUIManager {
                 // Re-enable button
                 confirmResetBtn.disabled = false;
                 confirmResetBtn.innerHTML = 'Reset Game';
-                
                 // Show error message
-                alert('An error occurred while resetting the game. Please try again.');
+                this.displayErrorMessage('An error occurred while resetting the game. Please try again.');
             });
         });
     }
@@ -431,10 +370,7 @@ class GameUIManager {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: JSON.stringify({
-                action: action,
-                details: details
-            })
+            body: JSON.stringify({ action, details })
         };
         
         fetch(this.API_ENDPOINT, requestOptions)
@@ -449,7 +385,6 @@ class GameUIManager {
             })
             .catch(error => {
                 console.error('Error:', error);
-                this.displayErrorMessage('An error occurred while processing your action. Please try again.');
                 if (onError) onError(error);
             });
     }
@@ -459,29 +394,6 @@ class GameUIManager {
      * @param {Object} data - The response data
      */
     handleActionResponse(data) {
-        // Check if the response is a JSON string that wasn't properly parsed
-        if (typeof data === 'string' && data.startsWith('{') && data.endsWith('}')) {
-            try {
-                data = JSON.parse(data);
-            } catch (e) {
-                console.error('Failed to parse JSON string:', e);
-            }
-        }
-        
-        // Check if the message is a JSON string
-        if (data.message && typeof data.message === 'string') {
-            if (data.message.startsWith('{') && data.message.endsWith('}')) {
-                try {
-                    const jsonData = JSON.parse(data.message);
-                    if (jsonData.message) {
-                        data.message = jsonData.message;
-                    }
-                } catch (e) {
-                    // Not valid JSON, keep original message
-                }
-            }
-        }
-        
         if (data.success) {
             // Add the message to the messages container
             if (data.message) {
@@ -506,12 +418,6 @@ class GameUIManager {
             // Update events if they changed
             if (data.events) {
                 this.updateEvents(data.events);
-            }
-            
-            // Handle combat state
-            if (data.combat) {
-                // Reload page to show combat interface
-                window.location.reload();
             }
         } else {
             // Display error message
@@ -556,12 +462,7 @@ class GameUIManager {
      * @param {string} message - The error message to display
      */
     displayErrorMessage(message) {
-        const messagesContainer = document.getElementById('messagesContainer');
-        if (messagesContainer) {
-            this.addMessage(message, true);
-        } else {
-            alert(message);
-        }
+        this.addMessage(message, true);
     }
 
     /**
@@ -592,14 +493,11 @@ class GameUIManager {
      */
     updateNPCs(npcs) {
         let npcsElement = document.querySelector('.npcs-present');
-        
         if (npcs.length > 0) {
             if (npcsElement) {
-                // Update existing element
                 npcsElement.innerHTML = `<strong>NPCs Present:</strong> ${npcs.join(', ')}`;
                 npcsElement.style.display = 'block';
             } else {
-                // Create new element
                 const gameOutput = document.getElementById('gameOutput');
                 if (gameOutput) {
                     npcsElement = document.createElement('div');
@@ -609,7 +507,6 @@ class GameUIManager {
                 }
             }
         } else if (npcsElement) {
-            // Hide if no NPCs
             npcsElement.style.display = 'none';
         }
     }
@@ -620,14 +517,11 @@ class GameUIManager {
      */
     updateEvents(events) {
         let eventsElement = document.querySelector('.events');
-        
         if (events.length > 0) {
             if (eventsElement) {
-                // Update existing element
                 eventsElement.innerHTML = `<strong>Events:</strong> ${events.join(', ')}`;
                 eventsElement.style.display = 'block';
             } else {
-                // Create new element
                 const gameOutput = document.getElementById('gameOutput');
                 if (gameOutput) {
                     eventsElement = document.createElement('div');
@@ -637,13 +531,12 @@ class GameUIManager {
                 }
             }
         } else if (eventsElement) {
-            // Hide if no events
             eventsElement.style.display = 'none';
         }
     }
 }
 
 // Initialize the game UI when the DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    const gameUI = new GameUIManager();
+document.addEventListener('DOMContentLoaded', () => {
+    new GameUIManager();
 });

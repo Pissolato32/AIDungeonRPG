@@ -3,16 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Dungeon RPG - Adventure Game</title>
+    <title>{{ get_text('game_title', session.get('language', 'pt-br')) }}</title>
     <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}">
 </head>
 <body>
     <div class="language-selector">
-        <a href="{{ url_for('change_language', lang='pt-br') }}" class="btn btn-sm {{ 'btn-primary' if session.get('language') == 'pt-br' else 'btn-secondary' }}">PT-BR</a>
-        <a href="{{ url_for('change_language', lang='en') }}" class="btn btn-sm {{ 'btn-primary' if session.get('language') == 'en' else 'btn-secondary' }}">EN</a>
+        <a href="{{ url_for('routes.change_language', lang='pt-br') }}" class="btn btn-sm {{ 'btn-primary' if session.get('language') == 'pt-br' else 'btn-secondary' }}">PT-BR</a>
+        <a href="{{ url_for('routes.change_language', lang='en') }}" class="btn btn-sm {{ 'btn-primary' if session.get('language') == 'en' else 'btn-secondary' }}">EN</a>
     </div>
     <div class="game-container">
         <!-- Top Navigation Bar -->
@@ -30,12 +29,12 @@
                     <ul class="navbar-nav me-auto">
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('character') }}">
-                                <i class="bi bi-person-badge me-1"></i> Character
+                                <i class="bi bi-person-badge me-1"></i> {{ get_text('character', session.get('language', 'pt-br')) }}
                             </a>
                         </li>
                         <li class="nav-item">
                             <button class="nav-link" id="restButton">
-                                <i class="bi bi-moon-stars me-1"></i> Rest
+                                <i class="bi bi-moon-stars me-1"></i> {{ get_text('rest', session.get('language', 'pt-br')) }}
                             </button>
                         </li>
                     </ul>
@@ -45,9 +44,6 @@
                         </span>
                         <span class="me-3">
                             <i class="bi bi-star-fill me-1 text-warning"></i> Level {{ character.level }}
-                        </span>
-                        <span class="gold-display">
-                            <i class="bi bi-coin me-1 text-warning"></i> {{ character.gold }} Gold
                         </span>
                     </span>
                 </div>
@@ -66,7 +62,7 @@
                             </h5>
                             <div>
                                 <button class="btn btn-sm btn-outline-danger" id="resetGameBtn">
-                                    <i class="bi bi-arrow-clockwise me-1"></i>Reset Game
+                                    <i class="bi bi-arrow-clockwise me-1"></i>{{ get_text('reset_game', session.get('language', 'pt-br')) }}
                                 </button>
                             </div>
                         </div>
@@ -81,13 +77,13 @@
                             
                             {% if game_state.npcs_present %}
                             <div class="npcs-present mb-3">
-                                <strong>NPCs Present:</strong> {{ ', '.join(game_state.npcs_present) }}
+                                <strong>{{ get_text('npcs_present', session.get('language', 'pt-br')) }}:</strong> {{ ', '.join(game_state.npcs_present) }}
                             </div>
                             {% endif %}
                             
                             {% if game_state.events %}
                             <div class="events mb-3">
-                                <strong>Events:</strong> {{ ', '.join(game_state.events) }}
+                                <strong>{{ get_text('events', session.get('language', 'pt-br')) }}:</strong> {{ ', '.join(game_state.events) }}
                             </div>
                             {% endif %}
                             
@@ -116,7 +112,7 @@
                                     <p id="enemyDescription" class="mb-1">{{ game_state.combat.enemy.description if game_state.combat and game_state.combat.get('enemy') else 'Enemy description' }}</p>
                                     
                                     <div class="combat-log mt-3">
-                                        <h6 class="border-top pt-2">Combat Log:</h6>
+                                        <h6 class="border-top pt-2">{{ get_text('combat_log', session.get('language', 'pt-br')) }}:</h6>
                                         <div id="combatLog" class="small">
                                             {% if game_state.combat and game_state.combat.get('log') %}
                                                 {% for entry in game_state.combat.log %}
@@ -130,16 +126,16 @@
                             
                             <div class="combat-actions d-flex gap-2">
                                 <button id="attackBasic" class="btn btn-outline-primary flex-grow-1">
-                                    <i class="bi bi-slash-circle me-1"></i>Basic Attack
+                                    <i class="bi bi-slash-circle me-1"></i>{{ get_text('basic_attack', session.get('language', 'pt-br')) }}
                                 </button>
                                 <button id="attackLight" class="btn btn-outline-success flex-grow-1">
-                                    <i class="bi bi-wind me-1"></i>Light Attack
+                                    <i class="bi bi-wind me-1"></i>{{ get_text('light_attack', session.get('language', 'pt-br')) }}
                                 </button>
                                 <button id="attackHeavy" class="btn btn-outline-danger flex-grow-1">
-                                    <i class="bi bi-lightning-charge me-1"></i>Heavy Attack
+                                    <i class="bi bi-lightning-charge me-1"></i>{{ get_text('heavy_attack', session.get('language', 'pt-br')) }}
                                 </button>
                                 <button id="fleeButton" class="btn btn-outline-secondary">
-                                    <i class="bi bi-door-open me-1"></i>Flee
+                                    <i class="bi bi-door-open me-1"></i>{{ get_text('flee', session.get('language', 'pt-br')) }}
                                 </button>
                             </div>
                         </div>
@@ -149,13 +145,13 @@
                             <form id="actionForm" class="{% if game_state.combat %}d-none{% endif %}">
                                 <div class="input-group">
                                     <select id="actionType" class="form-select flex-grow-0" style="width: 120px;">
-                                        <option value="move">Move</option>
-                                        <option value="look">Look</option>
-                                        <option value="talk">Talk</option>
-                                        <option value="search">Search</option>
-                                        <option value="custom">Custom</option>
+                                        <option value="move">{{ get_text('move', session.get('language', 'pt-br')) }}</option>
+                                        <option value="look">{{ get_text('look', session.get('language', 'pt-br')) }}</option>
+                                        <option value="talk">{{ get_text('talk', session.get('language', 'pt-br')) }}</option>
+                                        <option value="search">{{ get_text('search', session.get('language', 'pt-br')) }}</option>
+                                        <option value="custom">{{ get_text('custom', session.get('language', 'pt-br')) }}</option>
                                     </select>
-                                    <input type="text" id="actionDetails" class="form-control" placeholder="Enter details...">
+                                    <input type="text" id="actionDetails" class="form-control" placeholder="{{ get_text('enter_details', session.get('language', 'pt-br')) }}...">
                                     <button type="submit" class="btn btn-primary">
                                         <i class="bi bi-send"></i>
                                     </button>
@@ -170,21 +166,19 @@
             <div class="col-md-4 character-panel p-0">
                 <div class="card h-100 border-0 rounded-0">
                     <div class="card-header bg-dark border-bottom">
-                        <ul class="nav nav-tabs card-header-tabs nav-fill">
+                        <ul class="nav nav-tabs card-header-tabs">
                             <li class="nav-item">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#inventoryTab">Inv</a>
+                                <a class="nav-link active" data-bs-toggle="tab" href="#inventoryTab">{{ get_text('inventory', session.get('language', 'pt-br')) }}</a>
                             </li>
+                            <!-- Removed Events tab -->
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#npcsTab">NPCs</a>
+                                <a class="nav-link" data-bs-toggle="tab" href="#statsTab">{{ get_text('stats', session.get('language', 'pt-br')) }}</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" data-bs-toggle="tab" href="#questsTab">Quests</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#mapTab">Map</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#statsTab">Stats</a>
+                                <a class="nav-link" data-bs-toggle="tab" href="#mapTab">{{ get_text('map', session.get('language', 'pt-br')) }}</a>
                             </li>
                         </ul>
                     </div>
@@ -193,8 +187,8 @@
                         <!-- Inventory Tab -->
                         <div class="tab-pane fade show active" id="inventoryTab">
                             <div class="d-flex justify-content-between mb-3">
-                                <h5 class="mb-0">Inventory</h5>
-                                <span class="gold-display"><i class="bi bi-coin text-warning me-1"></i>{{ character.gold }} Gold</span>
+                                <h5 class="mb-0">{{ get_text('inventory', session.get('language', 'pt-br')) }}</h5>
+                                <span class="gold-display"><i class="bi bi-coin text-warning me-1"></i>{{ character.gold }} {{ get_text('gold', session.get('language', 'pt-br')) }}</span>
                             </div>
                             <div class="inventory-list">
                                 {% if character.inventory %}
@@ -204,7 +198,7 @@
                                             <span>
                                                 {%- set item_name = item.name if item.name is defined else item -%}
                                                 {% if character.equipment and item_name in character.equipment.values() %}
-                                                    <strong>{{ item_name }}*</strong> <span class="badge bg-success ms-2">equipado</span>
+                                                    <strong>{{ item_name }}*</strong> <span class="badge bg-success ms-2">{{ get_text('equipped', session.get('language', 'pt-br')) }}</span>
                                                 {% else %}
                                                     {{ item_name }}
                                                 {% endif %}
@@ -215,97 +209,25 @@
                                                     <span class="badge bg-info ms-2">x{{ item.quantity }}</span>
                                                 {% endif %}
                                             </span>
-                                            <button class="btn btn-sm btn-outline-primary use-item-btn" data-item="{{ item.name if item.name is defined else item }}">Use</button>
+                                            <button class="btn btn-sm btn-outline-primary use-item-btn" data-item="{{ item.name if item.name is defined else item }}">{{ get_text('use', session.get('language', 'pt-br')) }}</button>
                                         </div>
                                         {% endfor %}
                                     </div>
                                 {% else %}
                                     <div class="text-center text-secondary p-3">
                                         <i class="bi bi-inbox-fill fs-4"></i>
-                                        <p class="mt-2">Your inventory is empty</p>
+                                        <p class="mt-2">{{ get_text('empty_inventory', session.get('language', 'pt-br')) }}</p>
                                     </div>
                                 {% endif %}
                             </div>
                         </div>
-                        <!-- NPCs Tab -->
-                        <div class="tab-pane fade" id="npcsTab">
-                            <h5 class="mb-3">NPCs Present</h5>
-                            <ul class="list-group">
-                                {% for npc in game_state.npcs_present %}
-                                <li class="list-group-item">{{ npc }}</li>
-                                {% else %}
-                                <li class="list-group-item text-secondary">No NPCs present.</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                        <!-- Events Tab -->
-                        <div class="tab-pane fade" id="eventsTab">
-                            <h5 class="mb-3">Events</h5>
-                            <ul class="list-group">
-                                {% for event in game_state.events %}
-                                <li class="list-group-item">{{ event }}</li>
-                                {% else %}
-                                <li class="list-group-item text-secondary">No events at this location.</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                        <!-- Quests Tab -->
-                        <div class="tab-pane fade" id="questsTab">
-                            <h5 class="mb-3">Active Quests</h5>
-                            {% if game_state.quests %}
-                                <div class="list-group">
-                                    {% for quest in game_state.quests %}
-                                    <div class="list-group-item quest-item">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-1">{{ quest.name if quest.name is defined else quest.titulo if quest.titulo is defined else "Quest" }}</h6>
-                                            {% if quest.progress is defined %}
-                                            <span class="badge bg-primary">{{ quest.progress }}%</span>
-                                            {% endif %}
-                                        </div>
-                                        <p class="mb-1 small">{{ quest.description if quest.description is defined else quest.descricao if quest.descricao is defined else "" }}</p>
-                                        <div class="d-flex justify-content-between align-items-center mt-2">
-                                            <small class="text-muted">From: {{ quest.giver if quest.giver is defined else "Unknown" }}</small>
-                                            <small class="text-warning">Reward: {{ quest.reward if quest.reward is defined else quest.reward_gold if quest.reward_gold is defined else quest.recompensa if quest.recompensa is defined else "Unknown" }}</small>
-                                        </div>
-                                        {% if quest.tasks is defined and quest.tasks %}
-                                        <div class="quest-tasks mt-2">
-                                            <small class="d-block mb-1">Tasks:</small>
-                                            <ul class="list-unstyled ms-2 small">
-                                                {% for task in quest.tasks %}
-                                                <li>
-                                                    <i class="bi {{ 'bi-check-circle-fill text-success' if task.completed else 'bi-circle' }}"></i>
-                                                    {{ task.description }}
-                                                </li>
-                                                {% endfor %}
-                                            </ul>
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <div class="text-center text-secondary p-3">
-                                    <i class="bi bi-journal-text fs-4"></i>
-                                    <p class="mt-2">You don't have any active quests</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                        
-                        <!-- Map Tab -->
-                        <div class="tab-pane fade" id="mapTab">
-                            <h5 class="mb-3">World Map</h5>
-                            <div id="mapContainer" class="map-container"></div>
-                            <div class="map-controls">
-                                <button id="mapCenterBtn" class="btn btn-sm btn-secondary">Center Map</button>
-                            </div>
-                        </div>
-                        
+                        <!-- Removed duplicate Events Tab -->
                         <!-- Stats Tab -->
                         <div class="tab-pane fade" id="statsTab">
                             <div class="character-info mb-4">
                                 <h4>{{ character.name }}</h4>
-                                <div>Level {{ character.level }} {{ character.race }} {{ character.character_class }}</div>
-                                <div class="text-secondary">Experience: {{ character.experience }} / {{ character.level * 100 }}</div>
+                                <div>{{ get_text('level', session.get('language', 'pt-br')) }} {{ character.level }} {{ get_text(character.race|lower, session.get('language', 'pt-br')) }} {{ get_text(character.character_class|lower, session.get('language', 'pt-br')) }}</div>
+                                <div class="text-secondary">{{ get_text('experience', session.get('language', 'pt-br')) }}: {{ character.experience }} / {{ character.level * 100 }}</div>
                                 <div class="progress mt-2 mb-3">
                                     <div class="progress-bar bg-info" role="progressbar" 
                                          style="width: 0%;"
@@ -375,45 +297,72 @@
                             </div>
                             
                             <div class="attributes">
-                                <h5 class="mb-3">Attributes</h5>
+                                <h5 class="mb-3">{{ get_text('attributes', session.get('language', 'pt-br')) }}</h5>
                                 <div class="row">
                                     <div class="col-6 mb-2">
                                         <div class="attribute">
-                                            <span class="attribute-name"><i class="bi bi-shield-fill me-1"></i>STR</span>
+                                            <span class="attribute-name"><i class="bi bi-shield-fill me-1"></i>{{ get_text('strength', session.get('language', 'pt-br')) }}</span>
                                             <span class="attribute-value">{{ character.strength }}</span>
                                         </div>
                                     </div>
                                     <div class="col-6 mb-2">
                                         <div class="attribute">
-                                            <span class="attribute-name"><i class="bi bi-arrow-up-right me-1"></i>DEX</span>
+                                            <span class="attribute-name"><i class="bi bi-arrow-up-right me-1"></i>{{ get_text('dexterity', session.get('language', 'pt-br')) }}</span>
                                             <span class="attribute-value">{{ character.dexterity }}</span>
                                         </div>
                                     </div>
                                     <div class="col-6 mb-2">
                                         <div class="attribute">
-                                            <span class="attribute-name"><i class="bi bi-heart me-1"></i>CON</span>
+                                            <span class="attribute-name"><i class="bi bi-heart me-1"></i>{{ get_text('constitution', session.get('language', 'pt-br')) }}</span>
                                             <span class="attribute-value">{{ character.constitution }}</span>
                                         </div>
                                     </div>
                                     <div class="col-6 mb-2">
                                         <div class="attribute">
-                                            <span class="attribute-name"><i class="bi bi-lightbulb me-1"></i>INT</span>
+                                            <span class="attribute-name"><i class="bi bi-lightbulb me-1"></i>{{ get_text('intelligence', session.get('language', 'pt-br')) }}</span>
                                             <span class="attribute-value">{{ character.intelligence }}</span>
                                         </div>
                                     </div>
                                     <div class="col-6 mb-2">
                                         <div class="attribute">
-                                            <span class="attribute-name"><i class="bi bi-book me-1"></i>WIS</span>
+                                            <span class="attribute-name"><i class="bi bi-book me-1"></i>{{ get_text('wisdom', session.get('language', 'pt-br')) }}</span>
                                             <span class="attribute-value">{{ character.wisdom }}</span>
                                         </div>
                                     </div>
                                     <div class="col-6 mb-2">
                                         <div class="attribute">
-                                            <span class="attribute-name"><i class="bi bi-chat me-1"></i>CHA</span>
+                                            <span class="attribute-name"><i class="bi bi-chat me-1"></i>{{ get_text('charisma', session.get('language', 'pt-br')) }}</span>
                                             <span class="attribute-value">{{ character.charisma }}</span>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                        <!-- Quests Tab -->
+                        <div class="tab-pane fade" id="questsTab">
+                            <h5 class="mb-3">{{ get_text('quests', session.get('language', 'pt-br')) }}</h5>
+                            <ul class="list-group">
+                                {% for quest in character.quests %}
+                                <li class="list-group-item">
+                                    <div>
+                                        <strong>{{ quest.title }}</strong>
+                                        <span class="badge rounded-pill ms-2 
+                                            {% if quest.status == 'completed' %}bg-success{% elif quest.status == 'in_progress' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            {{ get_text(quest.status, session.get('language', 'pt-br')) }}
+                                        </span>
+                                    </div>
+                                    <div class="small text-muted">{{ quest.description }}</div>
+                                </li>
+                                {% else %}
+                                <li class="list-group-item text-secondary">{{ get_text('no_quests', session.get('language', 'pt-br')) }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <!-- Map Tab -->
+                        <div class="tab-pane fade" id="mapTab">
+                            <h5 class="mb-3">{{ get_text('map', session.get('language', 'pt-br')) }}</h5>
+                            <div id="gameMap" style="min-height: 200px;">
+                                <!-- O mapa será renderizado aqui pelo JS -->
                             </div>
                         </div>
                     </div>
@@ -427,15 +376,19 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="resetGameModalLabel">Reset Game</h5>
+                    <h5 class="modal-title" id="resetGameModalLabel">{{ get_text('reset_game', session.get('language', 'pt-br')) }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to reset the game? This will delete your current game progress and character data.</p>
+                    <p>{{ get_text('reset_game_confirmation', session.get('language', 'pt-br')) }}</p>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        Seu personagem será mantido (nome, raça, classe e atributos), mas todos os itens, ouro, experiência e progresso serão reiniciados.
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="confirmResetBtn">Reset Game</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ get_text('cancel', session.get('language', 'pt-br')) }}</button>
+                    <button type="button" class="btn btn-danger" id="confirmResetBtn">{{ get_text('reset_game', session.get('language', 'pt-br')) }}</button>
                 </div>
             </div>
         </div>
@@ -443,6 +396,5 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/game.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 </body>
 </html>

@@ -6,6 +6,7 @@ This module provides functions for processing AI responses.
 
 import json
 import logging
+import re
 from typing import Dict, Any, Union, Optional
 
 logger = logging.getLogger(__name__)
@@ -104,7 +105,8 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
                             logger.debug("Successfully extracted JSON using brace matching")
                             return json_data
                         except json.JSONDecodeError:
-                            break
+                            # Continue searching for other JSON structures instead of breaking
+                            pass
     except Exception as e:
         logger.warning("Error in JSON extraction strategy 3", extra={"error": str(e)})
 
@@ -125,3 +127,35 @@ def create_error_response(error_message: str) -> Dict[str, Any]:
         "success": False,
         "message": error_message
     }
+
+def validate_response_content(response: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Validate if the response content makes sense.
+    
+    Args:
+        response: The response dictionary
+        
+    Returns:
+        Validated response or error response
+    """
+    # Verificar se a resposta é genérica demais
+    if "message" in response and isinstance(response["message"], str):
+        message = response["message"]
+        
+        # Verificar padrões de respostas genéricas
+        generic_patterns = [
+            r"Você realizou a ação \w+: \w+",
+            r"You performed the \w+ action: \w+",
+            r"Action \w+ performed: \w+"
+        ]
+        
+        for pattern in generic_patterns:
+            if re.search(pattern, message):
+                # Se a resposta parece genérica, retornar erro
+                return {
+                    "success": False,
+                    "message": "Não foi possível processar sua ação. Por favor, tente novamente com mais detalhes."
+                }
+    
+    # Se passou nas verificações, retornar a resposta original
+    return response

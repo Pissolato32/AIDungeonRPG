@@ -1,4 +1,6 @@
-from .translation_manager import TranslationManager, get_text, _
+# Translations package initialization
+"""
+Translation functionality for the RPG game.
+"""
 
-# Export main components
-__all__ = ['TranslationManager', 'get_text', '_']
+from translations.simple import get_text

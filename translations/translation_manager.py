@@ -6,7 +6,7 @@ This module provides functionality for managing translations in the game.
 
 import logging
 from typing import Dict, Any, Optional, Union, List
-from .translation_data import TRANSLATIONS, DEFAULT_LANGUAGE
+from translations.translation_data import TRANSLATIONS, DEFAULT_LANGUAGE
 
 logger = logging.getLogger(__name__)
 
