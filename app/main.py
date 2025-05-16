@@ -6,7 +6,9 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, root_dir)
 
 # Importa a classe GameApp do módulo app
-from rpg_game.app.app import GameApp
+# Assuming 'app' is a package at the root_dir level, and 'app.py' is a module within it.
+# If 'app.py' is directly in the 'app' directory (which is common for Flask):
+from app.app import GameApp
 
 if __name__ == "__main__":
     # Cria uma instância da aplicação e a executa

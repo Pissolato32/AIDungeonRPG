@@ -18,67 +18,68 @@ logger = logging.getLogger(__name__)
 class WorldGenerator:
     """Handles procedural generation of the game world."""
 
-    # Tipos de biomas para diversidade
+    # Tipos de Zonas/Biomas Pós-Apocalípticos
     BIOMES = [
-        "floresta",
-        "montanha",
-        "planície",
-        "deserto",
-        "pântano",
-        "tundra",
-        "costa",
-        "caverna",
-        "ruínas",
-        "selva",
+        "ruas devastadas da cidade",
+        "zona de quarentena abandonada",
+        "esgotos infestados",
+        "rodovia destruída",
+        "floresta sombria e silenciosa",
+        "pântano contaminado",
+        "shopping center saqueado",
+        "hospital abandonado",
+        "complexo industrial em ruínas",
+        "área rural desolada",
     ]
 
-    # Tipos de assentamentos
+    # Tipos de Locais/Assentamentos de Sobreviventes (ou perigosos)
     SETTLEMENT_TYPES = [
-        "aldeia",
-        "vila",
-        "cidade",
-        "fortaleza",
-        "acampamento",
-        "posto avançado",
-        "porto",
-        "refúgio",
-        "santuário",
-        "colônia",
+        "abrigo subterrâneo",
+        "posto avançado de sobreviventes",
+        "acampamento de saqueadores",
+        "ninho de zumbis",
+        "edifício barricado",
+        "ponto de controle militar abandonado",
+        "fazenda isolada",
+        "estação de metrô colapsada",
+        "laboratório secreto",
+        "zona de evacuação falha",
     ]
 
     # Prefixos e sufixos para nomes de locais
     NAME_PREFIXES = [
-        "Riven",
-        "Elder",
-        "Stone",
-        "Oak",
-        "Silver",
-        "Dawn",
-        "Dusk",
-        "Frost",
-        "Shadow",
-        "Ember",
-        "Crystal",
-        "Iron",
-        "Golden",
-        "Mist",
+        "Cinza",
+        "Eco",
+        "Sombra",
+        "Ferrugem",
+        "Osso",
+        "Silêncio",
+        "Ruína",
+        "Esperança",  # Ocasional
+        "Último",
+        "Novo",  # Irônico
+        "Refúgio",
+        "Posto",
+        "Zona",
+        "Marco",
     ]
 
     NAME_SUFFIXES = [
-        "brook",
-        "vale",
-        "keep",
-        "haven",
-        "ford",
-        "cross",
-        "wood",
-        "peak",
-        "fall",
-        "ridge",
-        "hollow",
-        "field",
-        "shore",
-        "gate",
+        "Zero",
+        "Final",
+        "Perdido",
+        "Esquecido",
+        "Morto",
+        "Caído",
+        "Quebrado",
+        "Seguro",  # Ocasional
+        "Norte",
+        "Sul",
+        "Leste",
+        "Oeste",  # Funcional
+        "Alfa",
+        "Beta",
+        "Gama",  # Militar
     ]
 
     def __init__(self, data_dir: str):
@@ -150,14 +151,14 @@ class WorldGenerator:
             if not location_type:
                 location_type = random.choice(self.SETTLEMENT_TYPES)
 
-            adjectives = [
-                "Antiga",
-                "Nova",
-                "Grande",
-                "Pequena",
-                "Alta",
-                "Baixa",
-                "Velha",
+            adjectives = [  # Adjetivos mais temáticos
+                "Abandonada",
+                "Devastada",
+                "Contaminada",
+                "Fortificada",
+                "Isolada",
+                "Saqueada",
+                "Assombrada",
             ]
             elements = [
                 "do Norte",
@@ -165,8 +166,8 @@ class WorldGenerator:
                 "do Leste",
                 "do Oeste",
                 "da Montanha",
-                "do Rio",
-                "da Floresta",
+                "do Esgoto",
+                "da Zona Morta",
             ]
 
             if random.random() < 0.5:
@@ -182,15 +183,29 @@ class WorldGenerator:
             Location data dictionary
         """
         # Choose a settlement type for starting location
-        settlement_type = random.choice(
-            self.SETTLEMENT_TYPES[:3]
-        )  # Limit to aldeia, vila, cidade
+        possible_starts = [
+            "abrigo subterrâneo",
+            "edifício barricado",
+            "posto avançado de sobreviventes",
+        ]
+        settlement_type = random.choice(possible_starts)
         location_name = self.generate_location_name(settlement_type)
 
         # Generate a unique ID for the location
-        location_id = location_name.lower().replace(" ", "_")
+        base_location_id = (
+            location_name.lower()
+            .replace(" ", "_")
+            .replace("ç", "c")
+            .replace("ã", "a")
+            .replace("á", "a")
+            .replace("é", "e")
+            .replace("í", "i")
+            .replace("ó", "o")
+            .replace("ú", "u")
+        )
+        location_id = f"{base_location_id}_0_0"  # Assume starting at 0,0
 
-        # Generate description using AI
+        # Generate description using AI - ADAPTED PROMPT
         description = self.generate_location_description(location_name, settlement_type)
 
         # Generate NPCs
@@ -229,16 +244,16 @@ class WorldGenerator:
             Generated description
         """
         prompt = f"""
-        Gere uma descrição detalhada e atmosférica para um local chamado '{location_name}', 
-        que é um(a) {location_type} em um mundo de fantasia medieval.
+        Gere uma descrição detalhada e atmosférica para um local chamado '{location_name}',
+        que é um(a) {location_type} em um mundo pós-apocalíptico infestado por zumbis.
         
         A descrição deve ter 2-3 parágrafos e incluir:
-        - Aparência visual e arquitetura
-        - Atmosfera e sensações (sons, cheiros, etc.)
-        - Elementos culturais ou históricos interessantes
-        - Alguma característica única que torne o local memorável
+        - Aparência visual (destruição, abandono, sinais de luta, pichações de sobreviventes).
+        - Atmosfera e sensações (cheiro de podridão, silêncio opressor, sons distantes de zumbis ou tiros).
+        - Pistas sobre o que aconteceu ali (sinais de evacuação apressada, barricadas falhas, restos de suprimentos).
+        - Alguma característica única que torne o local memorável (um grafite específico, um veículo abandonado de forma peculiar, um perigo óbvio ou uma oportunidade).
         
-        Mantenha a descrição imersiva e evite mencionar elementos modernos.
+        Mantenha a descrição imersiva e focada no tema de sobrevivência e perigo.
         """
 
         try:
@@ -249,7 +264,7 @@ class WorldGenerator:
             logger.error(f"Error generating location description: {e}")
 
         # Fallback description if AI fails
-        return f"Um(a) {location_type} chamado(a) {location_name}. O local parece tranquilo e acolhedor."
+        return f"Um(a) {location_type} chamado(a) {location_name}. O ar é pesado e o silêncio é perturbador. Há sinais de destruição por toda parte."
 
     def generate_npcs(self, location_name: str, location_type: str) -> List[str]:
         """
@@ -263,67 +278,67 @@ class WorldGenerator:
             List of NPC names
         """
         # Base NPCs by location type
-        base_npcs = {
-            "aldeia": [
-                "Ancião da Aldeia",
-                "Ferreiro",
-                "Comerciante",
-                "Fazendeiro",
-                "Caçador",
+        base_npcs = {  # ADAPTED FOR ZOMBIE APOCALYPSE
+            "abrigo subterrâneo": [
+                "Líder do Abrigo Tenso",
+                "Engenheiro Cansado",
+                "Guarda Paranoico",
+                "Criança Assustada",
             ],
-            "vila": ["Prefeito", "Guarda", "Mercador", "Estalajadeiro", "Artesão"],
-            "cidade": [
-                "Nobre",
-                "Capitão da Guarda",
-                "Mercador Rico",
-                "Sacerdote",
-                "Mago da Corte",
+            "posto avançado de sobreviventes": [
+                "Vigia Solitário",
+                "Caçador Habilidoso",
+                "Negociante Oportunista",
+                "Curandeiro Improvisado",
             ],
-            "fortaleza": [
-                "Comandante",
-                "Soldado",
-                "Armeiro",
-                "Sentinela",
-                "Prisioneiro",
+            "acampamento de saqueadores": [
+                "Líder Saqueador Brutal",
+                "Capanga Violento",
+                "Informante Covarde",
             ],
-            "acampamento": [
-                "Líder do Acampamento",
-                "Batedor",
-                "Cozinheiro",
-                "Guerreiro",
-                "Xamã",
+            "edifício barricado": [
+                "Sobrevivente Desconfiado",
+                "Família Escondida",
+                "Vigia Nervoso",
             ],
-            "porto": [
-                "Capitão do Porto",
-                "Marinheiro",
-                "Pescador",
-                "Contrabandista",
-                "Viajante",
+            "hospital abandonado": [
+                "Médico Enlouquecido",
+                "Enfermeira Fantasma (delírio?)",
+                "Paciente Infectado (prestes a virar)",
+            ],
+            "shopping center saqueado": [
+                "Saqueador Solitário",
+                "Grupo de Sobreviventes Desesperados",
+            ],
+            "zona de quarentena abandonada": [
+                "Soldado Traumatizado",
+                "Cientista Arrependido",
             ],
         }
 
         # Get base NPCs for this location type
         npc_pool = base_npcs.get(
-            location_type.lower(), ["Viajante", "Morador", "Guarda"]
+            location_type.lower(), ["Sobrevivente Solitário", "Viajante Desesperado"]
         )
 
-        # Select 2-4 NPCs
-        num_npcs = random.randint(2, 4)
+        # Select 1-3 NPCs
+        num_npcs = random.randint(1, 3)
         npcs = random.sample(npc_pool, min(num_npcs, len(npc_pool)))
 
-        # Try to generate a unique NPC using AI
+        # Try to generate a unique NPC using AI - ADAPTED PROMPT
         try:
             prompt = f"""
-            Gere o nome e ocupação de um personagem NPC único e interessante que vive em {location_name}.
-            O personagem deve se encaixar em um mundo de fantasia medieval e ter alguma característica memorável.
-            Responda apenas com o nome e ocupação, sem explicações adicionais.
-            Exemplo: "Thorne, o Ferreiro de Espadas Mágicas" ou "Elara, Sacerdotisa das Chamas Antigas"
+            Gere o nome e uma breve descrição (1 frase) de um personagem NPC único e interessante que poderia ser encontrado em '{location_name}', um(a) {location_type} durante um apocalipse zumbi.
+            O personagem deve ter alguma característica ou história implícita que o torne memorável.
+            Responda apenas com o nome e a descrição.
+            Exemplo: "Corvo, um ex-militar que perdeu seu esquadrão e agora só confia em seu rifle." ou "Lily, uma garotinha que carrega um ursinho de pelúcia manchado de sangue e não fala."
             """
 
             response = self.ai_client.generate_response(prompt)
             if isinstance(response, str) and response.strip():
                 unique_npc = response.strip().split("\n")[0]  # Get first line only
-                npcs.append(unique_npc)
+                if unique_npc not in npcs:  # Avoid duplicates if AI gives a base one
+                    npcs.append(unique_npc)
         except Exception as e:
             logger.error(f"Error generating unique NPC: {e}")
 
@@ -340,47 +355,56 @@ class WorldGenerator:
         Returns:
             List of event descriptions
         """
-        # Base events by location type
+        # Base events by location type - ADAPTED FOR ZOMBIE APOCALYPSE
         base_events = {
-            "aldeia": [
-                "Uma brisa suave sopra pela aldeia.",
-                "Crianças brincam na praça central.",
-                "O sino da pequena capela toca ao longe.",
+            "abrigo subterrâneo": [
+                "O gerador falha por um momento, mergulhando tudo na escuridão antes de voltar.",
+                "Alguém chora baixinho em um canto escuro.",
+                "Uma discussão tensa sobre os suprimentos restantes pode ser ouvida.",
             ],
-            "vila": [
-                "Mercadores organizam suas barracas na praça do mercado.",
-                "Guardas patrulham as ruas principais.",
-                "Um bardo toca música na taverna local.",
+            "ruas devastadas da cidade": [
+                "Um grupo de corvos bica algo no meio da rua.",
+                "O vento uiva através das janelas quebradas dos edifícios.",
+                "Um zumbi solitário cambaleia ao longe.",
             ],
-            "cidade": [
-                "Nobres passeiam em suas carruagens pelas ruas.",
-                "Pregadores anunciam decretos reais na praça central.",
-                "Mercadores de terras distantes vendem itens exóticos.",
+            "shopping center saqueado": [
+                "Prateleiras vazias e vidros quebrados cobrem o chão.",
+                "Um carrinho de compras abandonado bloqueia um corredor.",
+                "Um alarme de incêndio defeituoso dispara intermitentemente.",
+            ],
+            "hospital abandonado": [
+                "O cheiro de antisséptico e podridão paira no ar.",
+                "Macas viradas e equipamentos médicos espalhados pelo chão.",
+                "Um prontuário médico ensanguentado está aberto em uma mesa.",
             ],
         }
 
         # Get base events for this location type
         event_pool = base_events.get(
             location_type.lower(),
-            ["Viajantes passam pelo local.", "O vento sopra suavemente."],
+            [
+                "O silêncio é quebrado por um som não identificado à distância.",
+                "Um rato corre por entre os escombros.",
+            ],
         )
 
         # Select 1-2 events
         num_events = random.randint(1, 2)
         events = random.sample(event_pool, min(num_events, len(event_pool)))
 
-        # Try to generate a unique event using AI
+        # Try to generate a unique event using AI - ADAPTED PROMPT
         try:
             prompt = f"""
-            Gere uma breve descrição de um evento ou situação interessante acontecendo em {location_name}.
-            O evento deve ser adequado para um mundo de fantasia medieval e criar uma atmosfera imersiva.
+            Gere uma breve descrição de um evento ou situação interessante e tensa acontecendo em '{location_name}', um(a) {location_type} durante um apocalipse zumbi.
+            O evento deve aumentar a sensação de perigo ou desolação.
             Responda com apenas uma frase descritiva, sem explicações adicionais.
             """
 
             response = self.ai_client.generate_response(prompt)
             if isinstance(response, str) and response.strip():
                 unique_event = response.strip().split("\n")[0]  # Get first line only
-                events.append(unique_event)
+                if unique_event not in events:
+                    events.append(unique_event)
         except Exception as e:
             logger.error(f"Error generating unique event: {e}")
 
@@ -429,33 +453,52 @@ class WorldGenerator:
         # Determine location type based on distance from origin
         distance_from_origin = abs(new_coords["x"]) + abs(new_coords["y"])
 
-        if distance_from_origin <= 1:
-            # Close to origin - civilized areas
-            location_types = self.SETTLEMENT_TYPES[
-                :4
-            ]  # aldeia, vila, cidade, fortaleza
-        elif distance_from_origin <= 3:
-            # Medium distance - mix of settlements and wilderness
-            location_types = self.SETTLEMENT_TYPES + [
-                f"{biome}" for biome in self.BIOMES[:5]
+        if distance_from_origin <= 2:  # Mais próximo do início
+            # Áreas urbanas em ruínas, talvez alguns postos avançados
+            possible_types = [
+                self.BIOMES[0],
+                self.BIOMES[1],
+                self.SETTLEMENT_TYPES[1],
+                self.SETTLEMENT_TYPES[4],
+            ]
+        elif distance_from_origin <= 5:  # Distância média
+            # Mistura de ruínas, áreas industriais, talvez zonas de quarentena
+            possible_types = self.BIOMES[:4] + [
+                self.SETTLEMENT_TYPES[2],
+                self.SETTLEMENT_TYPES[5],
+                self.SETTLEMENT_TYPES[8],
             ]
         else:
-            # Far from origin - mostly wilderness with occasional settlements
-            location_types = [
-                f"{biome}" for biome in self.BIOMES
-            ] + self.SETTLEMENT_TYPES[4:]
+            # Longe, áreas mais selvagens ou perigosas
+            possible_types = self.BIOMES[3:] + [
+                self.SETTLEMENT_TYPES[3],
+                self.SETTLEMENT_TYPES[9],
+            ]
 
-        location_type = random.choice(location_types)
+        location_type = random.choice(possible_types)
+
+        # Refine location_type para não ser apenas o nome do bioma se for um bioma
+        # Ex: "ruas devastadas da cidade" pode ser apenas "ruas devastadas"
+        # Ou "shopping center saqueado" (que é um bioma e um tipo de local)
+        if location_type in self.BIOMES and location_type not in self.SETTLEMENT_TYPES:
+            # Para biomas puros, o nome do local pode ser mais genérico
+            pass  # A geração de nome abaixo cuidará disso
 
         # Generate name based on type
         is_settlement = location_type in self.SETTLEMENT_TYPES
         if is_settlement:
             location_name = self.generate_location_name(location_type)
         else:
-            location_name = f"{location_type.capitalize()} de {random.choice(self.NAME_PREFIXES)}{random.choice(self.NAME_SUFFIXES)}"
+            location_name = f"{random.choice(self.NAME_PREFIXES)} {location_type.capitalize().split(' ')[-1]} {random.choice(self.NAME_SUFFIXES)}"
 
         # Generate a unique ID for the location
-        location_id = f"{location_name.lower().replace(' ', '_')}_{new_coords['x']}_{new_coords['y']}"
+        base_location_id = f"{location_name.lower().replace(' ', '_').replace('ç', 'c').replace('ã', 'a').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u')}_{new_coords['x']}_{new_coords['y']}"
+        location_id = base_location_id
+        counter = 0
+        # Ensure ID is unique within world_data, though coordinates should make it mostly unique
+        while location_id in world_data["locations"]:
+            counter += 1
+            location_id = f"{base_location_id}_{counter}"
 
         # Generate description using AI
         description = self.generate_location_description(location_name, location_type)

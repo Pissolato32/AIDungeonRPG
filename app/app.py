@@ -22,11 +22,12 @@ sys.path.insert(0, root_dir)
 from core.models import Character
 from core.game_engine import GameEngine, GameState
 from ai.groq_client import GroqClient
-from translations import get_text, TranslationManager
 from web.config import Config
 from web.session_manager import SessionManager
 from web.logger import GameLogger
-from web.error_handler import ErrorHandler
+from core.error_handler import (
+    ErrorHandler,
+)  # Assuming core.error_handler is the one with get_text
 from web.game_state_manager import GameStateManager
 from web.character_manager import CharacterManager
 from app.routes import bp as routes_bp
@@ -68,9 +69,6 @@ class GameApp:
         self.app.config["SESSION_TYPE"] = os.environ.get("SESSION_TYPE", "filesystem")
         Session(self.app)
 
-        # Make get_text available in templates
-        self.app.jinja_env.globals.update(get_text=get_text)
-
     def _register_routes(self):
         """Register all route handlers."""
         # Main routes
@@ -83,7 +81,7 @@ class GameApp:
         self.app.route("/api/reset", methods=["POST"])(self.reset_game)
 
         # Utility routes
-        self.app.route("/change_language/<lang>", methods=["GET"])(self.change_language)
+        # self.app.route("/change_language/<lang>", methods=["GET"])(self.change_language) # Rota removida
 
     def run(self):
         """Run the Flask application."""
@@ -102,7 +100,9 @@ class GameApp:
     def character(self):
         """Handle character creation and editing."""
         # Ensure session is initialized
-        user_id = SessionManager.ensure_session_initialized()
+        user_id = (
+            SessionManager.ensure_session_initialized()
+        )  # This already sets user_id and language in session
 
         try:
             if request.method == "POST":
@@ -114,7 +114,7 @@ class GameApp:
                 self.game_engine.save_character(user_id, character)
 
                 # Initialize and save game state
-                game_state = self._create_initial_game_state(session.get("language"))
+                game_state = self._create_initial_game_state()
                 self.game_engine.save_game_state(user_id, game_state)
 
                 GameLogger.log_game_action(
@@ -129,25 +129,20 @@ class GameApp:
                 character = (
                     Character.from_dict(character_data) if character_data else None
                 )
-                flash(
-                    get_text("errors.character_load_failed", session.get("language")),
-                    "error",
-                )
+                if (
+                    not character and user_id in session
+                ):  # Only flash if a load was attempted for an existing session
+                    flash("Falha ao carregar personagem existente.", "error")
                 return render_template("character.html", character=character)
 
         except ValueError as e:
             logger.error(f"ValueError in character route: {e}")
-            flash(
-                get_text("errors.invalid_input", session.get("language"), str(e)),
-                "error",
-            )
+            flash(f"Entrada inválida: {str(e)}", "error")
             return render_template("character.html", character=None, error=str(e))
         except Exception as e:
             logger.error(f"Unexpected error in character route: {e}")
             logger.error(traceback.format_exc())
-            flash(
-                get_text("errors.unexpected", session.get("language"), str(e)), "error"
-            )
+            flash(f"Erro inesperado: {str(e)}", "error")
             return render_template("character.html", character=None, error=str(e))
 
     def game(self):
@@ -155,13 +150,10 @@ class GameApp:
         if "user_id" not in session:
             session["user_id"] = os.urandom(16).hex()
             return redirect(url_for("character"))
-
-        character_data = self.game_engine.load_character(session["user_id"])
-        if isinstance(character_data, dict):
-            character = Character.from_dict(character_data)
-        else:
-            character = character_data
-        game_state = self._load_game_state_with_language(session["user_id"])
+        user_id = session["user_id"]
+        character_data = self.game_engine.load_character(user_id)
+        character = Character.from_dict(character_data) if character_data else None
+        game_state = self._load_game_state(session["user_id"])
         if not character:
             return redirect(url_for("character"))
 
@@ -172,10 +164,12 @@ class GameApp:
         if "user_id" not in session:
             return self._error_response("no_active_session")
 
+        action_name_for_log = "unknown_action"
         # Get action data
         try:
             data = request.json
             action = data.get("action")
+            action_name_for_log = action if action else "unknown_action"
             details = data.get("details", "")
 
             GameLogger.log_game_action(action, details, session["user_id"])
@@ -202,8 +196,8 @@ class GameApp:
             return self._error_response("invalid_input", str(e))
         except Exception as e:
             GameLogger.log_game_action(
-                action if "action" in locals() else "unknown_action",
-                f"Unexpected error: {e}",
+                action_name_for_log,
+                f"Unexpected error: {str(e)}",
                 session["user_id"],
                 "error",
             )
@@ -250,41 +244,21 @@ class GameApp:
             )
             return self._error_response("reset_error", str(e))
 
-    def change_language(self, lang):
-        """Change the user's language preference."""
-        session["language"] = lang
-        # Use Flask's redirect safely
-        return redirect(request.referrer or url_for("index"))
-
+    # def change_language(self, lang): # Método removido
+    #     """Change the user's language preference."""
+    #     # session["language"] = lang # Idioma agora é fixo
+    #     # logger.info(f"Language change attempt to {lang} for session {session.get('user_id')}, but language is fixed.")
+    #     return redirect(request.referrer or url_for("index"))
     # Helper methods
-    def _ensure_session_initialized(self) -> str:
-        """
-        Ensure user session is properly initialized with required values.
 
-        Returns:
-            str: The user ID from the session
-        """
-        # Generate a user ID if not exists
-        if "user_id" not in session:
-            session["user_id"] = os.urandom(16).hex()
-
-        # Set default language if not set
-        if "language" not in session:
-            session["language"] = TranslationManager.DEFAULT_LANGUAGE
-
-        return session["user_id"]
-
-    def _create_initial_game_state(self, language: str) -> GameState:
+    def _create_initial_game_state(self) -> GameState:
         """
         Create an initial game state for a new character.
-
-        Args:
-            language: The language to use for the game state
 
         Returns:
             GameState: A newly initialized game state
         """
-        return GameStateManager.create_initial_game_state(language)
+        return GameStateManager.create_initial_game_state()
 
     def _create_character_from_form(self, character_data: Dict[str, Any]) -> Character:
         """
@@ -314,33 +288,35 @@ class GameApp:
         # Use CharacterManager to process attributes
         return CharacterManager.get_character_attributes(character_data)
 
-    def _load_game_state_with_language(self, user_id: str) -> GameState:
+    def _load_game_state(self, user_id: str) -> GameState:
         """
-        Load game state for a user and set the current language.
+        Load game state for a user.
 
         Args:
             user_id: The user's unique identifier
 
         Returns:
-            GameState object with language set from session
+            GameState object
         """
-        language = session.get("language", TranslationManager.DEFAULT_LANGUAGE)
-        return GameStateManager.load_game_state_with_language(
-            self.game_engine, user_id, language
-        )
+        return GameStateManager.load_game_state(self.game_engine, user_id)
 
-    def _load_character_and_state(self) -> Tuple[Optional[Any], Optional[GameState]]:
+    def _load_character_and_state(
+        self,
+    ) -> Tuple[Optional[Character], Optional[GameState]]:
         """
         Load both character and game state for the current user.
 
         Returns:
             Tuple containing character and game state objects
         """
-        character = self.game_engine.load_character(session["user_id"])
-        game_state = self._load_game_state_with_language(session["user_id"])
+        character_data = self.game_engine.load_character(session["user_id"])
+        character = Character.from_dict(character_data) if character_data else None
+        game_state = self._load_game_state(session["user_id"])
         return character, game_state
 
-    def _save_character_and_state(self, character: Any, game_state: GameState) -> None:
+    def _save_character_and_state(
+        self, character: Character, game_state: GameState
+    ) -> None:
         """
         Save both character and game state for the current user.
 
@@ -362,8 +338,9 @@ class GameApp:
         Returns:
             JSON response with error message
         """
-        language = session.get("language", TranslationManager.DEFAULT_LANGUAGE)
-        return ErrorHandler.create_error_response(error_key, language, error_details)
+        return ErrorHandler.create_error_response(
+            error_key, "pt-br", error_details
+        )  # Hardcode pt-br for now
 
     def _log_game_action(
         self, action: str, details: str = "", user_id: str = None, level: str = "info"
@@ -390,10 +367,8 @@ class GameApp:
 
 
 # Create and run the application
+_game_app_instance = GameApp()
+application = _game_app_instance.app  # Export the Flask application object
+
 if __name__ == "__main__":
-    app = GameApp()
-    app.run()
-else:
-    # For WSGI servers
-    app = GameApp()
-    application = app.app  # Export the Flask application object
+    _game_app_instance.run()

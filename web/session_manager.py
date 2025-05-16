@@ -9,8 +9,6 @@ import logging
 from typing import Dict, Any, Optional
 from flask import session
 
-from translations import TranslationManager
-
 logger = logging.getLogger(__name__)
 
 
@@ -39,7 +37,7 @@ class SessionManager:
 
         # Set default language if not set
         if "language" not in session:
-            session["language"] = TranslationManager.DEFAULT_LANGUAGE
+            session["language"] = "pt-br"  # Hardcode to pt-br
             logger.debug(f"Set default language: {session['language']}")
 
         return session["user_id"]
@@ -62,7 +60,7 @@ class SessionManager:
         Returns:
             str: Language code
         """
-        return session.get("language", TranslationManager.DEFAULT_LANGUAGE)
+        return "pt-br"  # Always return pt-br
 
     @staticmethod
     def set_language(language: str) -> None:
@@ -72,8 +70,11 @@ class SessionManager:
         Args:
             language: Language code
         """
-        session["language"] = language
-        logger.debug(f"Language set to: {language}")
+        # Language is now fixed, so this method might be deprecated or do nothing.
+        # session["language"] = "pt-br" # Or simply remove its usage
+        logger.debug(
+            f"Attempted to set language to: {language}, but language is fixed to pt-br."
+        )
 
     @staticmethod
     def regenerate_user_id() -> str:

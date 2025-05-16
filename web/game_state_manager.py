@@ -7,8 +7,7 @@ This module provides functionality for managing game state.
 import logging
 from typing import Optional
 
-from game_engine import GameState
-from translations import TranslationManager
+from core.game_engine import GameState  # Adjusted import path
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +23,9 @@ class GameStateManager:
     """
 
     @staticmethod
-    def create_initial_game_state(language: str) -> GameState:
+    def create_initial_game_state() -> GameState:
         """
         Create an initial game state for a new character.
-
-        Args:
-            language: The language to use for the game state
 
         Returns:
             GameState: A newly initialized game state
@@ -37,53 +33,67 @@ class GameStateManager:
         game_state = GameState()
 
         # Set initial location with unique name and coordinates
-        game_state.current_location = "Aldeia de Rivenbrook"
-        game_state.location_id = "village_center"
+        game_state.current_location = "Abrigo Subterrâneo"
+        game_state.location_id = "bunker_main"
         game_state.coordinates = {"x": 0, "y": 0, "z": 0}
-        game_state.scene_description = "Você está no centro de uma pequena aldeia chamada Rivenbrook. Há uma taverna ao norte chamada 'O Javali Dourado', uma ferraria a leste, e o portão da aldeia ao sul."
+        game_state.scene_description = "Você está na sala principal de um abrigo subterrâneo improvisado. As paredes de concreto são úmidas e a única luz vem de algumas lâmpadas de emergência piscando. Há um portão de metal reforçado ao norte que leva à superfície, uma enfermaria improvisada a leste e um depósito de suprimentos a oeste."
 
         # Set NPCs and environmental elements
-        game_state.npcs_present = ["Ancião da Aldeia", "Mercador Viajante"]
-        game_state.events = ["Uma brisa suave sopra pela aldeia."]
+        game_state.npcs_present = [
+            "Velho Sobrevivente Cansado",
+            "Médica de Campo Apavorada",
+        ]
+        game_state.events = [
+            "Ouve-se o gotejar constante de água em algum lugar próximo.",
+            "Um gerador falha e a luz pisca antes de voltar.",
+        ]
 
         # Set welcome message and language
         game_state.messages = [
-            "Bem-vindo a Rivenbrook! Você pode explorar usando as ações abaixo."
+            "Você acorda no abrigo. O mundo lá fora mudou. Sobreviva."
         ]
-        game_state.language = language
 
         # Initialize world map with the starting location
         game_state.world_map = {
-            "village_center": {
-                "name": "Aldeia de Rivenbrook",
+            "bunker_main": {
+                "name": "Abrigo Subterrâneo - Principal",
                 "coordinates": {"x": 0, "y": 0, "z": 0},
                 "connections": {
-                    "north": "golden_boar_tavern",
-                    "east": "blacksmith_shop",
-                    "south": "village_gate",
+                    "north": "bunker_exit_tunnel",  # Saída para a superfície
+                    "east": "bunker_infirmary",
+                    "west": "bunker_storage",
                 },
             },
-            "golden_boar_tavern": {
-                "name": "Taverna O Javali Dourado",
+            "bunker_exit_tunnel": {
+                "name": "Túnel de Saída do Abrigo",
                 "coordinates": {"x": 0, "y": 1, "z": 0},
-                "connections": {"south": "village_center"},
+                "connections": {
+                    "south": "bunker_main",
+                    "north": "ruined_street_01",
+                },  # Leva para a rua
             },
-            "blacksmith_shop": {
-                "name": "Ferraria do Martelo Flamejante",
+            "bunker_infirmary": {
+                "name": "Enfermaria do Abrigo",
                 "coordinates": {"x": 1, "y": 0, "z": 0},
-                "connections": {"west": "village_center"},
+                "connections": {"west": "bunker_main"},
             },
-            "village_gate": {
-                "name": "Portão da Aldeia",
-                "coordinates": {"x": 0, "y": -1, "z": 0},
-                "connections": {"north": "village_center", "south": "crossroads"},
+            "bunker_storage": {
+                "name": "Depósito do Abrigo",
+                "coordinates": {"x": -1, "y": 0, "z": 0},
+                "connections": {"east": "bunker_main"},
+            },
+            # Example of an outside location
+            "ruined_street_01": {
+                "name": "Rua Devastada Próxima ao Abrigo",
+                "coordinates": {"x": 0, "y": 2, "z": 0},  # Assuming surface is y=2
+                "connections": {"south": "bunker_exit_tunnel"},
             },
         }
 
         # Mark the starting location as visited
         game_state.visited_locations = {
-            "village_center": {
-                "name": "Aldeia de Rivenbrook",
+            "bunker_main": {
+                "name": "Abrigo Subterrâneo - Principal",
                 "last_visited": "initial",
                 "description": game_state.scene_description,
                 "npcs_seen": game_state.npcs_present.copy(),
@@ -91,31 +101,26 @@ class GameStateManager:
             }
         }
 
-        logger.info(f"Created initial game state with language: {language}")
+        logger.info("Created initial game state.")
         return game_state
 
     @staticmethod
-    def load_game_state_with_language(
-        game_engine, user_id: str, language: str
-    ) -> Optional[GameState]:
+    def load_game_state(game_engine, user_id: str) -> Optional[GameState]:
         """
-        Load game state for a user and set the current language.
+        Load game state for a user.
 
         Args:
             game_engine: Game engine instance
             user_id: The user's unique identifier
-            language: Language to set
 
         Returns:
-            GameState object with language set from session
+            GameState object
         """
         game_state = game_engine.load_game_state(user_id)
 
         if game_state:
-            # Update language
-            game_state.language = language or TranslationManager.DEFAULT_LANGUAGE
             logger.debug(
-                f"Loaded game state for user {user_id[:8]}... with language: {game_state.language}"
+                f"Loaded game state for user {user_id[:8]}..."  # Language attribute might not exist anymore
             )
         else:
             logger.warning(f"No game state found for user {user_id[:8]}...")

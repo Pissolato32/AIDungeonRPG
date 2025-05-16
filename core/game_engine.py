@@ -1,6 +1,8 @@
 """
 Game engine module for handling game state and actions."""
 
+import json
+
 import os
 import random
 from typing import Dict, List, Any, Optional, TypedDict, cast
@@ -41,8 +43,9 @@ class GameState:
     npcs_present: List[str] = field(default_factory=list)
     known_npcs: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     messages: List[str] = field(default_factory=list)
-    coordinates: LocationCoords = field(default_factory=lambda: {"x": 0, "y": 0})
-    language: str = "pt"
+    coordinates: LocationCoords = field(
+        default_factory=lambda: {"x": 0, "y": 0, "z": 0}
+    )  # Added z coordinate
     current_action: str = ""
     discovered_locations: Dict[str, LocationData] = field(default_factory=dict)
     npcs_by_location: Dict[str, List[str]] = field(default_factory=dict)
@@ -57,7 +60,6 @@ class GameState:
             "known_npcs": self.known_npcs,
             "messages": self.messages,
             "coordinates": self.coordinates,
-            "language": self.language,
             "current_action": self.current_action,
             "discovered_locations": self.discovered_locations,
             "npcs_by_location": self.npcs_by_location,
@@ -73,8 +75,9 @@ class GameState:
             npcs_present=data.get("npcs_present", []),
             known_npcs=data.get("known_npcs", {}),
             messages=data.get("messages", []),
-            coordinates=data.get("coordinates", {"x": 0, "y": 0}),
-            language=data.get("language", "pt"),
+            coordinates=data.get(
+                "coordinates", {"x": 0, "y": 0, "z": 0}
+            ),  # Ensure z is handled
             current_action=data.get("current_action", ""),
             discovered_locations=data.get("discovered_locations", {}),
             npcs_by_location=data.get("npcs_by_location", {}),
@@ -91,7 +94,7 @@ class GameState:
         """Add a new discovered location."""
         self.discovered_locations[location_id] = location_data
         self.add_message(
-            f"Você descobriu {location_data.get('name', 'um novo local')}!"
+            f"Você descobriu: {location_data.get('name', 'um novo local desconhecido')}!"
         )
 
     def add_npc(self, npc_id: str, npc: Dict[str, Any]) -> None:
@@ -137,15 +140,107 @@ class GameEngine:
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir)
         self._location_cache: Dict[str, Dict[str, Any]] = {}
+        # Updated location types for zombie apocalypse
         self._location_types: Dict[str, List[str]] = {
-            "village": ["vila", "aldeia", "povoado"],
-            "mountain": ["montanha", "pico", "cordilheira"],
-            "forest": ["floresta", "bosque", "mata"],
-            "shop": ["loja", "mercado", "feira"],
-            "dungeon": ["dungeon", "caverna", "ruína"],
-            "camp": ["acampamento", "posto avançado"],
-            "temple": ["templo", "santuário", "igreja"],
+            "abrigo": ["abrigo subterrâneo", "bunker", "refúgio seguro"],
+            "ruina_urbana": [
+                "ruas devastadas",
+                "prédio abandonado",
+                "zona comercial saqueada",
+            ],
+            "posto_avancado": ["posto de controle", "acampamento de sobreviventes"],
+            "zona_perigosa": [
+                "ninho de zumbis",
+                "área contaminada",
+                "hospital infestado",
+            ],
+            "natureza_selvagem": [
+                "floresta silenciosa",
+                "estrada abandonada",
+                "fazenda isolada",
+            ],
         }
+
+    def _get_save_path(self, user_id: str, data_type: str) -> str:
+        """Helper to get the save file path."""
+        return os.path.join(self.data_dir, f"{user_id}_{data_type}.json")
+
+    def save_character(self, user_id: str, character: Character) -> None:
+        """Save character data to a file."""
+        path = self._get_save_path(user_id, "character")
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(character.to_dict(), f, indent=2)
+        except IOError as e:
+            # Log error
+            print(
+                f"Error saving character for {user_id}: {e}"
+            )  # Replace with proper logging
+
+    def load_character(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Load character data from a file."""
+        path = self._get_save_path(user_id, "character")
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except (IOError, json.JSONDecodeError) as e:
+                # Log error
+                print(
+                    f"Error loading character for {user_id}: {e}"
+                )  # Replace with proper logging
+        return None
+
+    def delete_character(self, user_id: str) -> None:
+        """Delete character data file."""
+        path = self._get_save_path(user_id, "character")
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except OSError as e:
+                # Log error
+                print(
+                    f"Error deleting character file for {user_id}: {e}"
+                )  # Replace with proper logging
+
+    def save_game_state(self, user_id: str, game_state: GameState) -> None:
+        """Save game state data to a file."""
+        path = self._get_save_path(user_id, "gamestate")
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(game_state.to_dict(), f, indent=2)
+        except IOError as e:
+            # Log error
+            print(
+                f"Error saving game state for {user_id}: {e}"
+            )  # Replace with proper logging
+
+    def load_game_state(self, user_id: str) -> Optional[GameState]:
+        """Load game state data from a file."""
+        path = self._get_save_path(user_id, "gamestate")
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return GameState.from_dict(data)
+            except (IOError, json.JSONDecodeError) as e:
+                # Log error
+                print(
+                    f"Error loading game state for {user_id}: {e}"
+                )  # Replace with proper logging
+        return None
+
+    def delete_game_state(self, user_id: str) -> None:
+        """Delete game state data file."""
+        path = self._get_save_path(user_id, "gamestate")
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except OSError as e:
+                # Log error
+                print(
+                    f"Error deleting game state file for {user_id}: {e}"
+                )  # Replace with proper logging
 
     def process_action(
         self,
@@ -206,7 +301,7 @@ class GameEngine:
         """Update the game state for a known location."""
         if loc := game_state.discovered_locations.get(new_location):
             game_state.current_location = new_location
-            if coords := loc.get("coordinates"):
+            if coords := loc.get("coordinates"):  # Ensure coordinates exist
                 game_state.coordinates = cast(LocationCoords, coords)
             if not loc.get("visited"):
                 loc["visited"] = True
@@ -217,7 +312,11 @@ class GameEngine:
     def _get_new_coordinates(self, game_state: GameState) -> LocationCoords:
         """Generate coordinates for a new location."""
         current = game_state.coordinates
-        x, y = current["x"], current["y"]
+        x, y, z = (
+            current.get("x", 0),
+            current.get("y", 0),
+            current.get("z", 0),
+        )  # Handle missing z
 
         # Try adjacent positions first
         directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
@@ -226,8 +325,8 @@ class GameEngine:
         for dx, dy in directions:
             new_x = x + dx
             new_y = y + dy
-            if self._is_valid_location(new_x, new_y, game_state):
-                return {"x": new_x, "y": new_y}
+            if self._is_valid_location(new_x, new_y, z, game_state):  # Pass z
+                return {"x": new_x, "y": new_y, "z": z}
 
         # Try diagonal positions next
         diagonals = [(1, 1), (-1, -1), (1, -1), (-1, 1)]
@@ -236,32 +335,31 @@ class GameEngine:
         for dx, dy in diagonals:
             new_x = x + dx
             new_y = y + dy
-            if self._is_valid_location(new_x, new_y, game_state):
-                return {"x": new_x, "y": new_y}
+            if self._is_valid_location(new_x, new_y, z, game_state):  # Pass z
+                return {"x": new_x, "y": new_y, "z": z}
 
         # If no adjacent positions are available, try random positions
         max_attempts = 10
         for _ in range(max_attempts):
             new_x = x + random.randint(-2, 2)
             new_y = y + random.randint(-2, 2)
-            if self._is_valid_location(new_x, new_y, game_state):
-                return {"x": new_x, "y": new_y}
+            if self._is_valid_location(new_x, new_y, z, game_state):  # Pass z
+                return {"x": new_x, "y": new_y, "z": z}
 
         # Fallback to a guaranteed new position
         while True:
             new_x = x + random.randint(-5, 5)
             new_y = y + random.randint(-5, 5)
-            if self._is_valid_location(new_x, new_y, game_state):
-                return {"x": new_x, "y": new_y}
+            if self._is_valid_location(new_x, new_y, z, game_state):  # Pass z
+                return {"x": new_x, "y": new_y, "z": z}
 
-    def _is_valid_location(self, x: int, y: int, game_state: GameState) -> bool:
+    def _is_valid_location(self, x: int, y: int, z: int, game_state: GameState) -> bool:
         """Check if coordinates are valid for a new location."""
         # Check if location already exists
         for loc in game_state.discovered_locations.values():
             coords = loc.get("coordinates", {})
-            if coords.get("x") == x and coords.get("y") == y:
+            if coords.get("x") == x and coords.get("y") == y and coords.get("z") == z:
                 return False
-
         # Add additional validation as needed
         # Example: Check map boundaries, terrain restrictions, etc.
         return True
@@ -270,7 +368,6 @@ class GameEngine:
         """Determine location type from name."""
         name_lower = name.lower()
 
-        # Check for each location type
         for loc_type, keywords in self._location_types.items():
             if any(word in name_lower for word in keywords):
                 return loc_type
@@ -282,8 +379,8 @@ class GameEngine:
         self, from_coords: LocationCoords, to_coords: LocationCoords
     ) -> Optional[str]:
         """Get cardinal direction between two coordinates."""
-        dx = to_coords["x"] - from_coords["x"]
-        dy = to_coords["y"] - from_coords["y"]
+        dx = to_coords.get("x", 0) - from_coords.get("x", 0)
+        dy = to_coords.get("y", 0) - from_coords.get("y", 0)
 
         if abs(dx) > abs(dy):
             return "east" if dx > 0 else "west"
@@ -298,7 +395,7 @@ class GameEngine:
 
     def _generate_location(self, game_state: GameState, result: Dict[str, Any]) -> None:
         """Generate a new location when moving to unexplored area."""
-        coords = game_state.coordinates
+        coords = game_state.coordinates  # This should now include 'z'
         cache_key = f"{coords['x']},{coords['y']}"
 
         if cache_key in self._location_cache:
@@ -354,7 +451,9 @@ class GameEngine:
 
         for existing_id, loc in game_state.discovered_locations.items():
             if coords := loc.get("coordinates"):
-                direction = self._get_direction(coords, new_coords)
+                direction = self._get_direction(
+                    cast(LocationCoords, coords), new_coords
+                )
                 if direction:
                     location_data["connections"][existing_id] = direction
                     loc["connections"] = loc.get("connections", {})
@@ -364,130 +463,103 @@ class GameEngine:
     def _generate_location_name(self, location_type: str) -> str:
         """Generate a thematic name for the location."""
         prefixes = {
-            "village": ["Vila", "Aldeia", "Povoado"],
-            "mountain": ["Pico", "Monte", "Serra"],
-            "forest": ["Floresta", "Bosque", "Mata"],
-            "shop": ["Mercado", "Empório", "Feira"],
-            "dungeon": ["Caverna", "Ruína", "Cripta"],
-            "camp": ["Acampamento", "Posto", "Refúgio"],
-            "temple": ["Templo", "Santuário", "Capela"],
+            "abrigo": ["Abrigo", "Bunker", "Refúgio"],
+            "ruina_urbana": ["Ruínas de", "Distrito de", "Setor"],
+            "posto_avancado": ["Posto Avançado", "Acampamento", "Barricada"],
+            "zona_perigosa": ["Zona Infestada de", "Ninho de", "Covil de"],
+            "natureza_selvagem": ["Estrada para", "Floresta de", "Campos de"],
         }
         suffixes = [
-            "do Norte",
-            "do Sul",
-            "do Leste",
-            "do Oeste",
-            "Antiga",
-            "Nova",
             "Perdida",
             "Esquecida",
+            "Devastada",
+            "Silenciosa",
+            "da Esperança",
+            "do Desespero",
         ]
 
         prefix = random.choice(prefixes.get(location_type, ["Local"]))
         suffix = random.choice(suffixes)
-        return f"{prefix} {suffix}"
+        return (
+            f"{prefix} {suffix}"
+            if random.random() > 0.3
+            else f"{prefix} {random.choice(['Alfa', 'Beta', 'Gama', 'Delta'])}"
+        )
 
     def _generate_location_description(self, location_type: str) -> str:
         """Generate a detailed description for the location."""
         descriptions = {
-            "village": (
-                "Uma pequena vila com casas rústicas e " "moradores acolhedores."
-            ),
-            "mountain": "Uma imponente montanha que se ergue até as nuvens.",
-            "forest": "Uma densa floresta com árvores antigas e misteriosas.",
-            "shop": ("Um movimentado local de comércio com " "mercadorias diversas."),
-            "dungeon": "Uma antiga construção que guarda segredos do passado.",
-            "camp": "Um posto avançado usado por viajantes e exploradores.",
-            "temple": "Um local sagrado de adoração e contemplação.",
+            "abrigo": "Um refúgio improvisado, mas relativamente seguro. As paredes são frias e úmidas, e o ar é pesado.",
+            "ruina_urbana": "Prédios em ruínas se erguem como esqueletos contra o céu cinzento. Carros abandonados e destroços bloqueiam as ruas.",
+            "posto_avancado": "Uma barricada feita às pressas com arame farpado e sucata. Sentinelas observam nervosamente os arredores.",
+            "zona_perigosa": "Um silêncio opressor paira aqui, quebrado apenas por sons guturais distantes. O cheiro de morte é forte.",
+            "natureza_selvagem": "A natureza tenta retomar o que era seu, mas mesmo aqui, a ameaça dos infectados e da escassez é constante.",
         }
-        return descriptions.get(location_type, "Um local misterioso e inexplorado.")
+        return descriptions.get(
+            location_type,
+            "Um local desolado e perigoso. Você sente um arrepio na espinha.",
+        )
 
-    def _generate_location_resources(self, location_type: str) -> List[str]:
+    def _generate_location_resources(
+        self, location_type: str
+    ) -> Optional[Dict[str, int]]:  # Changed to Dict
         """Generate available resources for the location."""
         resources = {
-            "village": ["água", "comida", "ferramentas"],
-            "mountain": ["minérios", "cristais", "ervas raras"],
-            "forest": ["madeira", "frutas", "ervas medicinais"],
-            "shop": ["equipamentos", "poções", "itens mágicos"],
-            "dungeon": ["tesouros", "artefatos", "relíquias"],
-            "camp": ["suprimentos", "mapas", "informações"],
-            "temple": ["bênçãos", "curas", "conhecimento"],
+            "abrigo": {
+                "Comida Enlatada": random.randint(1, 3),
+                "Água Purificada": random.randint(1, 2),
+            },
+            "ruina_urbana": {
+                "Sucata de Metal": random.randint(2, 5),
+                "Tecido Rasgado": random.randint(1, 4),
+            },
+            "posto_avancado": {
+                "Munição (variada)": random.randint(3, 10),
+                "Bandagens": random.randint(0, 2),
+            },
+            "zona_perigosa": {
+                "Componentes Eletrônicos": random.randint(0, 1),
+                "Químicos Estranhos": random.randint(0, 1),
+            },  # Less resources, more danger
+            "natureza_selvagem": {
+                "Madeira": random.randint(1, 5),
+                "Ervas Medicinais (não identificadas)": random.randint(0, 3),
+            },
         }
-        available = resources.get(location_type, ["recursos desconhecidos"])
-        return random.sample(available, k=random.randint(1, min(3, len(available))))
+        return (
+            resources.get(location_type, {"Sucata Variada": random.randint(1, 2)})
+            if random.random() < 0.6
+            else None
+        )  # 60% chance of resources
 
     def _generate_location_events(self, location_type: str) -> List[str]:
         """Generate random events for the location."""
         events = {
-            "village": [
-                "Festival local em andamento",
-                "Mercadores visitantes chegaram",
-                "Reunião do conselho",
+            "abrigo": [
+                "O gerador falha por um instante.",
+                "Alguém está cantando baixinho uma canção triste.",
+                "Uma discussão sobre racionamento de comida.",
             ],
-            "mountain": [
-                "Avalanche recente",
-                "Dragão avistado",
-                "Expedição de mineração",
+            "ruina_urbana": [
+                "Um bando de corvos sobrevoa.",
+                "O vento assobia por janelas quebradas.",
+                "Um barulho de algo caindo em um prédio próximo.",
             ],
-            "forest": [
-                "Criaturas místicas próximas",
-                "Chuva de flores mágicas",
-                "Caçadores acampados",
+            "posto_avancado": [
+                "Um sobrevivente está limpando sua arma.",
+                "Troca de guarda na barricada.",
+                "Alguém conta uma história sobre o mundo antigo.",
             ],
-            "shop": [
-                "Promoção especial",
-                "Itens raros disponíveis",
-                "Negociações tensas",
+            "zona_perigosa": [
+                "Um gemido distante ecoa.",
+                "O cheiro de podridão se intensifica.",
+                "Você vê sombras se movendo no limite da sua visão.",
             ],
-            "dungeon": ["Sons misteriosos", "Luzes estranhas", "Portas seladas"],
-            "camp": [
-                "Viajantes descansando",
-                "Histórias sendo compartilhadas",
-                "Preparativos para jornada",
-            ],
-            "temple": [
-                "Ritual em andamento",
-                "Peregrinos chegando",
-                "Meditação coletiva",
+            "natureza_selvagem": [
+                "Um animal selvagem (não infectado) cruza seu caminho.",
+                "O silêncio é quase total, apenas o som do vento.",
+                "Você encontra rastros recentes... não humanos.",
             ],
         }
-        available = events.get(location_type, ["Nada de notável acontecendo"])
+        available = events.get(location_type, ["O silêncio é perturbador."])
         return random.sample(available, k=random.randint(1, min(2, len(available))))
-
-    def create_game_state(self, character_id: str, language: str = "pt") -> GameState:
-        """Create a new game state for a character."""
-        initial_location: LocationData = {
-            "name": "Centro da Vila",
-            "type": "village",
-            "description": ("Você está no centro da pequena aldeia de Rivenbrook."),
-            "coordinates": {"x": 0, "y": 0},
-            "visited": True,
-            "events": ["Uma brisa suave sopra pela aldeia."],
-            "welcome": "Bem-vindo a Rivenbrook!",
-        }
-
-        initial_npcs = {
-            "guarda": {
-                "name": "Guarda da Vila",
-                "location": "centro_da_vila",
-                "profession": "Guardião",
-            },
-            "comerciante": {
-                "name": "Comerciante",
-                "location": "centro_da_vila",
-                "profession": "Mercador",
-            },
-        }
-
-        state = GameState()
-        state.language = language
-        state.current_location = "centro_da_vila"
-        state.discovered_locations["centro_da_vila"] = initial_location
-
-        for npc_id, npc_data in initial_npcs.items():
-            state.add_npc(npc_id, npc_data)
-        return state
-
-    def load_game_state(self, data: Dict[str, Any]) -> GameState:
-        """Load a game state from saved data."""
-        return GameState.from_dict(data)

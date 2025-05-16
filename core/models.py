@@ -49,13 +49,11 @@ class Character:
 
     @property
     def current_thirst(self) -> int:
-        return max(
-            self.survival_stats.get("current_thirst'", 1), 1
-        )  # nunca menor que 1
+        return max(self.survival_stats.get("current_thirst", 1), 1)  # nunca menor que 1
 
     @property
     def max_thirst(self) -> int:
-        return max(self.survival_stats.get("max_thirst'", 1), 1)  # nunca menor que 1
+        return max(self.survival_stats.get("max_thirst", 1), 1)  # nunca menor que 1
 
     # Você pode adicionar mais properties conforme a necessidade, ex:
     # @property

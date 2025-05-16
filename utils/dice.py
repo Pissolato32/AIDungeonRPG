@@ -24,6 +24,7 @@ def roll_dice(num_dice: int, sides: int, modifier: int = 0) -> Dict[str, any]:
         Dictionary with roll results including individual dice, total, and formatted string
     """
     try:
+        num_dice = max(1, num_dice)  # Ensure at least one die is rolled
         individual_rolls = [random.randint(1, sides) for _ in range(num_dice)]
         total = sum(individual_rolls) + modifier
 
@@ -134,9 +135,10 @@ def calculate_damage(
             }
 
         # Calculate base damage (garantir min_damage <= max_damage)
-        if max_damage < min_damage:
-            max_damage = min_damage
-        base_damage = random.randint(min_damage, max_damage)
+        # Ensure min_damage is not greater than max_damage
+        actual_min_damage = min(min_damage, max_damage)
+        actual_max_damage = max(min_damage, max_damage)
+        base_damage = random.randint(actual_min_damage, actual_max_damage)
 
         # Check for critical hit (10% chance)
         critical = random.random() < 0.1
