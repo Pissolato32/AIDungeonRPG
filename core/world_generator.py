@@ -9,7 +9,8 @@ import json
 import os
 import logging
 from typing import Dict, List, Any, Tuple, Optional
-from rpg_game.ai.groq_client import GroqClient
+from ai.groq_client import GroqClient
+
 
 logger = logging.getLogger(__name__)
 

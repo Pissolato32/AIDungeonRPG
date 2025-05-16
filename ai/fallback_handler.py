@@ -11,14 +11,7 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 # Type definitions
-PromptType = Literal[
-    "move",
-    "combat",
-    "talk",
-    "search",
-    "use_item",
-    "default"
-]
+PromptType = Literal["move", "combat", "talk", "search", "use_item", "default"]
 
 
 class DialogueOption(TypedDict):
@@ -63,44 +56,24 @@ FALLBACK_RESPONSES: Dict[PromptType, FallbackResponse] = {
     "move": {
         "success": True,
         "new_location": "Caminho da Floresta",
-        "description": (
-            "Você caminha por um caminho sinuoso através de uma"
-            " floresta densa."
-        ),
+        "description": "Você caminha por um caminho sinuoso através de uma floresta densa.",
         "npcs": [],
         "events": ["Uma suave brisa agita as folhas"],
-        "message": (
-            "Você caminha por um caminho sinuoso através de uma"
-            " floresta densa."
-        ),
+        "message": "Você caminha por um caminho sinuoso através de uma floresta densa.",
     },
-    "combat": {
-        "success": True,
-        "message": "Um inimigo aparece!"
-    },
+    "combat": {"success": True, "message": "Um inimigo aparece!"},
     "talk": {
         "success": True,
         "npc_name": "Aldeão Local",
         "dialogue": "Olá viajante! Desculpe, não posso conversar agora.",
-        "options": [
-            {
-                "texto": "Continuar explorando",
-                "tema": "exploração"
-            }
-        ],
+        "options": [{"texto": "Continuar explorando", "tema": "exploração"}],
         "message": "Olá viajante! Desculpe, não posso conversar agora.",
     },
     "search": {
         "success": True,
-        "findings": (
-            "Você examina a área, mas não encontra nada de especial"
-            " no momento."
-        ),
+        "findings": "Você examina a área, mas não encontra nada de especial no momento.",
         "items": [],
-        "message": (
-            "Você examina a área, mas não encontra nada de especial"
-            " no momento."
-        ),
+        "message": "Você examina a área, mas não encontra nada de especial no momento.",
     },
     "use_item": {
         "success": False,
@@ -129,13 +102,10 @@ def generate_fallback_response(prompt: str) -> FallbackResponse:
             "prompt_type": prompt_type,
             "prompt_length": len(prompt),
             "timestamp": datetime.now().isoformat(),
-        }
+        },
     )
 
-    return FALLBACK_RESPONSES.get(
-        prompt_type,
-        FALLBACK_RESPONSES["default"]
-    )
+    return FALLBACK_RESPONSES.get(prompt_type, FALLBACK_RESPONSES["default"])
 
 
 def identify_prompt_type(prompt: str) -> PromptType:

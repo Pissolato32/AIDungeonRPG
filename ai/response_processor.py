@@ -1,4 +1,5 @@
 """
+AI
 Response processor module.
 
 This module handles processing and validation of AI-generated responses,
@@ -57,15 +58,10 @@ def process_ai_response(response_text: str) -> AIResponse:
     except Exception as e:
         logger.error(
             "Error processing AI response",
-            extra={
-                "error": str(e),
-                "response_length": len(response_text)
-            }
+            extra={"error": str(e), "response_length": len(response_text)},
         )
         return AIResponse(
-            success=False,
-            message="Failed to process response",
-            error=str(e)
+            success=False, message="Failed to process response", error=str(e)
         )
 
 
@@ -81,11 +77,7 @@ def extract_json_from_text(text: str) -> JsonExtractionResult:
     # Strategy 1: Parse entire text as JSON
     try:
         data = json.loads(text.strip())
-        return JsonExtractionResult(
-            data=data,
-            error=None,
-            source="full_text"
-        )
+        return JsonExtractionResult(data=data, error=None, source="full_text")
     except json.JSONDecodeError:
         pass
 
@@ -103,9 +95,7 @@ def extract_json_from_text(text: str) -> JsonExtractionResult:
 
     # No valid JSON found
     return JsonExtractionResult(
-        data=None,
-        error="No valid JSON found in response",
-        source="none"
+        data=None, error="No valid JSON found in response", source="none"
     )
 
 
@@ -125,35 +115,22 @@ def _extract_from_code_blocks(text: str) -> JsonExtractionResult:
             if len(parts) > 1:
                 json_text = parts[1].split("```")[0].strip()
                 data = json.loads(json_text)
-                return JsonExtractionResult(
-                    data=data,
-                    error=None,
-                    source="json_block"
-                )
+                return JsonExtractionResult(data=data, error=None, source="json_block")
 
         # Try generic ``` blocks
         parts = text.split("```")
         for part in parts[1::2]:
             try:
                 data = json.loads(part.strip())
-                return JsonExtractionResult(
-                    data=data,
-                    error=None,
-                    source="code_block"
-                )
+                return JsonExtractionResult(data=data, error=None, source="code_block")
             except json.JSONDecodeError:
                 continue
 
     except Exception as e:
-        logger.warning(
-            "Error extracting from code blocks",
-            extra={"error": str(e)}
-        )
+        logger.warning("Error extracting from code blocks", extra={"error": str(e)})
 
     return JsonExtractionResult(
-        data=None,
-        error="No valid JSON in code blocks",
-        source="none"
+        data=None, error="No valid JSON in code blocks", source="none"
     )
 
 
@@ -173,9 +150,7 @@ def _extract_with_brace_matching(text: str) -> JsonExtractionResult:
         start_idx = text.find("{")
         if start_idx == -1:
             return JsonExtractionResult(
-                data=None,
-                error="No opening brace found",
-                source="none"
+                data=None, error="No opening brace found", source="none"
             )
 
         # Find matching closing brace
@@ -186,27 +161,20 @@ def _extract_with_brace_matching(text: str) -> JsonExtractionResult:
             elif text[i] == "}":
                 open_count -= 1
                 if open_count == 0:
-                    json_text = text[start_idx:i + 1]
+                    json_text = text[start_idx : i + 1]
                     try:
                         data = json.loads(json_text)
                         return JsonExtractionResult(
-                            data=data,
-                            error=None,
-                            source="brace_matching"
+                            data=data, error=None, source="brace_matching"
                         )
                     except json.JSONDecodeError:
                         continue
 
     except Exception as e:
-        logger.warning(
-            "Error in brace matching",
-            extra={"error": str(e)}
-        )
+        logger.warning("Error in brace matching", extra={"error": str(e)})
 
     return JsonExtractionResult(
-        data=None,
-        error="No valid JSON found with brace matching",
-        source="none"
+        data=None, error="No valid JSON found with brace matching", source="none"
     )
 
 
@@ -234,7 +202,7 @@ def validate_response_content(response: AIResponse) -> AIResponse:
                 message=(
                     "Não foi possível processar sua ação. "
                     "Por favor, tente novamente com mais detalhes."
-                )
+                ),
             )
 
     return response

@@ -18,6 +18,7 @@ class ConversationMessage(TypedDict, total=True):
 
     role: str
     content: str
+    # Define the role of the message (user or assistant)
 
 
 class NPCMemory(TypedDict, total=True):
@@ -62,10 +63,7 @@ class ConversationManager:
         self.conversation_history: Dict[str, List[ConversationMessage]] = {}
         self.npc_memory: Dict[str, NPCMemory] = {}
 
-    def get_conversation_prompt(
-        self,
-        context: ConversationContext
-    ) -> str:
+    def get_conversation_prompt(self, context: ConversationContext) -> str:
         """Generate a contextual conversation prompt.
 
         Args:
@@ -76,10 +74,7 @@ class ConversationManager:
         """
         if context.npc_name not in self.npc_memory:
             self.npc_memory[context.npc_name] = NPCMemory(
-                topics=set(),
-                shared_info=set(),
-                mentioned_quests=set(),
-                trust_level=0
+                topics=set(), shared_info=set(), mentioned_quests=set(), trust_level=0
             )
 
         npc_memory = self.npc_memory[context.npc_name]
@@ -87,26 +82,26 @@ class ConversationManager:
         knowledge = ", ".join(context.npc_details.get("knowledge", []))
 
         # Split long lines for readability
-        npc_prof = context.npc_details.get('profession', 'Unknown')
-        npc_pers = context.npc_details.get('personality', 'Neutral')
-        npc_mood = context.npc_details.get('current_mood', 'normal')
+        npc_profession = context.npc_details.get("profession", "Unknown")
+        npc_personality = context.npc_details.get("personality", "Neutral")
+        npc_current_mood = context.npc_details.get("current_mood", "normal")
 
         prompt = (
             f"Você é um NPC chamado {context.npc_name} em um RPG "
             "medieval.\n\n"
             "Sua personalidade:\n"
             f"- Raça: {context.npc_details.get('race', 'Unknown')}\n"
-            f"- Profissão: {npc_prof}\n"
-            f"- Personalidade: {npc_pers}\n"
+            f"- Profissão: {npc_profession}\n"
+            f"- Personalidade: {npc_personality}\n"
             f"- Conhecimento sobre: {knowledge}\n"
-            f"- Estado atual: {npc_mood}\n\n"
+            f"- Estado atual: {npc_current_mood}\n\n"
             "Memória da conversa:\n"
         )
 
         # Add memory sections
-        topics = ', '.join(npc_memory['topics'])
-        info = ', '.join(npc_memory['shared_info'])
-        quests = ', '.join(npc_memory['mentioned_quests'])
+        topics = ", ".join(npc_memory["topics"])
+        info = ", ".join(npc_memory["shared_info"])
+        quests = ", ".join(npc_memory["mentioned_quests"])
 
         prompt += (
             f"- Tópicos: {topics}\n"
@@ -133,11 +128,7 @@ class ConversationManager:
 
         return prompt
 
-    def add_user_message(
-        self,
-        character_id: str,
-        message: str
-    ) -> None:
+    def add_user_message(self, character_id: str, message: str) -> None:
         """Add a user message to conversation history.
 
         Args:
@@ -156,7 +147,7 @@ class ConversationManager:
         character_id: str,
         npc_name: str,
         message: str,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Add an NPC response to conversation history.
 
@@ -169,18 +160,14 @@ class ConversationManager:
         if character_id not in self.conversation_history:
             self.conversation_history[character_id] = []
 
-        new_msg = ConversationMessage(role="assistant", content=message)
-        self.conversation_history[character_id].append(new_msg)
+        new_message = ConversationMessage(role="assistant", content=message)
+        self.conversation_history[character_id].append(new_message)
         self._trim_conversation_history(character_id)
 
         # Update NPC memory
-        if context:
-            self._update_npc_memory(npc_name, message, context)
+        self._update_npc_memory(npc_name, message, context)
 
-    def _get_conversation_history(
-        self,
-        character_id: str
-    ) -> List[ConversationMessage]:
+    def _get_conversation_history(self, character_id: str) -> List[ConversationMessage]:
         """Retrieve conversation history for a character.
 
         Args:
@@ -203,10 +190,7 @@ class ConversationManager:
             self.conversation_history[character_id] = history[start:]
 
     def _update_npc_memory(
-        self,
-        npc_name: str,
-        message: str,
-        context: Dict[str, Any]
+        self, npc_name: str, message: str, context: Dict[str, Any]
     ) -> None:
         """Update NPC's memory based on conversation context.
 
@@ -217,10 +201,7 @@ class ConversationManager:
         """
         if npc_name not in self.npc_memory:
             self.npc_memory[npc_name] = NPCMemory(
-                topics=set(),
-                shared_info=set(),
-                mentioned_quests=set(),
-                trust_level=0
+                topics=set(), shared_info=set(), mentioned_quests=set(), trust_level=0
             )
 
         memory = self.npc_memory[npc_name]
@@ -235,6 +216,6 @@ class ConversationManager:
 
         # Update trust level with boundaries
         if "trust_change" in context:
-            curr = memory["trust_level"]
+            current = memory["trust_level"]
             delta = context["trust_change"]
-            memory["trust_level"] = max(-100, min(100, curr + delta))
+            memory["trust_level"] = max(-100, min(100, current + delta))

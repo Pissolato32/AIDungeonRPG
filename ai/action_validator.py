@@ -1,11 +1,15 @@
 """
 Action validator module.
 
-This module provides functions for validating player actions using AI.
+This module provides functions for validating player actions using artificial intelligence.
 """
 
+from flask import flash  # Import flash for error messages
 import logging
 from typing import Dict, Any, Optional
+from ai.response_processor import (
+    process_ai_response,
+)  # Moved import to the top for clarity
 
 logger = logging.getLogger(__name__)
 
@@ -14,23 +18,23 @@ def validate_action_with_ai(
     action: str, details: str, location: str, ai_client=None
 ) -> Dict[str, Any]:
     """
-    Validate if an action makes sense using AI.
+    Validate if an action makes sense using artificial intelligence.
 
     Args:
         action: The type of action (move, look, etc.)
         details: The details of the action
         location: Current location of the player
-        ai_client: Optional AI client to use
+        ai_client: Optional artificial intelligence client to use
 
     Returns:
         Dictionary with validation result
     """
     if not ai_client:
-        # Se não tiver cliente AI, assume que a ação é válida
+        # If there is no artificial intelligence client, assume that the action is valid
         return {"valid": True}
 
     try:
-        # Criar prompt para validação
+        # Create prompt for action validation
         prompt = f"""
         Você é um validador de ações em um jogo RPG. Sua tarefa é verificar se a ação do jogador faz sentido no contexto.
         
@@ -51,26 +55,19 @@ def validate_action_with_ai(
         }}
         """
 
-        # Enviar para a IA
+        flash("Ação validada com sucesso.", "success")  # Flash success message
+        # Enviar para a inteligência artificial
         response = ai_client.generate_response(prompt)
 
-        # Processar resposta
-        from ai.response_processor import process_ai_response
-
+        # Processar resposta com tratamento de erro
         result = process_ai_response(response)
-
-        # Verificar se o resultado tem o formato esperado
-        if isinstance(result, dict) and "valid" in result:
-            return result
-
-        # Formato inesperado, retornar resultado padrão
-        logger.warning(
-            "Unexpected validation response format",
-            extra={"response": str(result)[:100]},
-        )
-        return {"valid": True}
+        if not isinstance(result, dict) or "valid" not in result:
+            logger.warning(
+                "Formato de resposta inesperado", extra={"response": str(result)[:100]}
+            )
+            return {"valid": True}
 
     except Exception as e:
-        logger.error(f"Error validating action with AI: {e}")
-        # Em caso de erro, assume que a ação é válida
+        logger.error(f"Error validating action with artificial intelligence: {e}")
+        # In case of error, assume that the action is valid
         return {"valid": True}

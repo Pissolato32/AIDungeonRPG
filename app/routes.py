@@ -9,6 +9,7 @@ import os
 import logging
 import uuid
 from flask import (
+    flash,
     render_template,
     request,
     redirect,
@@ -21,6 +22,7 @@ from flask import (
 from core.models import Character
 from core.game_engine import GameEngine
 from utils.data_io import save_data, load_data
+from web.error_handler import ErrorHandler
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -62,13 +64,9 @@ def character():
 
         # Initialize game state with proper language
         game_state = game_engine.create_game_state(
-            character_id=user_id,
-            language=session.get("language", "pt")
+            character_id=user_id, language=session.get("language", "pt")
         )
-        save_data(
-            game_state.to_dict(),
-            f"game_state_{user_id}.json"
-        )
+        save_data(game_state.to_dict(), f"game_state_{user_id}.json")
 
         return redirect(url_for("routes.game"))
 
@@ -80,9 +78,8 @@ def character():
 
     if os.path.exists(data_dir):
         for filename in os.listdir(data_dir):
-            is_char_file = (
-                filename.startswith("character_") and
-                filename.endswith(".json")
+            is_char_file = filename.startswith("character_") and filename.endswith(
+                ".json"
             )
             if is_char_file:
                 char_data = load_data(filename)
@@ -92,10 +89,13 @@ def character():
                     char_data["user_id"] = uid
                     existing_characters.append(char_data)
 
-    return render_template(
-        "character.html",
-        existing_characters=existing_characters
+    flash(
+        ErrorHandler.format_error_response(
+            "character_creation_failed", session.get("language", "ptbr")
+        )["error"]["message"],
+        "error",
     )
+    return render_template("character.html", existing_characters=existing_characters)
 
 
 @bp.route("/select_character/<user_id>")
@@ -151,9 +151,7 @@ def game():
         game_state = game_engine.load_game_state(state_data)
 
     # Render game template
-    return render_template(
-        "game.html", character=character, game_state=game_state
-    )
+    return render_template("game.html", character=character, game_state=game_state)
 
 
 @bp.route("/api/action", methods=["POST"])
@@ -162,12 +160,16 @@ def api_action():
     # Check if user has a character
     user_id = session.get("user_id")
     if not user_id:
-        return jsonify({"success": False, "message": "No character found"})
+        return ErrorHandler.create_error_response(
+            "no_character_found", session.get("language")
+        )
 
     # Load character data
     char_data = load_data(f"character_{user_id}.json")
     if not char_data:
-        return jsonify({"success": False, "message": "No character found"})
+        return ErrorHandler.create_error_response(
+            "no_character_found", session.get("language")
+        )
 
     # Create character object
     character = Character.from_dict(char_data)
@@ -175,7 +177,9 @@ def api_action():
     # Load game state
     state_data = load_data(f"game_state_{user_id}.json")
     if not state_data:
-        return jsonify({"success": False, "message": "No game state found"})
+        return ErrorHandler.create_error_response(
+            "no_game_state_found", session.get("language")
+        )
 
     game_state = game_engine.load_game_state(state_data)
 
@@ -185,9 +189,7 @@ def api_action():
     details = data.get("details", "")
 
     # Log the action
-    logger.info(
-        f"Action: {action} | Details: {details} | User: {user_id[:8]}..."
-    )
+    logger.info(f"Action: {action} | Details: {details} | User: {user_id[:8]}...")
 
     # Process action
     result = game_engine.process_action(action, details, character, game_state)
@@ -204,12 +206,16 @@ def api_reset():
     """Reset the game but keep the character."""
     user_id = session.get("user_id")
     if not user_id:
-        return jsonify({"success": False, "message": "No character found"})
+        return ErrorHandler.create_error_response(
+            "no_character_found", session.get("language")
+        )
 
     # Load character data
     char_data = load_data(f"character_{user_id}.json")
     if not char_data:
-        return jsonify({"success": False, "message": "No character found"})
+        return ErrorHandler.create_error_response(
+            "no_character_found", session.get("language")
+        )
 
     # Reset character stats but keep basic info
     basic_info = {
@@ -253,19 +259,21 @@ def api_world_map():
     # Check if user has a character
     user_id = session.get("user_id")
     if not user_id:
-        return jsonify({"success": False, "message": "No character found"})
+        return ErrorHandler.create_error_response(
+            "no_character_found", session.get("language")
+        )
 
     # Load game state
     state_data = load_data(f"game_state_{user_id}.json")
     if not state_data:
-        return jsonify({"success": False, "message": "No game state found"})
+        return ErrorHandler.create_error_response(
+            "no_game_state_found", session.get("language")
+        )
 
     # Extract world map and player position
     world_map = state_data.get("world_map", {})
     coordinates = state_data.get("coordinates", {"x": 0, "y": 0, "z": 0})
 
-    return jsonify({
-        "success": True,
-        "world_map": world_map,
-        "player_position": coordinates
-    })
+    return jsonify(
+        {"success": True, "world_map": world_map, "player_position": coordinates}
+    )

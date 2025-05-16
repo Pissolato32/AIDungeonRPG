@@ -1,278 +1,430 @@
 """
-Encounter generator module.
+Módulo de geração de encontros.
 
-This module provides functionality for generating random encounters.
+Este módulo é responsável por gerar encontros dinâmicos baseados no ambiente,
+nível do personagem e condições do jogo.
 """
 
 import random
-import logging
-from typing import Dict, Any, List, Optional, Union
-
-from ai.groq_client import GroqClient
-from core.enemy import Enemy
-
-logger = logging.getLogger(__name__)
+from typing import Dict, Any, List, Optional, TypedDict
 
 
-def get_random_encounter(character_level: int, location: str = None) -> Dict[str, Any]:
-    """
-    Generate a random encounter based on character level and location.
-
-    Args:
-        character_level: The character's level
-        location: Optional location name for themed encounters
-
-    Returns:
-        Dictionary with encounter details
-    """
-    # Determine encounter type
-    encounter_type = _determine_encounter_type(location)
-
-    if encounter_type == "combat":
-        return _generate_combat_encounter(character_level, location)
-    elif encounter_type == "npc":
-        return _generate_npc_encounter(character_level, location)
-    else:
-        return _generate_environmental_encounter(character_level, location)
+class EncounterEnemy(TypedDict):
+    """Tipo para inimigos em um encontro."""
+    name: str
+    level: int
+    health: int
+    damage: int
+    type: str
+    abilities: List[str]
+    loot: Dict[str, float]  # item: chance de drop
 
 
-def _determine_encounter_type(location: Optional[str] = None) -> str:
-    """
-    Determine the type of encounter based on location.
-
-    Args:
-        location: Optional location name
-
-    Returns:
-        Encounter type: "combat", "npc", or "environmental"
-    """
-    # Base probabilities
-    combat_chance = 0.5  # 50% chance of combat
-    npc_chance = 0.3  # 30% chance of NPC encounter
-
-    # Adjust based on location
-    if location:
-        location_lower = location.lower()
-
-        if "floresta" in location_lower or "caverna" in location_lower:
-            combat_chance = 0.7  # More combat in dangerous areas
-            npc_chance = 0.2
-        elif "cidade" in location_lower or "aldeia" in location_lower:
-            combat_chance = 0.3  # Less combat in civilized areas
-            npc_chance = 0.5
-
-    # Roll for encounter type
-    roll = random.random()
-
-    if roll < combat_chance:
-        return "combat"
-    elif roll < combat_chance + npc_chance:
-        return "npc"
-    else:
-        return "environmental"
+class EncounterReward(TypedDict):
+    """Tipo para recompensas de encontro."""
+    experience: int
+    gold: int
+    items: List[Dict[str, Any]]
+    reputation: Optional[Dict[str, int]]
 
 
-def _generate_combat_encounter(
-    character_level: int, location: Optional[str] = None
-) -> Dict[str, Any]:
-    """
-    Generate a combat encounter.
-
-    Args:
-        character_level: The character's level
-        location: Optional location name
-
-    Returns:
-        Dictionary with combat encounter details
-    """
-    # Determine enemy type based on location and level
-    enemy_type = _select_enemy_type(character_level, location)
-
-    # Create enemy instance
-    enemy = _create_enemy(enemy_type, character_level)
-
-    # Create encounter result
-    return {
-        "type": "combat",
-        "enemy": enemy.to_dict(),
-        "message": f"Um {enemy.name} aparece!",
-        "combat": True,
-    }
+class Encounter(TypedDict):
+    """Tipo para encontros completos."""
+    type: str
+    difficulty: int
+    enemies: List[EncounterEnemy]
+    description: str
+    environment_effects: Dict[str, Any]
+    rewards: EncounterReward
+    escape_chance: float
 
 
-def _select_enemy_type(character_level: int, location: Optional[str] = None) -> str:
-    """
-    Select an appropriate enemy type based on level and location.
+class EncounterGenerator:
+    """Gerador de encontros dinâmicos."""
 
-    Args:
-        character_level: The character's level
-        location: Optional location name
+    def __init__(self) -> None:
+        """Inicializa o gerador de encontros."""
+        self._enemy_templates = {
+            "goblin": {
+                "base_health": 30,
+                "base_damage": 5,
+                "abilities": ["Ataque Furtivo", "Fuga"],
+                "loot": {
+                    "Moedas de Cobre": 0.8,
+                    "Adaga Enferrujada": 0.3,
+                    "Poção Menor": 0.2
+                }
+            },
+            "lobo": {
+                "base_health": 25,
+                "base_damage": 8,
+                "abilities": ["Mordida", "Uivo Aterrorizante"],
+                "loot": {
+                    "Pele de Lobo": 0.9,
+                    "Presas Afiadas": 0.6
+                }
+            },
+            "bandido": {
+                "base_health": 40,
+                "base_damage": 7,
+                "abilities": ["Golpe Traiçoeiro", "Roubar"],
+                "loot": {
+                    "Moedas de Prata": 0.7,
+                    "Arma Comum": 0.4,
+                    "Poção de Cura": 0.3
+                }
+            },
+            "esqueleto": {
+                "base_health": 35,
+                "base_damage": 6,
+                "abilities": ["Ataque Ossudo", "Resistência Mórbida"],
+                "loot": {
+                    "Ossos": 1.0,
+                    "Gema Antiga": 0.2,
+                    "Arma Enferrujada": 0.5
+                }
+            }
+        }
 
-    Returns:
-        Enemy type name
-    """
-    # Basic enemies for low levels
-    tier1_enemies = ["Lobo Selvagem", "Bandido", "Goblin", "Aranha Gigante"]
+        self._environment_effects = {
+            "forest": {
+                "cover": True,
+                "escape_bonus": 0.2,
+                "vision_penalty": -2
+            },
+            "mountain": {
+                "high_ground": True,
+                "damage_bonus": 2,
+                "movement_penalty": -1
+            },
+            "desert": {
+                "heat": True,
+                "stamina_drain": 2,
+                "accuracy_penalty": -1
+            },
+            "cave": {
+                "darkness": True,
+                "vision_penalty": -3,
+                "echo": True
+            }
+        }
 
-    # Medium difficulty enemies
-    tier2_enemies = ["Guerreiro Orc", "Esqueleto", "Zumbi", "Ladrão"]
+    def generate_encounter(
+        self,
+        player_level: int,
+        location_type: str,
+        time_of_day: str = "day"
+    ) -> Encounter:
+        """
+        Gera um encontro baseado no nível do jogador e ambiente.
 
-    # Harder enemies
-    tier3_enemies = ["Troll", "Ogro", "Elemental", "Cultista"]
+        Args:
+            player_level: Nível do jogador
+            location_type: Tipo de localização
+            time_of_day: Período do dia
 
-    # Boss-level enemies
-    tier4_enemies = ["Dragão Jovem", "Lich", "Demônio Menor", "Gigante"]
+        Returns:
+            Encontro gerado com inimigos e recompensas
+        """
+        # Determinar dificuldade
+        difficulty = self._calculate_difficulty(player_level, time_of_day)
+        
+        # Selecionar inimigos apropriados
+        enemies = self._generate_enemies(
+            difficulty,
+            player_level,
+            location_type
+        )
+        
+        # Gerar recompensas
+        rewards = self._generate_rewards(
+            difficulty,
+            player_level,
+            len(enemies)
+        )
+        
+        # Aplicar efeitos ambientais
+        env_effects = self._get_environmental_effects(
+            location_type,
+            time_of_day
+        )
+        
+        # Calcular chance de fuga
+        escape_chance = self._calculate_escape_chance(
+            difficulty,
+            location_type
+        )
+        
+        return {
+            "type": self._determine_encounter_type(enemies),
+            "difficulty": difficulty,
+            "enemies": enemies,
+            "description": self._generate_description(
+                enemies,
+                location_type,
+                time_of_day
+            ),
+            "environment_effects": env_effects,
+            "rewards": rewards,
+            "escape_chance": escape_chance
+        }
 
-    # Select tier based on level
-    if character_level <= 3:
-        enemy_pool = tier1_enemies
-    elif character_level <= 6:
-        enemy_pool = tier1_enemies + tier2_enemies
-    elif character_level <= 10:
-        enemy_pool = tier2_enemies + tier3_enemies
-    else:
-        enemy_pool = tier3_enemies + tier4_enemies
+    def _calculate_difficulty(
+        self,
+        player_level: int,
+        time_of_day: str
+    ) -> int:
+        """Calcula a dificuldade do encontro."""
+        base_difficulty = random.randint(
+            max(1, player_level - 2),
+            player_level + 2
+        )
+        
+        # Modificadores de dificuldade
+        if time_of_day == "night":
+            base_difficulty += 1
+        
+        return base_difficulty
 
-    # Adjust based on location if provided
-    if location:
-        location_lower = location.lower()
+    def _generate_enemies(
+        self,
+        difficulty: int,
+        player_level: int,
+        location_type: str
+    ) -> List[EncounterEnemy]:
+        """Gera lista de inimigos para o encontro."""
+        num_enemies = random.randint(1, max(2, difficulty // 2))
+        enemies: List[EncounterEnemy] = []
+        
+        for _ in range(num_enemies):
+            enemy_type = self._select_enemy_type(location_type)
+            template = self._enemy_templates[enemy_type]
+            
+            # Escalar estatísticas com dificuldade
+            level = max(1, player_level + random.randint(-2, 2))
+            scale = level / 5  # Fator de escala
+            
+            enemy: EncounterEnemy = {
+                "name": self._generate_enemy_name(enemy_type),
+                "level": level,
+                "health": int(template["base_health"] * scale),
+                "damage": int(template["base_damage"] * scale),
+                "type": enemy_type,
+                "abilities": template["abilities"].copy(),
+                "loot": template["loot"].copy()
+            }
+            
+            enemies.append(enemy)
+        
+        return enemies
 
-        if "floresta" in location_lower:
-            forest_enemies = [
-                "Lobo Selvagem",
-                "Urso",
-                "Aranha Gigante",
-                "Druida Corrompido",
-            ]
-            enemy_pool = [e for e in enemy_pool if e in forest_enemies] or enemy_pool
-        elif "caverna" in location_lower:
-            cave_enemies = ["Goblin", "Troll", "Morcego Gigante", "Slime"]
-            enemy_pool = [e for e in enemy_pool if e in cave_enemies] or enemy_pool
+    def _generate_rewards(
+        self,
+        difficulty: int,
+        player_level: int,
+        num_enemies: int
+    ) -> EncounterReward:
+        """Gera recompensas para o encontro."""
+        base_xp = 50 * difficulty
+        base_gold = 10 * difficulty
+        
+        # Escalar com número de inimigos
+        total_xp = base_xp * num_enemies
+        total_gold = base_gold * num_enemies
+        
+        # Adicionar variação aleatória
+        total_xp = int(total_xp * random.uniform(0.8, 1.2))
+        total_gold = int(total_gold * random.uniform(0.8, 1.2))
+        
+        return {
+            "experience": total_xp,
+            "gold": total_gold,
+            "items": self._generate_loot(difficulty, num_enemies),
+            "reputation": self._generate_reputation_rewards(difficulty)
+        }
 
-    # Select random enemy from pool
-    return random.choice(enemy_pool)
+    def _select_enemy_type(self, location_type: str) -> str:
+        """Seleciona tipo de inimigo baseado na localização."""
+        location_enemies = {
+            "forest": ["goblin", "lobo"],
+            "mountain": ["bandido", "lobo"],
+            "desert": ["bandido", "esqueleto"],
+            "cave": ["goblin", "esqueleto"]
+        }
+        
+        enemies = location_enemies.get(
+            location_type,
+            list(self._enemy_templates.keys())
+        )
+        return random.choice(enemies)
 
+    def _generate_enemy_name(self, enemy_type: str) -> str:
+        """Gera um nome único para o inimigo."""
+        prefixes = {
+            "goblin": ["Astuto", "Cruel", "Sorrateiro"],
+            "lobo": ["Feroz", "Selvagem", "Faminto"],
+            "bandido": ["Violento", "Perigoso", "Impiedoso"],
+            "esqueleto": ["Antigo", "Corrompido", "Sombrio"]
+        }
+        
+        prefix = random.choice(prefixes.get(enemy_type, ["Normal"]))
+        return f"{prefix} {enemy_type.title()}"
 
-def _create_enemy(enemy_type: str, character_level: int) -> Enemy:
-    """
-    Create an enemy instance based on type and level.
+    def _get_environmental_effects(
+        self,
+        location_type: str,
+        time_of_day: str
+    ) -> Dict[str, Any]:
+        """Obtém efeitos ambientais para o encontro."""
+        effects = self._environment_effects.get(location_type, {}).copy()
+        
+        # Modificadores baseados no período do dia
+        if time_of_day == "night":
+            effects["vision_penalty"] = (
+                effects.get("vision_penalty", 0) - 2
+            )
+            effects["stealth_bonus"] = 2
+        
+        return effects
 
-    Args:
-        enemy_type: The type of enemy
-        character_level: The character's level
+    def _calculate_escape_chance(
+        self,
+        difficulty: int,
+        location_type: str
+    ) -> float:
+        """Calcula a chance de fuga do encontro."""
+        base_chance = 0.5  # 50% base
+        
+        # Modificar baseado na dificuldade
+        difficulty_mod = max(0.1, 1 - (difficulty * 0.1))
+        
+        # Modificar baseado no ambiente
+        location_mod = {
+            "forest": 0.2,  # Mais fácil escapar
+            "mountain": -0.1,
+            "desert": 0.1,
+            "cave": -0.2  # Mais difícil escapar
+        }.get(location_type, 0)
+        
+        return min(0.9, max(0.1, base_chance * difficulty_mod + location_mod))
 
-    Returns:
-        Enemy instance
-    """
-    # Base stats
-    base_hp = 10
-    base_damage = (1, 4)
+    def _generate_description(
+        self,
+        enemies: List[EncounterEnemy],
+        location_type: str,
+        time_of_day: str
+    ) -> str:
+        """Gera uma descrição narrativa do encontro."""
+        time_desc = (
+            "Sob a luz do dia" if time_of_day == "day"
+            else "Na escuridão da noite"
+        )
+        
+        enemy_desc = []
+        for enemy in enemies:
+            enemy_desc.append(f"um {enemy['name']}")
+        
+        if len(enemy_desc) == 1:
+            enemies_text = enemy_desc[0]
+        else:
+            enemies_text = (
+                ", ".join(enemy_desc[:-1]) +
+                f" e {enemy_desc[-1]}"
+            )
+        
+        location_desc = {
+            "forest": "entre as árvores da floresta",
+            "mountain": "nas encostas rochosas",
+            "desert": "nas dunas do deserto",
+            "cave": "nas profundezas da caverna"
+        }.get(location_type, "na área")
+        
+        return (
+            f"{time_desc}, {enemies_text} surge(m) {location_desc}, "
+            "preparado(s) para o combate!"
+        )
 
-    # Adjust level based on character level
-    enemy_level = max(1, character_level - 1 + random.randint(-1, 1))
+    def _generate_loot(
+        self,
+        difficulty: int,
+        num_enemies: int
+    ) -> List[Dict[str, Any]]:
+        """Gera itens de loot baseados na dificuldade."""
+        items = []
+        num_items = random.randint(1, max(2, num_enemies))
+        
+        for _ in range(num_items):
+            if random.random() < 0.7:  # 70% chance de item comum
+                items.append(self._generate_common_item())
+            else:  # 30% chance de item raro
+                items.append(self._generate_rare_item(difficulty))
+        
+        return items
 
-    # Scale stats based on level
-    hp = base_hp + (enemy_level * 5)
-    min_damage, max_damage = base_damage
-    damage = (min_damage + enemy_level // 2, max_damage + enemy_level)
+    def _generate_common_item(self) -> Dict[str, Any]:
+        """Gera um item comum."""
+        common_items = [
+            {"name": "Poção de Cura", "type": "consumable", "value": 10},
+            {"name": "Faca", "type": "weapon", "value": 5},
+            {"name": "Escudo de Madeira", "type": "armor", "value": 8},
+            {"name": "Ervas Medicinais", "type": "crafting", "value": 3}
+        ]
+        return random.choice(common_items)
 
-    # Create enemy
-    enemy = Enemy(
-        name=enemy_type,
-        description=f"Um {enemy_type} hostil.",
-        level=enemy_level,
-        max_hp=hp,
-        current_hp=hp,
-        attack_damage=damage,
-        defense=enemy_level // 2,
-        xp_reward=10 * enemy_level,
-        gold_reward=(5 * enemy_level, 15 * enemy_level),
-    )
+    def _generate_rare_item(self, difficulty: int) -> Dict[str, Any]:
+        """Gera um item raro baseado na dificuldade."""
+        rare_items = [
+            {
+                "name": "Espada Mágica",
+                "type": "weapon",
+                "value": 50,
+                "bonus": difficulty
+            },
+            {
+                "name": "Armadura Encantada",
+                "type": "armor",
+                "value": 60,
+                "bonus": difficulty
+            },
+            {
+                "name": "Anel de Proteção",
+                "type": "accessory",
+                "value": 45,
+                "bonus": difficulty // 2
+            }
+        ]
+        return random.choice(rare_items)
 
-    return enemy
+    def _generate_reputation_rewards(
+        self,
+        difficulty: int
+    ) -> Optional[Dict[str, int]]:
+        """Gera recompensas de reputação com facções."""
+        if random.random() < 0.3:  # 30% chance de afetar reputação
+            factions = ["Vila", "Guilda", "Mercadores"]
+            faction = random.choice(factions)
+            return {faction: difficulty * 2}
+        return None
 
-
-def _generate_npc_encounter(
-    character_level: int, location: Optional[str] = None
-) -> Dict[str, Any]:
-    """
-    Generate an NPC encounter.
-
-    Args:
-        character_level: The character's level
-        location: Optional location name
-
-    Returns:
-        Dictionary with NPC encounter details
-    """
-    # NPC types
-    npc_types = [
-        "Mercador Viajante",
-        "Aventureiro Ferido",
-        "Peregrino",
-        "Caçador",
-        "Refugiado",
-        "Bardo",
-        "Eremita",
-    ]
-
-    # Select NPC type
-    npc_type = random.choice(npc_types)
-
-    # Generate message
-    messages = [
-        f"Você encontra um {npc_type} no caminho.",
-        f"Um {npc_type} acena para você à distância.",
-        f"Um {npc_type} se aproxima cautelosamente.",
-    ]
-
-    return {
-        "type": "npc",
-        "npc": npc_type,
-        "message": random.choice(messages),
-        "combat": False,
-    }
-
-
-def _generate_environmental_encounter(
-    character_level: int, location: Optional[str] = None
-) -> Dict[str, Any]:
-    """
-    Generate an environmental encounter.
-
-    Args:
-        character_level: The character's level
-        location: Optional location name
-
-    Returns:
-        Dictionary with environmental encounter details
-    """
-    # Environmental events
-    events = [
-        "Você encontra pegadas estranhas no chão.",
-        "Uma brisa fria sopra, trazendo um cheiro peculiar.",
-        "Você ouve sons distantes que não consegue identificar.",
-        "O céu escurece repentinamente, mas logo volta ao normal.",
-        "Você encontra os restos de um acampamento abandonado.",
-    ]
-
-    # Adjust based on location
-    if location:
-        location_lower = location.lower()
-
-        if "floresta" in location_lower:
-            forest_events = [
-                "Os pássaros silenciam repentinamente.",
-                "Você nota marcas de garras em uma árvore próxima.",
-                "Uma névoa estranha começa a se formar entre as árvores.",
-            ]
-            events.extend(forest_events)
-        elif "caverna" in location_lower:
-            cave_events = [
-                "Você ouve o som de água pingando nas profundezas.",
-                "Cristais estranhos brilham nas paredes.",
-                "Um vento inexplicável apaga momentaneamente sua tocha.",
-            ]
-            events.extend(cave_events)
-
-    return {"type": "environmental", "message": random.choice(events), "combat": False}
+    def _determine_encounter_type(
+        self,
+        enemies: List[EncounterEnemy]
+    ) -> str:
+        """Determina o tipo do encontro baseado nos inimigos presentes."""
+        if not enemies:
+            return "empty"
+            
+        # Verificar tipo único
+        enemy_types = {enemy["type"] for enemy in enemies}
+        if len(enemy_types) == 1:
+            return f"{next(iter(enemy_types))}_group"
+            
+        # Verificar quantidade
+        if len(enemies) == 1:
+            return "single"
+        elif len(enemies) == 2:
+            return "duo"
+        elif len(enemies) <= 4:
+            return "group"
+        else:
+            return "horde"

@@ -1,82 +1,45 @@
-"""
-Error handling module.
-
-This module provides functionality for handling errors in the web application.
-"""
-
+# web/error_handler.py
 import logging
 import traceback
-from typing import Dict, Any, Optional
-from flask import jsonify
-
-from translations import get_text
+from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 class ErrorHandler:
-    """
-    Handles errors in the web application.
+    def __init__(self):
+        # Configurações adicionais podem ser feitas aqui
+        pass
 
-    Features:
-    - Standardized error responses
-    - Error logging
-    - Translation support
-    """
+    def handle_error(
+        self, error: Exception, context: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Handle generic errors, logging them with optional context."""
+        context_info = f" Context: {context}" if context else ""
+        logger.error(f"Erro ocorreu: {error}{context_info}")
+        logger.debug(traceback.format_exc())
 
-    @staticmethod
-    def log_error(error: Exception, context: Optional[str] = None) -> None:
-        """
-        Log an error with context.
-
-        Args:
-            error: The exception to log
-            context: Additional context information
-        """
-        error_message = f"{context + ': ' if context else ''}{str(error)}"
-        logger.error(error_message)
-        logger.error(traceback.format_exc())
+    def handle_exception(
+        self, exception: Exception, context: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Handle exceptions with full traceback and optional context."""
+        context_info = f" Context: {context}" if context else ""
+        logger.critical(f"Exceção ocorreu: {exception}{context_info}")
+        logger.critical(traceback.format_exc())
 
     @staticmethod
-    def create_error_response(
-        error_key: str, language: str, error_details: str = ""
-    ) -> Any:
-        """
-        Create a standardized error response.
-
-        Args:
-            error_key: Key for the error message in translations
-            language: Language code
-            error_details: Additional error details
-
-        Returns:
-            JSON response with error message
-        """
-        message = get_text(f"errors.{error_key}", language, error_details)
-
-        return jsonify({"success": False, "message": message, "error_key": error_key})
-
-    @staticmethod
-    def handle_route_error(
-        e: Exception, route_name: str, language: str
+    def format_error_response(
+        message: str, code: int = 500, details: Optional[str] = None
     ) -> Dict[str, Any]:
-        """
-        Handle an error in a route.
-
-        Args:
-            e: The exception
-            route_name: Name of the route where the error occurred
-            language: Language code
-
-        Returns:
-            Error response dictionary
-        """
-        # Log the error
-        ErrorHandler.log_error(e, f"Error in {route_name} route")
-
-        # Create error response
-        return {
+        """Format a standardized error response (for APIs)."""
+        response = {
             "success": False,
-            "message": get_text("errors.route_error", language, str(e)),
-            "error": str(e),
+            "error": {
+                "message": message,
+                "code": code,
+            },
         }
+        if details:
+            response["error"]["details"] = details
+        return response

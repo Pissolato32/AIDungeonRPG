@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Literal, TypedDict, Any, Optional, cast
-from .models import BaseEntity
+from .models import NPCBase
 import random
 
 # Type definitions
@@ -48,7 +48,7 @@ DialogueDict = Dict[str, List[DialogueOption]]
 
 
 @dataclass
-class NPC(BaseEntity):
+class NPC(NPCBase):
     """Represents an NPC in the game world.
 
     Attributes:
@@ -99,11 +99,7 @@ class NPC(BaseEntity):
                 "*olha com desconfiança*",
                 "Não tenho nada para falar com você.",
             ],
-            "neutral": [
-                "Olá viajante.",
-                "Bem-vindo.",
-                "Como posso ajudar?"
-            ],
+            "neutral": ["Olá viajante.", "Bem-vindo.", "Como posso ajudar?"],
             "friendly": [
                 "Ah, que bom ver você novamente!",
                 "Que os deuses abençoem seu caminho!",
@@ -113,17 +109,16 @@ class NPC(BaseEntity):
 
         disposition: DispositionType = cast(
             DispositionType,
-            "hostile" if self.relationship_level < -30
-            else "friendly" if self.relationship_level > 30
-            else "neutral"
+            (
+                "hostile"
+                if self.relationship_level < -30
+                else "friendly" if self.relationship_level > 30 else "neutral"
+            ),
         )
 
         return random.choice(greetings[disposition])
 
-    def get_dialogue_options(
-        self,
-        context: Dict[str, Any]
-    ) -> List[DialogueOption]:
+    def get_dialogue_options(self, context: Dict[str, Any]) -> List[DialogueOption]:
         """Generate relevant dialogue options based on context.
 
         The options are determined by the NPC's profession, knowledge,
@@ -178,9 +173,7 @@ class NPC(BaseEntity):
         return options
 
     def interact(
-        self,
-        action: ActionType,
-        context: Dict[str, Any]
+        self, action: ActionType, context: Dict[str, Any]
     ) -> InteractionResult:
         """Process an interaction with the NPC.
 
@@ -197,11 +190,7 @@ class NPC(BaseEntity):
         self.interaction_count += 1
         self.last_interaction = action
 
-        response: InteractionResult = {
-            "success": True,
-            "message": "",
-            "options": []
-        }
+        response: InteractionResult = {"success": True, "message": "", "options": []}
 
         if action == "greet":
             response["message"] = self.get_greeting()

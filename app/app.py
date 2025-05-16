@@ -1,10 +1,10 @@
 from flask import (
     Flask,
     render_template,
+    redirect,
     session,
     request,
     jsonify,
-    redirect,
     url_for,
     flash,
 )
@@ -15,7 +15,7 @@ import sys
 import logging
 import traceback
 
-# Adiciona o diretório raiz do projeto ao path do Python
+# Add the project root directory to the Python path
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, root_dir)
 
@@ -40,7 +40,6 @@ class GameApp:
     """Main application class for the RPG game."""
 
     def __init__(self):
-        """Initialize the application and its dependencies."""
         try:
             self.app = Flask(
                 __name__,
@@ -60,7 +59,7 @@ class GameApp:
             if not os.path.exists(self.data_dir):
                 os.makedirs(self.data_dir)
         except Exception as e:
-            logger.error(f"Error during app initialization: {str(e)}")
+            logger.error(f"Error during app initialization: {e}")
             raise
 
     def _configure_app(self):
@@ -130,17 +129,21 @@ class GameApp:
                 character = (
                     Character.from_dict(character_data) if character_data else None
                 )
+                flash(
+                    get_text("errors.character_load_failed", session.get("language")),
+                    "error",
+                )
                 return render_template("character.html", character=character)
 
         except ValueError as e:
-            logger.error(f"ValueError in character route: {str(e)}")
+            logger.error(f"ValueError in character route: {e}")
             flash(
                 get_text("errors.invalid_input", session.get("language"), str(e)),
                 "error",
             )
             return render_template("character.html", character=None, error=str(e))
         except Exception as e:
-            logger.error(f"Unexpected error in character route: {str(e)}")
+            logger.error(f"Unexpected error in character route: {e}")
             logger.error(traceback.format_exc())
             flash(
                 get_text("errors.unexpected", session.get("language"), str(e)), "error"
@@ -157,7 +160,7 @@ class GameApp:
         if isinstance(character_data, dict):
             character = Character.from_dict(character_data)
         else:
-            character = character_data if character_data else None
+            character = character_data
         game_state = self._load_game_state_with_language(session["user_id"])
         if not character:
             return redirect(url_for("character"))
@@ -200,7 +203,7 @@ class GameApp:
         except Exception as e:
             GameLogger.log_game_action(
                 action if "action" in locals() else "unknown_action",
-                f"Unexpected error: {str(e)}",
+                f"Unexpected error: {e}",
                 session["user_id"],
                 "error",
             )
@@ -243,7 +246,7 @@ class GameApp:
             return jsonify({"success": True})
         except Exception as e:
             GameLogger.log_game_action(
-                "reset_game", f"Unexpected error: {str(e)}", session["user_id"], "error"
+                "reset_game", f"Unexpected error: {e}", session["user_id"], "error"
             )
             return self._error_response("reset_error", str(e))
 

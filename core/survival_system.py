@@ -1,245 +1,266 @@
 """
-Survival system module.
+Módulo de sistema de sobrevivência.
 
-This module provides functionality for managing character survival mechanics like hunger and thirst.
+Este módulo fornece funcionalidades para gerenciar mecânicas de sobrevivência
+de personagens, como fome, sede, energia e temperatura.
 """
 
 import logging
-import random
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, TypedDict, cast
+from core.models import Character
 
 logger = logging.getLogger(__name__)
 
 
+class SurvivalStats(TypedDict):
+    """Definição de tipo para estatísticas de sobrevivência."""
+    health: int
+    hunger: int
+    thirst: int
+    energy: int
+    temperature: int
+
+
+class EnvironmentalEffect(TypedDict):
+    """Definição de tipo para efeitos ambientais."""
+    name: str
+    description: str
+    stats_modifier: Dict[str, int]
+    duration: int
+
+
 class SurvivalSystem:
     """
-    Manages character survival mechanics like hunger and thirst.
+    Gerencia as mecânicas de sobrevivência do personagem.
 
-    Features:
-    - Hunger and thirst decay over time
-    - Effects of hunger and thirst on character stats
-    - Consumption of food and water
+    Recursos:
+    - Decaimento de fome, sede e energia ao longo do tempo
+    - Efeitos de fome, sede e temperatura nas estatísticas
+    - Consumo de comida e água
+    - Efeitos ambientais dinâmicos
+    - Sistema de temperatura corporal
+    - Condições climáticas variáveis
     """
 
-    # Constants for hunger and thirst
-    MAX_HUNGER = 100
-    MAX_THIRST = 100
-    HUNGER_DECAY_RATE = 1  # Per action
-    THIRST_DECAY_RATE = 2  # Per action
-
-    @staticmethod
-    def update_survival_stats(character: Any, action_type: str) -> Dict[str, Any]:
-        """
-        Update character's hunger and thirst based on action type.
-
-        Args:
-            character: Character object
-            action_type: Type of action performed
-
-        Returns:
-            Dictionary with updated stats and messages
-        """
-        result = {"hunger_changed": False, "thirst_changed": False, "messages": []}
-
-        # Skip for certain actions
-        if action_type in ["rest", "use_item"]:
-            return result
-
-        # Get current values
-        current_hunger = getattr(character, "current_hunger", SurvivalSystem.MAX_HUNGER)
-        current_thirst = getattr(character, "current_thirst", SurvivalSystem.MAX_THIRST)
-
-        # Determine decay rates based on action
-        hunger_decay = SurvivalSystem._get_hunger_decay(action_type)
-        thirst_decay = SurvivalSystem._get_thirst_decay(action_type)
-
-        # Update hunger
-        new_hunger = max(0, current_hunger - hunger_decay)
-        if new_hunger != current_hunger:
-            character.current_hunger = new_hunger
-            result["hunger_changed"] = True
-
-            # Add hunger messages if reaching thresholds
-            if new_hunger <= 0:
-                result["messages"].append(
-                    "Você está faminto! Precisa comer algo imediatamente."
-                )
-            elif new_hunger <= 20:
-                result["messages"].append(
-                    "Seu estômago ronca de fome. Você precisa comer logo."
-                )
-            elif new_hunger <= 40:
-                result["messages"].append("Você começa a sentir fome.")
-
-        # Update thirst
-        new_thirst = max(0, current_thirst - thirst_decay)
-        if new_thirst != current_thirst:
-            character.current_thirst = new_thirst
-            result["thirst_changed"] = True
-
-            # Add thirst messages if reaching thresholds
-            if new_thirst <= 0:
-                result["messages"].append(
-                    "Você está desidratado! Precisa beber água imediatamente."
-                )
-            elif new_thirst <= 20:
-                result["messages"].append(
-                    "Sua garganta está seca. Você precisa beber algo logo."
-                )
-            elif new_thirst <= 40:
-                result["messages"].append("Você começa a sentir sede.")
-
-        # Apply survival effects
-        SurvivalSystem._apply_survival_effects(character)
-
-        return result
-
-    @staticmethod
-    def consume_food(character: Any, food_item: str) -> Dict[str, Any]:
-        """
-        Character consumes food to restore hunger.
-
-        Args:
-            character: Character object
-            food_item: Name of the food item
-
-        Returns:
-            Dictionary with results
-        """
-        # Food values
-        food_values = {
-            "Pão": 15,
-            "Bread": 15,
-            "Carne": 25,
-            "Meat": 25,
-            "Fruta": 10,
-            "Fruit": 10,
-            "Ração": 20,
-            "Ration": 20,
-            "Refeição": 40,
-            "Meal": 40,
-            "Banquete": 100,
-            "Feast": 100,
+    def __init__(self) -> None:
+        """Inicializa o sistema de sobrevivência com valores base."""
+        self._max_stats = {
+            "health": 100,
+            "hunger": 100,
+            "thirst": 100,
+            "energy": 100,
+            "temperature": 100
+        }
+        self._depletion_rates = {
+            "hunger": 2,
+            "thirst": 3,
+            "energy": 1
+        }
+        self._critical_thresholds = {
+            "hunger": 20,
+            "thirst": 15,
+            "energy": 10,
+            "temperature": (35, 65)  # (min, max) intervalo confortável
         }
 
-        # Default value for unknown items
-        hunger_restore = food_values.get(food_item, 15)
+    def initialize_stats(self, character: Character) -> None:
+        """Inicializa estatísticas de sobrevivência do personagem."""
+        stats = {}
+        for stat in ["health", "hunger", "thirst", "energy"]:
+            stats[stat] = self._max_stats[stat]
+        stats["temperature"] = self._max_stats["temperature"] // 2
+        character.survival_stats = stats
 
-        # Update hunger
-        old_hunger = getattr(character, "current_hunger", 0)
-        new_hunger = min(SurvivalSystem.MAX_HUNGER, old_hunger + hunger_restore)
-        character.current_hunger = new_hunger
+    def update_stats(
+        self,
+        character: Character,
+        action: str,
+        environment: str = "normal"
+    ) -> Dict[str, Any]:
+        """
+        Atualiza as estatísticas do personagem.
+
+        Args:
+            character: O personagem a ser atualizado
+            action: A ação sendo realizada
+            environment: O tipo de ambiente atual
+
+        Returns:
+            Dict com estatísticas atualizadas e mensagens
+        """
+        if not hasattr(character, "survival_stats"):
+            self.initialize_stats(character)
+
+        stats = character.survival_stats
+        messages: List[str] = []
+        effects: List[str] = []
+
+        # Aplicar custos de ação
+        action_costs = self._get_action_costs(action)
+        for stat, cost in action_costs.items():
+            if stat in stats:
+                stats[stat] = max(0, stats[stat] - cost)
+
+        # Aplicar efeitos ambientais
+        env_effects = self._get_environmental_effects(environment)
+        for effect in env_effects:
+            effects.append(effect["name"])
+            for stat, modifier in effect["stats_modifier"].items():
+                if stat in stats:
+                    new_val = stats[stat] + modifier
+                    stats[stat] = max(0, min(
+                        self._max_stats[stat],
+                        new_val
+                    ))        # Verificar condições críticas
+        typed_stats = cast(SurvivalStats, stats)
+        critical_msgs = self._check_critical_conditions(typed_stats)
+        messages.extend(critical_msgs)
+
+        # Depleção natural
+        for stat, rate in self._depletion_rates.items():
+            if stat in stats:
+                stats[stat] = max(0, stats[stat] - rate)
+
+        # Verificar efeitos nas estatísticas vitais
+        self._apply_vital_effects(typed_stats, messages)
+
+        # Salvar estatísticas atualizadas
+        character.survival_stats = stats
 
         return {
-            "success": True,
-            "hunger_restored": new_hunger - old_hunger,
-            "message": f"Você consome {food_item} e recupera {new_hunger - old_hunger} pontos de fome.",
+            "stats": stats,
+            "messages": messages,
+            "effects": effects
         }
 
-    @staticmethod
-    def consume_water(character: Any, water_item: str) -> Dict[str, Any]:
-        """
-        Character consumes water to restore thirst.
-
-        Args:
-            character: Character object
-            water_item: Name of the water item
-
-        Returns:
-            Dictionary with results
-        """
-        # Water values
-        water_values = {
-            "Água": 20,
-            "Water": 20,
-            "Poção": 15,
-            "Potion": 15,
-            "Vinho": 10,
-            "Wine": 10,
-            "Cerveja": 15,
-            "Beer": 15,
-            "Hidromel": 25,
-            "Mead": 25,
+    def _get_action_costs(self, action: str) -> Dict[str, int]:
+        """Calcula custos de energia para ações."""
+        costs = {
+            "move": {"energy": 5, "thirst": 3, "hunger": 2},
+            "fight": {"energy": 15, "health": 10},
+            "run": {"energy": 20, "thirst": 8},
+            "swim": {"energy": 10, "temperature": -5},
+            "climb": {"energy": 25, "thirst": 5},
+            "rest": {"energy": -30, "hunger": 5},
+            "eat": {"hunger": -40},
+            "drink": {"thirst": -50},
+            "sleep": {"energy": -100, "hunger": 10, "thirst": 15}
         }
+        return costs.get(action, {"energy": 1})
 
-        # Default value for unknown items
-        thirst_restore = water_values.get(water_item, 20)
-
-        # Update thirst
-        old_thirst = getattr(character, "current_thirst", 0)
-        new_thirst = min(SurvivalSystem.MAX_THIRST, old_thirst + thirst_restore)
-        character.current_thirst = new_thirst
-
-        return {
-            "success": True,
-            "thirst_restored": new_thirst - old_thirst,
-            "message": f"Você bebe {water_item} e recupera {new_thirst - old_thirst} pontos de sede.",
+    def _get_environmental_effects(
+        self,
+        environment: str
+    ) -> List[EnvironmentalEffect]:
+        """Obtém efeitos do ambiente atual."""
+        effects: Dict[str, List[EnvironmentalEffect]] = {
+            "desert": [
+                {
+                    "name": "Calor Extremo",
+                    "description": "O sol escaldante drena sua energia",
+                    "stats_modifier": {
+                        "thirst": -8,
+                        "temperature": 15,
+                        "energy": -3
+                    },
+                    "duration": 5
+                }
+            ],
+            "snow": [
+                {
+                    "name": "Frio Intenso",
+                    "description": "O frio congela seus ossos",
+                    "stats_modifier": {
+                        "temperature": -15,
+                        "energy": -5
+                    },
+                    "duration": 5
+                }
+            ],
+            "forest": [
+                {
+                    "name": "Umidade",
+                    "description": "A umidade da floresta é revigorante",
+                    "stats_modifier": {
+                        "temperature": -2,
+                        "thirst": -1
+                    },
+                    "duration": 3
+                }
+            ],
+            "mountain": [
+                {
+                    "name": "Altitude",
+                    "description": "O ar rarefeito dificulta a respiração",
+                    "stats_modifier": {
+                        "energy": -5,
+                        "temperature": -10
+                    },
+                    "duration": 4
+                }
+            ]
         }
+        return effects.get(environment, [])
 
-    @staticmethod
-    def _get_hunger_decay(action_type: str) -> int:
-        """Get hunger decay rate based on action type."""
-        decay_rates = {
-            "move": 2,
-            "attack": 3,
-            "flee": 4,
-            "search": 1,
-            "talk": 0.5,
-            "look": 0.5,
-        }
+    def _check_critical_conditions(
+        self,
+        stats: SurvivalStats
+    ) -> List[str]:
+        """Verifica condições críticas de sobrevivência."""
+        messages = []
 
-        # Add randomness
-        base_rate = decay_rates.get(action_type, SurvivalSystem.HUNGER_DECAY_RATE)
-        return random.uniform(base_rate * 0.8, base_rate * 1.2)
+        if stats["hunger"] <= self._critical_thresholds["hunger"]:
+            messages.append(
+                "Seu estômago está doendo de fome. "
+                "Precisa comer algo logo!"
+            )
 
-    @staticmethod
-    def _get_thirst_decay(action_type: str) -> int:
-        """Get thirst decay rate based on action type."""
-        decay_rates = {
-            "move": 3,
-            "attack": 4,
-            "flee": 5,
-            "search": 1,
-            "talk": 1,
-            "look": 0.5,
-        }
+        if stats["thirst"] <= self._critical_thresholds["thirst"]:
+            messages.append(
+                "Sua garganta está seca. "
+                "Precisa encontrar água rapidamente!"
+            )
 
-        # Add randomness
-        base_rate = decay_rates.get(action_type, SurvivalSystem.THIRST_DECAY_RATE)
-        return random.uniform(base_rate * 0.8, base_rate * 1.2)
+        if stats["energy"] <= self._critical_thresholds["energy"]:
+            messages.append(
+                "Você mal consegue manter os olhos abertos. "
+                "Precisa descansar!"
+            )
 
-    @staticmethod
-    def _apply_survival_effects(character: Any) -> None:
-        """Apply effects of hunger and thirst on character stats."""
-        hunger = getattr(character, "current_hunger", SurvivalSystem.MAX_HUNGER)
-        thirst = getattr(character, "current_thirst", SurvivalSystem.MAX_THIRST)
+        temp_min, temp_max = self._critical_thresholds["temperature"]
+        if stats["temperature"] < temp_min:
+            messages.append(
+                "Você está tremendo de frio. "
+                "Precisa se aquecer!"
+            )
+        elif stats["temperature"] > temp_max:
+            messages.append(
+                "O calor está insuportável. "
+                "Precisa se refrescar!"
+            )
 
-        # Reset temporary effects
-        if hasattr(character, "temp_stat_penalties"):
-            character.temp_stat_penalties = {}
-        else:
-            character.temp_stat_penalties = {}
+        return messages
 
-        # Apply hunger penalties
-        if hunger <= 0:
-            # Severe hunger: -3 to strength and dexterity
-            character.temp_stat_penalties["strength"] = -3
-            character.temp_stat_penalties["dexterity"] = -3
-        elif hunger <= 20:
-            # Moderate hunger: -2 to strength
-            character.temp_stat_penalties["strength"] = -2
-        elif hunger <= 40:
-            # Mild hunger: -1 to strength
-            character.temp_stat_penalties["strength"] = -1
-
-        # Apply thirst penalties
-        if thirst <= 0:
-            # Severe thirst: -3 to constitution and wisdom
-            character.temp_stat_penalties["constitution"] = -3
-            character.temp_stat_penalties["wisdom"] = -3
-        elif thirst <= 20:
-            # Moderate thirst: -2 to constitution
-            character.temp_stat_penalties["constitution"] = -2
-        elif thirst <= 40:
-            # Mild thirst: -1 to constitution
-            character.temp_stat_penalties["constitution"] = -1
+    def _apply_vital_effects(
+        self,
+        stats: SurvivalStats,
+        messages: List[str]
+    ) -> None:
+        """Aplica efeitos nas estatísticas vitais."""
+        if stats["health"] <= 0:
+            messages.append(
+                "Você está gravemente ferido e precisa de cura!"
+            )
+        if stats["hunger"] <= 0:
+            stats["health"] = max(0, stats["health"] - 5)
+            messages.append("Você está morrendo de fome!")
+        if stats["thirst"] <= 0:
+            stats["health"] = max(0, stats["health"] - 10)
+            messages.append(
+                "Você está severamente desidratado!"
+            )
+        if stats["energy"] <= 0:
+            stats["health"] = max(0, stats["health"] - 3)
+            messages.append(
+                "Você está exausto e precisa descansar!"
+            )

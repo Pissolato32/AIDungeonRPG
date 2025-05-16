@@ -1,123 +1,102 @@
-"""
-Character management module.
-
-This module provides functionality for managing character creation and attributes.
-"""
-
-from __future__ import annotations
-
+from typing import Dict, Any
 import logging
-from typing import Dict, Any, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from core.models import Character
+from core.models import Character
 
 logger = logging.getLogger(__name__)
 
 
 class CharacterManager:
-    """
-    Manages character creation and attribute processing.
-
-    Features:
-    - Character attribute processing
-    - Form data conversion
-    - Default attribute management
-    """
-
-    # Default attribute values by type
     ATTRIBUTE_DEFAULTS = {
-        # Integer attributes
         "int": {
-            # Base stats
             "strength": 10,
             "dexterity": 10,
             "constitution": 10,
             "intelligence": 10,
             "wisdom": 10,
             "charisma": 10,
-            # Resource stats
             "max_hp": 20,
             "current_hp": 20,
             "max_stamina": 10,
             "current_stamina": 10,
-            # Progression stats
             "gold": 50,
             "experience": 0,
             "level": 1,
         },
-        # String attributes
         "str": {
-            "name": "",  # Campo vazio por padrão
+            "name": "",
             "character_class": "Warrior",
             "race": "Human",
         },
-        # List attributes
         "list": {"inventory": ["Basic Sword", "Health Potion"]},
     }
 
+    CLASS_HIT_DICE = {
+        "Barbarian": 12,
+        "Fighter": 10,
+        "Paladin": 10,
+        "Ranger": 10,
+        "Bard": 8,
+        "Cleric": 8,
+        "Druid": 8,
+        "Monk": 8,
+        "Rogue": 8,
+        "Warlock": 8,
+        "Sorcerer": 6,
+        "Wizard": 6,
+        "Warrior": 10,
+    }
+
+    @staticmethod
+    def calculate_max_hp_dnd5e(
+        character_class: str, constitution: int, level: int
+    ) -> int:
+        level = max(1, level)
+        hit_die = CharacterManager.CLASS_HIT_DICE.get(character_class, 10)
+        mod_const = (constitution - 10) // 2
+        max_hp = hit_die + mod_const
+        for lvl in range(2, level + 1):
+            avg = (hit_die // 2) + 1
+            max_hp += avg + mod_const
+        return max(1, max_hp)
+
     @classmethod
     def create_character_from_form(cls, character_data: Dict[str, Any]) -> "Character":
-        """
-        Create a character object from form data.
-
-        Args:
-            character_data: Dictionary containing character form data
-
-        Returns:
-            Character: A newly created character object
-        """
-        # Import here to avoid circular imports
-        from core.models import Character
         from utils.character_utils import (
             calculate_initial_gold,
             generate_initial_inventory,
         )
 
-        # Process attributes
-        attributes = cls.get_character_attributes(character_data)
+        full_data = cls.get_character_attributes(character_data)
 
-        # Remover duplicatas para evitar múltiplos valores
-        for key in ["name", "character_class", "race"]:
-            if key in attributes:
-                del attributes[key]
+        name = full_data.pop("name", "Unknown")
+        character_class = full_data.pop("character_class", "Warrior")
+        race = full_data.pop("race", "Human")
 
-        # Garantir consistência de ouro e inventário (ignorar valores do frontend)
-        character_class = character_data.get("class", "Warrior")
-        race = character_data.get("race", "Human")
-        strength = int(character_data.get("strength", 10))
-        dexterity = int(character_data.get("dexterity", 10))
-        intelligence = int(character_data.get("intelligence", 10))
+        strength = full_data.get("strength", 10)
+        dexterity = full_data.get("dexterity", 10)
+        intelligence = full_data.get("intelligence", 10)
+        level = full_data.get("level", 1)
+        constitution = full_data.get("constitution", 10)
         description = character_data.get("description", "")
 
-        attributes["gold"] = calculate_initial_gold(character_class, race)
-        attributes["inventory"] = generate_initial_inventory(
+        full_data["description"] = description
+        full_data["gold"] = calculate_initial_gold(character_class, race)
+        full_data["inventory"] = generate_initial_inventory(
             character_class, race, strength, dexterity, intelligence, description
         )
+        full_data["max_hp"] = cls.calculate_max_hp_dnd5e(
+            character_class, constitution, level
+        )
+        full_data["current_hp"] = full_data["max_hp"]
 
-        # Create character with processed attributes
         return Character(
-            name=character_data.get("name", "Unknown"),
-            character_class=character_class,
-            race=race,
-            **attributes,
+            name=name, character_class=character_class, race=race, attributes=full_data
         )
 
     @classmethod
     def get_character_attributes(cls, character_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Extract and convert character attributes from form data.
-
-        Args:
-            character_data: Dictionary containing character form data
-
-        Returns:
-            Dictionary with properly typed character attributes
-        """
-        # Initialize attributes dictionary
         attributes = {}
 
-        # Process integer attributes
         for attr, default in cls.ATTRIBUTE_DEFAULTS["int"].items():
             try:
                 value = character_data.get(attr, default)
@@ -126,13 +105,10 @@ class CharacterManager:
                 attributes[attr] = default
                 logger.warning("Invalid value for %s, using default: %s", attr, default)
 
-        # Process string attributes
         for attr, default in cls.ATTRIBUTE_DEFAULTS["str"].items():
-            # Special case for 'character_class' which is stored as 'class' in form data
             form_key = "class" if attr == "character_class" else attr
             attributes[attr] = character_data.get(form_key, default)
 
-        # Process list attributes with special handling
         for attr, default in cls.ATTRIBUTE_DEFAULTS["list"].items():
             if attr == "inventory":
                 inventory = character_data.get("inventory", "")

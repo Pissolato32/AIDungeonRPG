@@ -1,0 +1,39 @@
+{
+  "name": "Teste",
+  "character_class": "Rogue",
+  "race": "Elf",
+  "level": 1,
+  "experience": 0,
+  "attributes": {
+    "strength": 12,
+    "dexterity": 16,
+    "constitution": 10,
+    "intelligence": 15,
+    "wisdom": 10,
+    "charisma": 12,
+    "max_hp": 8,
+    "current_hp": 8,
+    "max_stamina": 9,
+    "current_stamina": 9,
+    "gold": 99,
+    "experience": 0,
+    "level": 1,
+    "inventory": [
+      "Dagger",
+      "Thieves Tools",
+      "Dark Cloak",
+      "Pão Élfico",
+      "Capa Élfica",
+      "Kit de Armadilhas",
+      "Pergaminho Mágico",
+      "Poção de Vida Pequena",
+      "Poção de Stamina Pequena"
+    ],
+    "description": "oi"
+  },
+  "inventory": [],
+  "equipment": {},
+  "skills": [],
+  "survival_stats": {},
+  "status_effects": []
+}
