@@ -38,7 +38,9 @@ class ErrorHandler:
         logger.error(traceback.format_exc())
 
     @staticmethod
-    def create_error_response(error_key: str, language: str, error_details: str = '') -> Any:
+    def create_error_response(
+        error_key: str, language: str, error_details: str = ""
+    ) -> Any:
         """
         Create a standardized error response.
 
@@ -50,16 +52,14 @@ class ErrorHandler:
         Returns:
             JSON response with error message
         """
-        message = get_text(f'errors.{error_key}', language, error_details)
+        message = get_text(f"errors.{error_key}", language, error_details)
 
-        return jsonify({
-            'success': False,
-            'message': message,
-            'error_key': error_key
-        })
+        return jsonify({"success": False, "message": message, "error_key": error_key})
 
     @staticmethod
-    def handle_route_error(e: Exception, route_name: str, language: str) -> Dict[str, Any]:
+    def handle_route_error(
+        e: Exception, route_name: str, language: str
+    ) -> Dict[str, Any]:
         """
         Handle an error in a route.
 
@@ -76,7 +76,7 @@ class ErrorHandler:
 
         # Create error response
         return {
-            'success': False,
-            'message': get_text('errors.route_error', language, str(e)),
-            'error': str(e)
+            "success": False,
+            "message": get_text("errors.route_error", language, str(e)),
+            "error": str(e),
         }

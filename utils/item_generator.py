@@ -13,6 +13,7 @@ from rpg_game.ai.groq_client import GroqClient
 
 logger = logging.getLogger(__name__)
 
+
 class ItemGenerator:
     """Handles procedural generation of items with consistent attributes."""
 
@@ -22,7 +23,7 @@ class ItemGenerator:
         "armor": ["helmet", "chestplate", "gauntlets", "boots", "shield"],
         "consumable": ["potion", "food", "scroll", "elixir"],
         "material": ["ore", "herb", "gem", "leather", "cloth", "wood"],
-        "quest": ["key", "artifact", "document", "map", "letter"]
+        "quest": ["key", "artifact", "document", "map", "letter"],
     }
 
     # Item rarities and their modifiers
@@ -31,7 +32,7 @@ class ItemGenerator:
         "uncommon": {"modifier": 1.5, "chance": 0.25},
         "rare": {"modifier": 2.0, "chance": 0.1},
         "epic": {"modifier": 3.0, "chance": 0.04},
-        "legendary": {"modifier": 5.0, "chance": 0.01}
+        "legendary": {"modifier": 5.0, "chance": 0.01},
     }
 
     # Item prefixes for different attributes
@@ -40,16 +41,52 @@ class ItemGenerator:
         "defense": ["Sturdy", "Reinforced", "Protective", "Solid", "Impenetrable"],
         "magic": ["Enchanted", "Arcane", "Mystical", "Magical", "Ethereal"],
         "health": ["Vital", "Healthy", "Robust", "Vigorous", "Hearty"],
-        "stamina": ["Energetic", "Enduring", "Tireless", "Invigorating", "Revitalizing"]
+        "stamina": [
+            "Energetic",
+            "Enduring",
+            "Tireless",
+            "Invigorating",
+            "Revitalizing",
+        ],
     }
 
     # Item suffixes for different attributes
     SUFFIXES = {
-        "damage": ["of Slaying", "of Destruction", "of Power", "of Might", "of Strength"],
-        "defense": ["of Protection", "of Shielding", "of Warding", "of Guarding", "of Defense"],
-        "magic": ["of Sorcery", "of Wizardry", "of Magic", "of Spells", "of Enchantment"],
-        "health": ["of Vitality", "of Life", "of Healing", "of Regeneration", "of Mending"],
-        "stamina": ["of Endurance", "of Energy", "of Vigor", "of Stamina", "of Persistence"]
+        "damage": [
+            "of Slaying",
+            "of Destruction",
+            "of Power",
+            "of Might",
+            "of Strength",
+        ],
+        "defense": [
+            "of Protection",
+            "of Shielding",
+            "of Warding",
+            "of Guarding",
+            "of Defense",
+        ],
+        "magic": [
+            "of Sorcery",
+            "of Wizardry",
+            "of Magic",
+            "of Spells",
+            "of Enchantment",
+        ],
+        "health": [
+            "of Vitality",
+            "of Life",
+            "of Healing",
+            "of Regeneration",
+            "of Mending",
+        ],
+        "stamina": [
+            "of Endurance",
+            "of Energy",
+            "of Vigor",
+            "of Stamina",
+            "of Persistence",
+        ],
     }
 
     def __init__(self, data_dir: str):
@@ -73,19 +110,13 @@ class ItemGenerator:
         """
         if os.path.exists(self.items_file):
             try:
-                with open(self.items_file, 'r', encoding='utf-8') as f:
+                with open(self.items_file, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
                 logger.error(f"Error loading items database: {e}")
 
         # Return empty database if file doesn't exist or has errors
-        return {
-            "items": {},
-            "metadata": {
-                "version": "1.0",
-                "created": "procedural"
-            }
-        }
+        return {"items": {}, "metadata": {"version": "1.0", "created": "procedural"}}
 
     def save_items_database(self) -> bool:
         """
@@ -96,7 +127,7 @@ class ItemGenerator:
         """
         try:
             os.makedirs(self.data_dir, exist_ok=True)
-            with open(self.items_file, 'w', encoding='utf-8') as f:
+            with open(self.items_file, "w", encoding="utf-8") as f:
                 json.dump(self.items_db, f, indent=2, ensure_ascii=False)
             return True
         except Exception as e:
@@ -198,10 +229,10 @@ class ItemGenerator:
             "level": level,
             "damage": [base_damage_min, base_damage_max],
             "durability": durability,
-            "attributes": {
-                attribute: int(level * rarity_mod)
-            },
-            "description": self._generate_item_description(name, weapon_type, rarity, attribute)
+            "attributes": {attribute: int(level * rarity_mod)},
+            "description": self._generate_item_description(
+                name, weapon_type, rarity, attribute
+            ),
         }
 
         # Generate unique ID
@@ -263,10 +294,10 @@ class ItemGenerator:
             "level": level,
             "defense": base_defense,
             "durability": durability,
-            "attributes": {
-                attribute: int(level * rarity_mod)
-            },
-            "description": self._generate_item_description(name, armor_type, rarity, attribute)
+            "attributes": {attribute: int(level * rarity_mod)},
+            "description": self._generate_item_description(
+                name, armor_type, rarity, attribute
+            ),
         }
 
         # Generate unique ID
@@ -329,10 +360,12 @@ class ItemGenerator:
             "effect": {
                 "type": effect_type,
                 "value": effect_value,
-                "duration": int(30 * rarity_mod) if effect_type != "health" else 0
+                "duration": int(30 * rarity_mod) if effect_type != "health" else 0,
             },
             "quantity": 1,
-            "description": self._generate_item_description(name, consumable_type, rarity, effect_type)
+            "description": self._generate_item_description(
+                name, consumable_type, rarity, effect_type
+            ),
         }
 
         # Generate unique ID
@@ -348,7 +381,9 @@ class ItemGenerator:
 
         return item_data
 
-    def generate_quest_item(self, quest_name: str = None, level: int = 1) -> Dict[str, Any]:
+    def generate_quest_item(
+        self, quest_name: str = None, level: int = 1
+    ) -> Dict[str, Any]:
         """
         Generate a quest item.
 
@@ -394,12 +429,16 @@ class ItemGenerator:
             "subtype": item_type,
             "rarity": "rare",  # Quest items are always rare
             "level": level,
-            "description": self._generate_item_description(name, item_type, "rare", "quest")
+            "description": self._generate_item_description(
+                name, item_type, "rare", "quest"
+            ),
         }
 
         # Add content for documents, maps, and letters
         if item_type in ["document", "map", "letter"]:
-            item_data["content"] = self._generate_document_content(item_type, quest_name)
+            item_data["content"] = self._generate_document_content(
+                item_type, quest_name
+            )
 
         # Generate unique ID
         item_id = self.generate_item_id(name)
@@ -448,7 +487,9 @@ class ItemGenerator:
         chances = [self.RARITIES[r]["chance"] for r in rarities]
         return random.choices(rarities, weights=chances, k=1)[0]
 
-    def _generate_item_description(self, name: str, item_type: str, rarity: str, attribute: str) -> str:
+    def _generate_item_description(
+        self, name: str, item_type: str, rarity: str, attribute: str
+    ) -> str:
         """
         Generate a description for an item using AI.
 
@@ -489,10 +530,12 @@ class ItemGenerator:
             "weapon": f"Uma {item_type} de qualidade {rarity}. Parece ser eficaz em combate.",
             "armor": f"Uma peça de {item_type} de qualidade {rarity}. Oferece boa proteção.",
             "consumable": f"Um {item_type} de qualidade {rarity}. Parece ter propriedades úteis.",
-            "quest": f"Um {item_type} importante para alguma missão. Parece valioso."
+            "quest": f"Um {item_type} importante para alguma missão. Parece valioso.",
         }
 
-        item_category = next((k for k, v in self.ITEM_TYPES.items() if item_type in v), "quest")
+        item_category = next(
+            (k for k, v in self.ITEM_TYPES.items() if item_type in v), "quest"
+        )
         return fallbacks.get(item_category, f"Um item de qualidade {rarity}.")
 
     def _generate_document_content(self, doc_type: str, quest_name: str = None) -> str:
@@ -538,7 +581,9 @@ class ItemGenerator:
         fallbacks = {
             "document": "Este documento contém informações antigas sobre um tesouro escondido. Parece importante.",
             "map": "O mapa mostra um caminho através da floresta até uma caverna. Há uma marca de 'X' no final do caminho.",
-            "letter": "Caro amigo, preciso de sua ajuda urgentemente. Encontre-me na taverna ao anoitecer. Tenha cuidado, estamos sendo observados."
+            "letter": "Caro amigo, preciso de sua ajuda urgentemente. Encontre-me na taverna ao anoitecer. Tenha cuidado, estamos sendo observados.",
         }
 
-        return fallbacks.get(doc_type, "Este item contém informações importantes para sua jornada.")
+        return fallbacks.get(
+            doc_type, "Este item contém informações importantes para sua jornada."
+        )

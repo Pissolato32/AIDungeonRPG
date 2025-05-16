@@ -22,10 +22,10 @@ class GameLogger:
 
     @staticmethod
     def log_game_action(
-        action: str, 
-        details: str = '', 
-        user_id: Optional[str] = None, 
-        level: str = 'info'
+        action: str,
+        details: str = "",
+        user_id: Optional[str] = None,
+        level: str = "info",
     ) -> None:
         """
         Log game actions with consistent formatting and optional context.

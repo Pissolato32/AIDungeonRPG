@@ -27,10 +27,11 @@ class Config:
             Dictionary with application configuration
         """
         return {
-            'host': os.environ.get('FLASK_HOST', '0.0.0.0'),
-            'port': int(os.environ.get('FLASK_PORT', 5000)),
-            'debug': os.environ.get('FLASK_DEBUG', 'True').lower() in ('true', '1', 't'),
-            'threaded': True
+            "host": os.environ.get("FLASK_HOST", "0.0.0.0"),
+            "port": int(os.environ.get("FLASK_PORT", 5000)),
+            "debug": os.environ.get("FLASK_DEBUG", "True").lower()
+            in ("true", "1", "t"),
+            "threaded": True,
         }
 
     @staticmethod
@@ -42,11 +43,11 @@ class Config:
             app: Flask application instance
         """
         # Session configuration
-        app.config['SESSION_TYPE'] = os.environ.get('SESSION_TYPE', 'filesystem')
+        app.config["SESSION_TYPE"] = os.environ.get("SESSION_TYPE", "filesystem")
 
         # Security settings
-        app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
+        app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", os.urandom(24).hex())
 
         # Other settings
-        app.config['JSON_SORT_KEYS'] = False
-        app.config['TEMPLATES_AUTO_RELOAD'] = True
+        app.config["JSON_SORT_KEYS"] = False
+        app.config["TEMPLATES_AUTO_RELOAD"] = True

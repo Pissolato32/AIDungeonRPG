@@ -14,13 +14,13 @@ from utils.quest_generator import generate_quest
 
 # Export all functions for backward compatibility
 __all__ = [
-    'roll_dice',
-    'calculate_attribute_modifier',
-    'calculate_damage',
-    'save_json_data',
-    'load_json_data',
-    'format_datetime',
-    'get_random_encounter',
-    'generate_loot_table',
-    'generate_quest'
+    "roll_dice",
+    "calculate_attribute_modifier",
+    "calculate_damage",
+    "save_json_data",
+    "load_json_data",
+    "format_datetime",
+    "get_random_encounter",
+    "generate_loot_table",
+    "generate_quest",
 ]

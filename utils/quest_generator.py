@@ -20,14 +20,12 @@ QUEST_TARGETS = {
     "collect": ["herbs", "minerals", "artifacts", "supplies", "ingredients"],
     "deliver": ["message", "package", "supplies", "medicine", "weapon"],
     "escort": ["merchant", "noble", "child", "scholar", "pilgrim"],
-    "investigate": ["ruins", "disappearance", "strange_events", "creature", "crime"]
+    "investigate": ["ruins", "disappearance", "strange_events", "creature", "crime"],
 }
 
 
 def generate_quest(
-    location: str,
-    difficulty: int = 1,
-    lang: str = None
+    location: str, difficulty: int = 1, lang: str = None
 ) -> Dict[str, Any]:
     """
     Generate a random quest.
@@ -56,7 +54,7 @@ def generate_quest(
             "reward_xp": 100 * difficulty,
             "reward_items": _generate_quest_rewards(difficulty, lang),
             "status": "active",
-            "progress": 0
+            "progress": 0,
         }
 
         logger.info(f"Quest generated: {quest['name']}")
@@ -68,7 +66,9 @@ def generate_quest(
         return _get_default_quest(location)
 
 
-def _generate_quest_details(quest_type: str, location: str, lang: str) -> Dict[str, str]:
+def _generate_quest_details(
+    quest_type: str, location: str, lang: str
+) -> Dict[str, str]:
     """
     Generate quest name and description based on type.
 
@@ -94,7 +94,7 @@ def _generate_quest_details(quest_type: str, location: str, lang: str) -> Dict[s
         # Default quest
         return {
             "name": get_text("quest_names.default", lang),
-            "description": get_text("quest_descriptions.default", lang, location)
+            "description": get_text("quest_descriptions.default", lang, location),
         }
 
 
@@ -114,7 +114,9 @@ def _generate_kill_quest(location: str, lang: str) -> Dict[str, str]:
 
     return {
         "name": get_text("quest_names.kill", lang, target),
-        "description": get_text("quest_descriptions.kill", lang, target.lower(), location)
+        "description": get_text(
+            "quest_descriptions.kill", lang, target.lower(), location
+        ),
     }
 
 
@@ -134,7 +136,9 @@ def _generate_collect_quest(location: str, lang: str) -> Dict[str, str]:
 
     return {
         "name": get_text("quest_names.collect", lang, target),
-        "description": get_text("quest_descriptions.collect", lang, target.lower(), location)
+        "description": get_text(
+            "quest_descriptions.collect", lang, target.lower(), location
+        ),
     }
 
 
@@ -154,7 +158,9 @@ def _generate_deliver_quest(location: str, lang: str) -> Dict[str, str]:
 
     return {
         "name": get_text("quest_names.deliver", lang, target),
-        "description": get_text("quest_descriptions.deliver", lang, target.lower(), location)
+        "description": get_text(
+            "quest_descriptions.deliver", lang, target.lower(), location
+        ),
     }
 
 
@@ -174,7 +180,9 @@ def _generate_escort_quest(location: str, lang: str) -> Dict[str, str]:
 
     return {
         "name": get_text("quest_names.escort", lang, target),
-        "description": get_text("quest_descriptions.escort", lang, target.lower(), location)
+        "description": get_text(
+            "quest_descriptions.escort", lang, target.lower(), location
+        ),
     }
 
 
@@ -194,7 +202,9 @@ def _generate_investigate_quest(location: str, lang: str) -> Dict[str, str]:
 
     return {
         "name": get_text("quest_names.investigate", lang, target),
-        "description": get_text("quest_descriptions.investigate", lang, target.lower(), location)
+        "description": get_text(
+            "quest_descriptions.investigate", lang, target.lower(), location
+        ),
     }
 
 
@@ -243,5 +253,5 @@ def _get_default_quest(location: str) -> Dict[str, Any]:
         "reward_xp": 25,
         "reward_items": [],
         "status": "active",
-        "progress": 0
+        "progress": 0,
     }

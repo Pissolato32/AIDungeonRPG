@@ -10,10 +10,7 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 
-def format_datetime(
-    dt_string: str,
-    format_str: str = "%d/%m/%Y %H:%M"
-) -> str:
+def format_datetime(dt_string: str, format_str: str = "%d/%m/%Y %H:%M") -> str:
     """
     Format a date string to a readable format.
 

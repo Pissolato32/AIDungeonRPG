@@ -33,16 +33,16 @@ class SessionManager:
             str: The user ID from the session
         """
         # Generate a user ID if not exists
-        if 'user_id' not in session:
-            session['user_id'] = os.urandom(16).hex()
+        if "user_id" not in session:
+            session["user_id"] = os.urandom(16).hex()
             logger.debug(f"Generated new user ID: {session['user_id'][:8]}...")
 
         # Set default language if not set
-        if 'language' not in session:
-            session['language'] = TranslationManager.DEFAULT_LANGUAGE
+        if "language" not in session:
+            session["language"] = TranslationManager.DEFAULT_LANGUAGE
             logger.debug(f"Set default language: {session['language']}")
 
-        return session['user_id']
+        return session["user_id"]
 
     @staticmethod
     def get_user_id() -> Optional[str]:
@@ -52,7 +52,7 @@ class SessionManager:
         Returns:
             str: User ID or None if not set
         """
-        return session.get('user_id')
+        return session.get("user_id")
 
     @staticmethod
     def get_language() -> str:
@@ -62,7 +62,7 @@ class SessionManager:
         Returns:
             str: Language code
         """
-        return session.get('language', TranslationManager.DEFAULT_LANGUAGE)
+        return session.get("language", TranslationManager.DEFAULT_LANGUAGE)
 
     @staticmethod
     def set_language(language: str) -> None:
@@ -72,7 +72,7 @@ class SessionManager:
         Args:
             language: Language code
         """
-        session['language'] = language
+        session["language"] = language
         logger.debug(f"Language set to: {language}")
 
     @staticmethod
@@ -83,9 +83,9 @@ class SessionManager:
         Returns:
             str: New user ID
         """
-        session['user_id'] = os.urandom(16).hex()
+        session["user_id"] = os.urandom(16).hex()
         logger.debug(f"Regenerated user ID: {session['user_id'][:8]}...")
-        return session['user_id']
+        return session["user_id"]
 
     @staticmethod
     def get_session_data() -> Dict[str, Any]:

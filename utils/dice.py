@@ -45,7 +45,7 @@ def roll_dice(num_dice: int, sides: int, modifier: int = 0) -> Dict[str, any]:
             "modifier": modifier,
             "formula": roll_str,
             "result_string": result_str,
-            "success": True
+            "success": True,
         }
 
         logger.debug(f"Dice roll: {result_str}")
@@ -58,7 +58,7 @@ def roll_dice(num_dice: int, sides: int, modifier: int = 0) -> Dict[str, any]:
             "modifier": modifier,
             "formula": f"0d{sides}+{modifier}",
             "result_string": f"Erro na rolagem: {str(e)}",
-            "success": False
+            "success": False,
         }
 
 
@@ -78,7 +78,7 @@ def calculate_attribute_modifier(attribute_score: int) -> int:
 def calculate_damage(
     attacker_stats: Dict[str, int],
     defender_stats: Dict[str, int],
-    attack_type: str = "basic"
+    attack_type: str = "basic",
 ) -> Tuple[int, bool]:
     """
     Calculate attack damage considering attacker and defender statistics.
@@ -116,7 +116,9 @@ def calculate_damage(
         return 1, True  # Minimum damage in case of error
 
 
-def _get_attack_parameters(attack_type: str, attacker_stats: Dict[str, int]) -> Tuple[int, int, float]:
+def _get_attack_parameters(
+    attack_type: str, attacker_stats: Dict[str, int]
+) -> Tuple[int, int, float]:
     """
     Get attack parameters based on attack type.
 

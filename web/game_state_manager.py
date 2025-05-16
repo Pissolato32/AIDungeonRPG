@@ -47,7 +47,9 @@ class GameStateManager:
         game_state.events = ["Uma brisa suave sopra pela aldeia."]
 
         # Set welcome message and language
-        game_state.messages = ["Bem-vindo a Rivenbrook! Você pode explorar usando as ações abaixo."]
+        game_state.messages = [
+            "Bem-vindo a Rivenbrook! Você pode explorar usando as ações abaixo."
+        ]
         game_state.language = language
 
         # Initialize world map with the starting location
@@ -58,31 +60,24 @@ class GameStateManager:
                 "connections": {
                     "north": "golden_boar_tavern",
                     "east": "blacksmith_shop",
-                    "south": "village_gate"
-                }
+                    "south": "village_gate",
+                },
             },
             "golden_boar_tavern": {
                 "name": "Taverna O Javali Dourado",
                 "coordinates": {"x": 0, "y": 1, "z": 0},
-                "connections": {
-                    "south": "village_center"
-                }
+                "connections": {"south": "village_center"},
             },
             "blacksmith_shop": {
                 "name": "Ferraria do Martelo Flamejante",
                 "coordinates": {"x": 1, "y": 0, "z": 0},
-                "connections": {
-                    "west": "village_center"
-                }
+                "connections": {"west": "village_center"},
             },
             "village_gate": {
                 "name": "Portão da Aldeia",
                 "coordinates": {"x": 0, "y": -1, "z": 0},
-                "connections": {
-                    "north": "village_center",
-                    "south": "crossroads"
-                }
-            }
+                "connections": {"north": "village_center", "south": "crossroads"},
+            },
         }
 
         # Mark the starting location as visited
@@ -92,7 +87,7 @@ class GameStateManager:
                 "last_visited": "initial",
                 "description": game_state.scene_description,
                 "npcs_seen": game_state.npcs_present.copy(),
-                "events_seen": game_state.events.copy()
+                "events_seen": game_state.events.copy(),
             }
         }
 
@@ -100,7 +95,9 @@ class GameStateManager:
         return game_state
 
     @staticmethod
-    def load_game_state_with_language(game_engine, user_id: str, language: str) -> Optional[GameState]:
+    def load_game_state_with_language(
+        game_engine, user_id: str, language: str
+    ) -> Optional[GameState]:
         """
         Load game state for a user and set the current language.
 
@@ -117,7 +114,9 @@ class GameStateManager:
         if game_state:
             # Update language
             game_state.language = language or TranslationManager.DEFAULT_LANGUAGE
-            logger.debug(f"Loaded game state for user {user_id[:8]}... with language: {game_state.language}")
+            logger.debug(
+                f"Loaded game state for user {user_id[:8]}... with language: {game_state.language}"
+            )
         else:
             logger.warning(f"No game state found for user {user_id[:8]}...")
 

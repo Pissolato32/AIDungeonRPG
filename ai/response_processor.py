@@ -1,161 +1,240 @@
 """
 Response processor module.
 
-This module provides functions for processing AI responses.
+This module handles processing and validation of AI-generated responses,
+including JSON extraction and error handling.
 """
 
 import json
 import logging
 import re
-from typing import Dict, Any, Union, Optional
+from typing import Dict, TypedDict, Optional, cast
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
 
-def process_ai_response(response_text: str) -> Union[Dict[str, Any], str]:
-    """
-    Process AI response text, attempting to extract JSON if present.
+class AIResponse(TypedDict, total=False):
+    """Type definition for AI response data."""
+
+    success: bool
+    message: str
+    error: Optional[str]
+    details: Optional[Dict[str, str]]
+
+
+@dataclass
+class JsonExtractionResult:
+    """Result of JSON extraction attempt."""
+
+    data: Optional[Dict[str, str]]
+    error: Optional[str]
+    source: str = "none"
+
+
+def process_ai_response(response_text: str) -> AIResponse:
+    """Process AI response text, attempting to extract JSON if present.
 
     Args:
-        response_text: Raw response text from AI
+        response_text: Raw response text from the AI
 
     Returns:
-        Extracted JSON as dictionary or original text if not JSON
+        A structured response object
     """
     try:
         # Try to extract JSON from the response
-        json_data = extract_json_from_text(response_text)
+        result = extract_json_from_text(response_text)
 
-        if json_data:
-            return json_data
+        if result.data:
+            response = cast(AIResponse, result.data)
+            if "success" not in response:
+                response["success"] = True
+            return response
 
         # If no JSON found, return as message
-        return {"success": True, "message": response_text}
+        return AIResponse(success=True, message=response_text)
+
     except Exception as e:
-        logger.error(f"Error processing AI response: {e}")
-        return {"success": False, "message": "Failed to process response"}
+        logger.error(
+            "Error processing AI response",
+            extra={
+                "error": str(e),
+                "response_length": len(response_text)
+            }
+        )
+        return AIResponse(
+            success=False,
+            message="Failed to process response",
+            error=str(e)
+        )
 
 
-def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
-    """
-    Extract JSON from text that might contain markdown code blocks or other text.
+def extract_json_from_text(text: str) -> JsonExtractionResult:
+    """Extract JSON from text that might contain other content.
 
     Args:
         text: Text that might contain JSON
 
     Returns:
-        Extracted JSON as dictionary or None if no valid JSON found
+        JsonExtractionResult containing extracted data or error info
     """
-    # Try different JSON extraction strategies
-    json_data = None
-
-    # Strategy 1: Try to parse the entire text as JSON
+    # Strategy 1: Parse entire text as JSON
     try:
-        json_data = json.loads(text.strip())
-        logger.debug("Successfully parsed entire text as JSON")
-        return json_data
+        data = json.loads(text.strip())
+        return JsonExtractionResult(
+            data=data,
+            error=None,
+            source="full_text"
+        )
     except json.JSONDecodeError:
         pass
 
     # Strategy 2: Look for JSON in code blocks
-    try:
-        # Extract content from markdown code blocks
-        if "```json" in text or "```" in text:
-            try:
-                # Handle ```json blocks
-                if "```json" in text:
-                    parts = text.split("```json")
-                    if len(parts) > 1:
-                        json_text = parts[1].split("```")[0].strip()
-                        json_data = json.loads(json_text)
-                        logger.debug("Successfully extracted JSON from ```json block")
-                        return json_data
+    if "```" in text:
+        result = _extract_from_code_blocks(text)
+        if result.data:
+            return result
 
-                # Handle generic ``` blocks that might contain JSON
-                parts = text.split("```")
-                if len(parts) > 1:
-                    for part in parts[1::2]:  # Check only content inside code blocks
-                        try:
-                            json_data = json.loads(part.strip())
-                            logger.debug("Successfully extracted JSON from ``` block")
-                            return json_data
-                        except json.JSONDecodeError:
-                            continue
-            except Exception as e:
-                logger.warning("Error extracting JSON from code blocks", extra={"error": str(e)})
-    except Exception as e:
-        logger.warning("Error in JSON extraction strategy 2", extra={"error": str(e)})
-
-    # Strategy 3: Look for JSON-like structures with { }
-    try:
-        # Find content between curly braces
-        if "{" in text and "}" in text:
-            start_idx = text.find("{")
-            # Find matching closing brace
-            open_count = 0
-            for i in range(start_idx, len(text)):
-                if text[i] == "{":
-                    open_count += 1
-                elif text[i] == "}":
-                    open_count -= 1
-                    if open_count == 0:
-                        json_text = text[start_idx:i+1]
-                        try:
-                            json_data = json.loads(json_text)
-                            logger.debug("Successfully extracted JSON using brace matching")
-                            return json_data
-                        except json.JSONDecodeError:
-                            # Continue searching for other JSON structures instead of breaking
-                            pass
-    except Exception as e:
-        logger.warning("Error in JSON extraction strategy 3", extra={"error": str(e)})
+    # Strategy 3: Look for JSON-like structures
+    if "{" in text and "}" in text:
+        result = _extract_with_brace_matching(text)
+        if result.data:
+            return result
 
     # No valid JSON found
-    return None
+    return JsonExtractionResult(
+        data=None,
+        error="No valid JSON found in response",
+        source="none"
+    )
 
-def create_error_response(error_message: str) -> Dict[str, Any]:
-    """
-    Create a standardized error response.
+
+def _extract_from_code_blocks(text: str) -> JsonExtractionResult:
+    """Extract JSON from markdown code blocks.
 
     Args:
-        error_message: Error message to include
+        text: Text containing markdown code blocks
 
     Returns:
-        Error response dictionary
+        JsonExtractionResult with extracted data or error
     """
-    return {
-        "success": False,
-        "message": error_message
-    }
+    try:
+        # Try ```json blocks first
+        if "```json" in text:
+            parts = text.split("```json")
+            if len(parts) > 1:
+                json_text = parts[1].split("```")[0].strip()
+                data = json.loads(json_text)
+                return JsonExtractionResult(
+                    data=data,
+                    error=None,
+                    source="json_block"
+                )
 
-def validate_response_content(response: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Validate if the response content makes sense.
-    
+        # Try generic ``` blocks
+        parts = text.split("```")
+        for part in parts[1::2]:
+            try:
+                data = json.loads(part.strip())
+                return JsonExtractionResult(
+                    data=data,
+                    error=None,
+                    source="code_block"
+                )
+            except json.JSONDecodeError:
+                continue
+
+    except Exception as e:
+        logger.warning(
+            "Error extracting from code blocks",
+            extra={"error": str(e)}
+        )
+
+    return JsonExtractionResult(
+        data=None,
+        error="No valid JSON in code blocks",
+        source="none"
+    )
+
+
+def _extract_with_brace_matching(text: str) -> JsonExtractionResult:
+    """Extract JSON using brace matching.
+
+    Looks for matching pairs of curly braces and attempts to parse
+    the content between them as JSON.
+
     Args:
-        response: The response dictionary
-        
+        text: Text to search for JSON structures
+
+    Returns:
+        JsonExtractionResult with extracted data or error
+    """
+    try:
+        start_idx = text.find("{")
+        if start_idx == -1:
+            return JsonExtractionResult(
+                data=None,
+                error="No opening brace found",
+                source="none"
+            )
+
+        # Find matching closing brace
+        open_count = 0
+        for i in range(start_idx, len(text)):
+            if text[i] == "{":
+                open_count += 1
+            elif text[i] == "}":
+                open_count -= 1
+                if open_count == 0:
+                    json_text = text[start_idx:i + 1]
+                    try:
+                        data = json.loads(json_text)
+                        return JsonExtractionResult(
+                            data=data,
+                            error=None,
+                            source="brace_matching"
+                        )
+                    except json.JSONDecodeError:
+                        continue
+
+    except Exception as e:
+        logger.warning(
+            "Error in brace matching",
+            extra={"error": str(e)}
+        )
+
+    return JsonExtractionResult(
+        data=None,
+        error="No valid JSON found with brace matching",
+        source="none"
+    )
+
+
+def validate_response_content(response: AIResponse) -> AIResponse:
+    """Validate if the response content is meaningful.
+
+    Args:
+        response: The response dictionary to validate
+
     Returns:
         Validated response or error response
     """
-    # Verificar se a resposta é genérica demais
+    patterns = [
+        r"Você realizou a ação \w+: \w+",
+        r"You performed the \w+ action: \w+",
+        r"Action \w+ performed: \w+",
+    ]
+
     if "message" in response and isinstance(response["message"], str):
         message = response["message"]
-        
-        # Verificar padrões de respostas genéricas
-        generic_patterns = [
-            r"Você realizou a ação \w+: \w+",
-            r"You performed the \w+ action: \w+",
-            r"Action \w+ performed: \w+"
-        ]
-        
-        for pattern in generic_patterns:
-            if re.search(pattern, message):
-                # Se a resposta parece genérica, retornar erro
-                return {
-                    "success": False,
-                    "message": "Não foi possível processar sua ação. Por favor, tente novamente com mais detalhes."
-                }
-    
-    # Se passou nas verificações, retornar a resposta original
+
+        if any(re.search(pattern, message) for pattern in patterns):
+            return AIResponse(
+                success=False,
+                message=(
+                    "Não foi possível processar sua ação. "
+                    "Por favor, tente novamente com mais detalhes."
+                )
+            )
+
     return response

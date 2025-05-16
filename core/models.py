@@ -9,7 +9,8 @@ from utils.dice import calculate_attribute_modifier
 logger = logging.getLogger(__name__)
 
 # Type variables for generics
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 class GameEntity(Protocol):
     """Protocol defining common methods for game entities."""
@@ -101,6 +102,7 @@ class Character(CombatEntity):
 
     Attributes cover basic stats, inventory, progression, and survival mechanics.
     """
+
     # Required attributes (must be provided at creation)
     character_class: str = "Warrior"
     race: str = "Human"
@@ -132,11 +134,19 @@ class Character(CombatEntity):
     current_thirst: int = 100
 
     # Inventory and equipment
-    inventory: List[str] = field(default_factory=lambda: ["Basic Sword", "Health Potion"])
-    equipment: Dict[str, Optional[str]] = field(default_factory=lambda: {
-        "weapon": None, "armor": None, "helmet": None,
-        "gloves": None, "boots": None, "accessory": None
-    })
+    inventory: List[str] = field(
+        default_factory=lambda: ["Basic Sword", "Health Potion"]
+    )
+    equipment: Dict[str, Optional[str]] = field(
+        default_factory=lambda: {
+            "weapon": None,
+            "armor": None,
+            "helmet": None,
+            "gloves": None,
+            "boots": None,
+            "accessory": None,
+        }
+    )
 
     # Progression and resources
     gold: int = 50
@@ -155,7 +165,7 @@ class Character(CombatEntity):
 
         # Set combat stats based on attributes
         self._update_combat_stats()
-        
+
         # Ensure new character starts with full HP and stamina
         # Only set if they're at default values (10)
         if self.current_hp == 10 and self.max_hp != 10:
@@ -190,19 +200,25 @@ class Character(CombatEntity):
             "Mage": 6,
             "Rogue": 8,
             "Cleric": 8,
-            "Ranger": 10
-        }.get(self.character_class, 8)  # Default: 8
-        
+            "Ranger": 10,
+        }.get(
+            self.character_class, 8
+        )  # Default: 8
+
         # Max HP = Hit Die + Modificador de Constituição
         self.max_hp = hit_die + self.constitution_mod
-        
+
         # No nível 1, HP é o máximo do dado + modificador
         if self.level == 1:
             self.max_hp = hit_die + self.constitution_mod
         else:
             # Níveis adicionais: média do dado + modificador por nível
             avg_hit_die = (hit_die / 2) + 1
-            self.max_hp = hit_die + self.constitution_mod + (avg_hit_die + self.constitution_mod) * (self.level - 1)
+            self.max_hp = (
+                hit_die
+                + self.constitution_mod
+                + (avg_hit_die + self.constitution_mod) * (self.level - 1)
+            )
             self.max_hp = int(self.max_hp)
 
         # Stamina base por classe
@@ -212,48 +228,62 @@ class Character(CombatEntity):
             "Mage": 6,
             "Rogue": 12,
             "Cleric": 8,
-            "Ranger": 10
-        }.get(self.character_class, 8)  # Default: 8
-        
+            "Ranger": 10,
+        }.get(
+            self.character_class, 8
+        )  # Default: 8
+
         # Max stamina baseada na classe, força e constituição
         self.max_stamina = base_stamina + self.strength_mod + self.constitution_mod
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Character':
+    def from_dict(cls, data: Dict[str, Any]) -> "Character":
         """Create a character from a dictionary or return if already Character."""
         if isinstance(data, cls):
             return data  # Já é um Character, retorna direto
         # Remove calculated fields that shouldn't be passed to the constructor
         calculated_fields = [
-            'attack_damage', 'defense', 
-            'strength_mod', 'dexterity_mod', 'constitution_mod', 
-            'intelligence_mod', 'wisdom_mod', 'charisma_mod'
+            "attack_damage",
+            "defense",
+            "strength_mod",
+            "dexterity_mod",
+            "constitution_mod",
+            "intelligence_mod",
+            "wisdom_mod",
+            "charisma_mod",
         ]
 
         filtered_data = {k: v for k, v in data.items() if k not in calculated_fields}
 
         # Handle class field name difference
-        if 'class' in filtered_data and 'character_class' not in filtered_data:
-            filtered_data['character_class'] = filtered_data.pop('class')
+        if "class" in filtered_data and "character_class" not in filtered_data:
+            filtered_data["character_class"] = filtered_data.pop("class")
 
         # --- Garantir ouro e inventário corretos ao carregar personagem ---
-        from utils.character_utils import calculate_initial_gold, generate_initial_inventory
+        from utils.character_utils import (
+            calculate_initial_gold,
+            generate_initial_inventory,
+        )
+
         # Só sobrescreve se for criação (nível 1, xp 0, etc)
-        if filtered_data.get('level', 1) == 1 and filtered_data.get('experience', 0) == 0:
-            character_class = filtered_data.get('character_class', 'Warrior')
-            race = filtered_data.get('race', 'Human')
-            strength = int(filtered_data.get('strength', 10))
-            dexterity = int(filtered_data.get('dexterity', 10))
-            intelligence = int(filtered_data.get('intelligence', 10))
-            description = filtered_data.get('description', '')
-            filtered_data['gold'] = calculate_initial_gold(character_class, race)
-            filtered_data['inventory'] = generate_initial_inventory(
+        if (
+            filtered_data.get("level", 1) == 1
+            and filtered_data.get("experience", 0) == 0
+        ):
+            character_class = filtered_data.get("character_class", "Warrior")
+            race = filtered_data.get("race", "Human")
+            strength = int(filtered_data.get("strength", 10))
+            dexterity = int(filtered_data.get("dexterity", 10))
+            intelligence = int(filtered_data.get("intelligence", 10))
+            description = filtered_data.get("description", "")
+            filtered_data["gold"] = calculate_initial_gold(character_class, race)
+            filtered_data["inventory"] = generate_initial_inventory(
                 character_class, race, strength, dexterity, intelligence, description
             )
 
         # Create character instance
         character = cls(**filtered_data)
-        
+
         return character
 
     def validate_action(self, action: str, cost: int) -> bool:
@@ -269,7 +299,10 @@ class Character(CombatEntity):
         """
         if self.current_stamina < cost:
             from translations import get_text
-            logger.warning(get_text("character.not_enough_stamina", None, self.name, action))
+
+            logger.warning(
+                get_text("character.not_enough_stamina", None, self.name, action)
+            )
             return False
         return True
 
@@ -328,11 +361,13 @@ class Character(CombatEntity):
         old_stamina = self.current_stamina
 
         self.current_hp = min(self.max_hp, self.current_hp + hp_recovery)
-        self.current_stamina = min(self.max_stamina, self.current_stamina + stamina_recovery)
+        self.current_stamina = min(
+            self.max_stamina, self.current_stamina + stamina_recovery
+        )
 
         return {
             "hp_recovered": self.current_hp - old_hp,
-            "stamina_recovered": self.current_stamina - old_stamina
+            "stamina_recovered": self.current_stamina - old_stamina,
         }
 
     def attack(self, target: CombatEntity) -> Tuple[int, bool]:
@@ -367,6 +402,7 @@ class Enemy(CombatEntity):
 
     Attributes describe enemy characteristics for combat and progression.
     """
+
     # Combat rewards
     experience_reward: int = 25
     gold_reward: Tuple[int, int] = (5, 15)
@@ -387,7 +423,10 @@ class Enemy(CombatEntity):
         """
         damage_after_defense = max(1, amount - self.defense)
         self.current_hp = max(0, self.current_hp - damage_after_defense)
-        logger.info("Enemy took damage", extra={"enemy_name": self.name, "damage": damage_after_defense})
+        logger.info(
+            "Enemy took damage",
+            extra={"enemy_name": self.name, "damage": damage_after_defense},
+        )
         return self.current_hp, damage_after_defense
 
     def attack(self, target: CombatEntity) -> Tuple[int, bool]:
@@ -427,6 +466,7 @@ class Quest(BaseEntity):
 
     Attributes describe objectives, rewards, and quest progress.
     """
+
     difficulty: int = 1
     reward_gold: int = 50
     reward_xp: int = 100

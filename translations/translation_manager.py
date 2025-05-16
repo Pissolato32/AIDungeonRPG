@@ -39,7 +39,7 @@ class TranslationManager:
         key: str,
         lang: str = None,
         *args: Union[str, int, float],
-        **kwargs: Union[str, int, float]
+        **kwargs: Union[str, int, float],
     ) -> str:
         """
         Get translated text with formatting support.
@@ -98,7 +98,9 @@ class TranslationManager:
 
         # Fallback to default language if not supported
         if lang not in cls.TRANSLATIONS:
-            logger.warning(f"Unsupported language: {lang}. Using {cls.DEFAULT_LANGUAGE}.")
+            logger.warning(
+                f"Unsupported language: {lang}. Using {cls.DEFAULT_LANGUAGE}."
+            )
             return cls.DEFAULT_LANGUAGE
 
         return lang
@@ -117,7 +119,7 @@ class TranslationManager:
         """
         # Navigate through nested dictionary
         translation = cls.TRANSLATIONS[lang]
-        for k in key.split('.'):
+        for k in key.split("."):
             try:
                 translation = translation[k]
             except (KeyError, TypeError):
@@ -129,11 +131,7 @@ class TranslationManager:
 
     @classmethod
     def _format_translation(
-        cls, 
-        translation: str, 
-        key: str,
-        args: tuple,
-        kwargs: dict
+        cls, translation: str, key: str, args: tuple, kwargs: dict
     ) -> str:
         """
         Format translation with arguments.
@@ -161,12 +159,7 @@ class TranslationManager:
             return translation
 
     @classmethod
-    def add_translation(
-        cls,
-        key: str,
-        translation: str,
-        lang: str = None
-    ) -> None:
+    def add_translation(cls, key: str, translation: str, lang: str = None) -> None:
         """
         Add a translation dynamically.
 
@@ -183,7 +176,7 @@ class TranslationManager:
             cls.TRANSLATIONS[lang] = {}
 
         # Support nested keys
-        keys = key.split('.')
+        keys = key.split(".")
         current = cls.TRANSLATIONS[lang]
 
         # Navigate to the correct nesting level
@@ -207,7 +200,8 @@ class TranslationManager:
         if lang:
             # Remove specific language entries
             cls._translation_cache = {
-                k: v for k, v in cls._translation_cache.items()
+                k: v
+                for k, v in cls._translation_cache.items()
                 if not k.startswith(f"{lang}:")
             }
         else:
@@ -226,10 +220,7 @@ class TranslationManager:
 
     @classmethod
     def translate_section(
-        cls,
-        section: str,
-        source_lang: str = None,
-        target_lang: str = "en"
+        cls, section: str, source_lang: str = None, target_lang: str = "en"
     ) -> Dict[str, Any]:
         """
         Translate a complete section.
@@ -274,7 +265,7 @@ class TranslationManager:
         source_section: Dict[str, Any],
         target_section: Optional[Dict[str, Any]],
         source_lang: str,
-        target_lang: str
+        target_lang: str,
     ) -> Dict[str, Any]:
         """
         Translate a dictionary section recursively.
@@ -297,7 +288,11 @@ class TranslationManager:
 
         # Process each key in source section
         for k, v in source_section.items():
-            if isinstance(v, dict) and k in target_section and isinstance(target_section[k], dict):
+            if (
+                isinstance(v, dict)
+                and k in target_section
+                and isinstance(target_section[k], dict)
+            ):
                 # Recursively translate nested sections
                 translated_section[k] = cls.translate_section(
                     f"{section_path}.{k}", source_lang, target_lang
@@ -311,10 +306,10 @@ class TranslationManager:
 
 # Global function for compatibility
 def get_text(
-    key: str, 
-    lang: str = TranslationManager.DEFAULT_LANGUAGE, 
-    *args: Union[str, int, float], 
-    **kwargs: Union[str, int, float]
+    key: str,
+    lang: str = TranslationManager.DEFAULT_LANGUAGE,
+    *args: Union[str, int, float],
+    **kwargs: Union[str, int, float],
 ) -> str:
     """
     Wrapper for class method to maintain compatibility.

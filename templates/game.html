@@ -1,24 +1,30 @@
 <!DOCTYPE html>
-<html data-bs-theme="dark">
+<ht                <a class="navbar-brand" href="{{ url_for('routes.index') }}">
+                    <i class="bi bi-controller me-2"></i>AI Dungeon RPG
+                </a>
+                
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>="{{ session.get('language', 'pt-br') }}" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Dungeon RPG - An interactive text-based adventure game">
     <title>{{ get_text('game_title', session.get('language', 'pt-br')) }}</title>
     <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
-    <div class="language-selector">
-        <a href="{{ url_for('routes.change_language', lang='pt-br') }}" class="btn btn-sm {{ 'btn-primary' if session.get('language') == 'pt-br' else 'btn-secondary' }}">PT-BR</a>
-        <a href="{{ url_for('routes.change_language', lang='en') }}" class="btn btn-sm {{ 'btn-primary' if session.get('language') == 'en' else 'btn-secondary' }}">EN</a>
+<body>    <div class="language-selector">
+        <a href="{{ url_for('routes.change_language', lang='pt-br', next=request.path) }}" class="btn btn-sm {{ 'btn-primary' if session.get('language') == 'pt-br' else 'btn-secondary' }}" aria-label="Change language to Portuguese">PT-BR</a>
+        <a href="{{ url_for('routes.change_language', lang='en', next=request.path) }}" class="btn btn-sm {{ 'btn-primary' if session.get('language') == 'en' else 'btn-secondary' }}" aria-label="Change language to English">EN</a>
     </div>
     <div class="game-container">
         <!-- Top Navigation Bar -->
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
             <div class="container-fluid">
-                <a class="navbar-brand" href="{{ url_for('index') }}">
-                    <i class="bi bi-controller me-2"></i>WebChatRPG
+                <a class="navbar-brand" href="{{ url_for('routes.index') }}">
+                    <i class="bi bi-controller me-2"></i>AI Dungeon RPG
                 </a>
                 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -27,8 +33,7 @@
                 
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav me-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('character') }}">
+                        <li class="nav-item">                            <a class="nav-link" href="{{ url_for('routes.character') }}">
                                 <i class="bi bi-person-badge me-1"></i> {{ get_text('character', session.get('language', 'pt-br')) }}
                             </a>
                         </li>
@@ -101,10 +106,9 @@
                                     <h5 class="card-title d-flex justify-content-between">
                                         <span id="enemyName">{{ game_state.combat.enemy.name if game_state.combat and game_state.combat.get('enemy') else 'Enemy' }}</span>
                                         <span>HP: <span id="enemyHp">{{ game_state.combat.enemy.current_hp if game_state.combat and game_state.combat.get('enemy') else 0 }}</span> / <span id="enemyMaxHp">{{ game_state.combat.enemy.max_hp if game_state.combat and game_state.combat.get('enemy') else 0 }}</span></span>
-                                    </h5>
-                                    <div class="progress mb-2">
-                                        <div id="enemyHpBar" class="progress-bar bg-danger" role="progressbar" 
-                                             style="width: 0%;"
+                                    </h5>                                    <div class="progress mb-2" role="progressbar" aria-label="Enemy health">
+                                        <div id="enemyHpBar" class="progress-bar bg-danger"
+                                             style="width: {{ ((game_state.combat.enemy.current_hp / game_state.combat.enemy.max_hp * 100) if game_state.combat and game_state.combat.get('enemy') else 0)|round }}%"
                                              aria-valuenow="{{ game_state.combat.enemy.current_hp if game_state.combat and game_state.combat.get('enemy') else 0 }}" 
                                              aria-valuemin="0" 
                                              aria-valuemax="{{ game_state.combat.enemy.max_hp if game_state.combat and game_state.combat.get('enemy') else 0 }}"></div>
@@ -245,11 +249,10 @@
                                     </div>
                                     <div class="progress">
                                         <div id="hpBar" class="progress-bar bg-danger" role="progressbar" 
-                                             style="width: {{ (character.current_hp / character.max_hp * 100)|round }}%;"
-                                             data-width="{{ (character.current_hp / character.max_hp * 100)|round }}"
-                                             aria-valuenow="{{ character.current_hp }}" 
+                                             style="width: {{ (character.current_hp / character.max_hp * 100)|round|default(0) }}%;"
+                                             aria-valuenow="{{ character.current_hp|default(0) }}" 
                                              aria-valuemin="0" 
-                                             aria-valuemax="{{ character.max_hp }}"></div>
+                                             aria-valuemax="{{ character.max_hp|default(100) }}"></div>
                                     </div>
                                 </div>
                                 <div class="mb-2">
@@ -259,11 +262,10 @@
                                     </div>
                                     <div class="progress mb-2">
                                         <div id="staminaBar" class="progress-bar bg-success" role="progressbar"
-                                             style="width: {{ (character.current_stamina / character.max_stamina * 100)|round }}%;"
-                                             data-width="{{ (character.current_stamina / character.max_stamina * 100)|round }}"
-                                             aria-valuenow="{{ character.current_stamina }}" 
+                                             style="width: {{ (character.current_stamina / character.max_stamina * 100)|round|default(0) }}%;"
+                                             aria-valuenow="{{ character.current_stamina|default(0) }}" 
                                              aria-valuemin="0" 
-                                             aria-valuemax="{{ character.max_stamina }}"></div>
+                                             aria-valuemax="{{ character.max_stamina|default(100) }}"></div>
                                     </div>
                                 </div>
                                 <div class="mb-2">
@@ -273,11 +275,10 @@
                                     </div>
                                     <div class="progress mb-2">
                                         <div id="hungerBar" class="progress-bar bg-warning" role="progressbar"
-                                             style="width: {{ (character.current_hunger / character.max_hunger * 100)|round }}%;"
-                                             data-width="{{ (character.current_hunger / character.max_hunger * 100)|round }}"
-                                             aria-valuenow="{{ character.current_hunger }}" 
+                                             style="width: {{ (character.current_hunger / character.max_hunger * 100)|round|default(0) }}%;"
+                                             aria-valuenow="{{ character.current_hunger|default(0) }}" 
                                              aria-valuemin="0" 
-                                             aria-valuemax="{{ character.max_hunger }}"></div>
+                                             aria-valuemax="{{ character.max_hunger|default(100) }}"></div>
                                     </div>
                                 </div>
                                 <div class="mb-2">
@@ -287,11 +288,10 @@
                                     </div>
                                     <div class="progress mb-2">
                                         <div id="thirstBar" class="progress-bar bg-info" role="progressbar"
-                                             style="width: {{ (character.current_thirst / character.max_thirst * 100)|round }}%;"
-                                             data-width="{{ (character.current_thirst / character.max_thirst * 100)|round }}"
-                                             aria-valuenow="{{ character.current_thirst }}" 
+                                             style="width: {{ (character.current_thirst / character.max_thirst * 100)|round|default(0) }}%;"
+                                             aria-valuenow="{{ character.current_thirst|default(0) }}" 
                                              aria-valuemin="0" 
-                                             aria-valuemax="{{ character.max_thirst }}"></div>
+                                             aria-valuemax="{{ character.max_thirst|default(100) }}"></div>
                                     </div>
                                 </div>
                             </div>

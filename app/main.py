@@ -2,7 +2,7 @@ import sys
 import os
 
 # Adiciona o diretório raiz do projeto ao path do Python
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, root_dir)
 
 # Importa a classe GameApp do módulo app

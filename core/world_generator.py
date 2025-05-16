@@ -13,30 +13,71 @@ from rpg_game.ai.groq_client import GroqClient
 
 logger = logging.getLogger(__name__)
 
+
 class WorldGenerator:
     """Handles procedural generation of the game world."""
 
     # Tipos de biomas para diversidade
     BIOMES = [
-        "floresta", "montanha", "planície", "deserto", "pântano", 
-        "tundra", "costa", "caverna", "ruínas", "selva"
+        "floresta",
+        "montanha",
+        "planície",
+        "deserto",
+        "pântano",
+        "tundra",
+        "costa",
+        "caverna",
+        "ruínas",
+        "selva",
     ]
 
     # Tipos de assentamentos
     SETTLEMENT_TYPES = [
-        "aldeia", "vila", "cidade", "fortaleza", "acampamento", 
-        "posto avançado", "porto", "refúgio", "santuário", "colônia"
+        "aldeia",
+        "vila",
+        "cidade",
+        "fortaleza",
+        "acampamento",
+        "posto avançado",
+        "porto",
+        "refúgio",
+        "santuário",
+        "colônia",
     ]
 
     # Prefixos e sufixos para nomes de locais
     NAME_PREFIXES = [
-        "Riven", "Elder", "Stone", "Oak", "Silver", "Dawn", "Dusk", 
-        "Frost", "Shadow", "Ember", "Crystal", "Iron", "Golden", "Mist"
+        "Riven",
+        "Elder",
+        "Stone",
+        "Oak",
+        "Silver",
+        "Dawn",
+        "Dusk",
+        "Frost",
+        "Shadow",
+        "Ember",
+        "Crystal",
+        "Iron",
+        "Golden",
+        "Mist",
     ]
 
     NAME_SUFFIXES = [
-        "brook", "vale", "keep", "haven", "ford", "cross", "wood", 
-        "peak", "fall", "ridge", "hollow", "field", "shore", "gate"
+        "brook",
+        "vale",
+        "keep",
+        "haven",
+        "ford",
+        "cross",
+        "wood",
+        "peak",
+        "fall",
+        "ridge",
+        "hollow",
+        "field",
+        "shore",
+        "gate",
     ]
 
     def __init__(self, data_dir: str):
@@ -59,7 +100,7 @@ class WorldGenerator:
         """
         if os.path.exists(self.world_file):
             try:
-                with open(self.world_file, 'r', encoding='utf-8') as f:
+                with open(self.world_file, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
                 logger.error(f"Error loading world map: {e}")
@@ -68,10 +109,7 @@ class WorldGenerator:
         return {
             "locations": {},
             "connections": {},
-            "metadata": {
-                "version": "1.0",
-                "created": "procedural"
-            }
+            "metadata": {"version": "1.0", "created": "procedural"},
         }
 
     def save_world(self, world_data: Dict[str, Any]) -> bool:
@@ -86,7 +124,7 @@ class WorldGenerator:
         """
         try:
             os.makedirs(self.data_dir, exist_ok=True)
-            with open(self.world_file, 'w', encoding='utf-8') as f:
+            with open(self.world_file, "w", encoding="utf-8") as f:
                 json.dump(world_data, f, indent=2, ensure_ascii=False)
             return True
         except Exception as e:
@@ -111,8 +149,24 @@ class WorldGenerator:
             if not location_type:
                 location_type = random.choice(self.SETTLEMENT_TYPES)
 
-            adjectives = ["Antiga", "Nova", "Grande", "Pequena", "Alta", "Baixa", "Velha"]
-            elements = ["do Norte", "do Sul", "do Leste", "do Oeste", "da Montanha", "do Rio", "da Floresta"]
+            adjectives = [
+                "Antiga",
+                "Nova",
+                "Grande",
+                "Pequena",
+                "Alta",
+                "Baixa",
+                "Velha",
+            ]
+            elements = [
+                "do Norte",
+                "do Sul",
+                "do Leste",
+                "do Oeste",
+                "da Montanha",
+                "do Rio",
+                "da Floresta",
+            ]
 
             if random.random() < 0.5:
                 return f"{random.choice(adjectives)} {location_type.capitalize()}"
@@ -127,7 +181,9 @@ class WorldGenerator:
             Location data dictionary
         """
         # Choose a settlement type for starting location
-        settlement_type = random.choice(self.SETTLEMENT_TYPES[:3])  # Limit to aldeia, vila, cidade
+        settlement_type = random.choice(
+            self.SETTLEMENT_TYPES[:3]
+        )  # Limit to aldeia, vila, cidade
         location_name = self.generate_location_name(settlement_type)
 
         # Generate a unique ID for the location
@@ -153,12 +209,14 @@ class WorldGenerator:
             "coordinates": {"x": 0, "y": 0, "z": 0},  # Starting point is origin
             "connections": {},  # Will be filled as player explores
             "discovered": True,
-            "visited": True
+            "visited": True,
         }
 
         return location_data
 
-    def generate_location_description(self, location_name: str, location_type: str) -> str:
+    def generate_location_description(
+        self, location_name: str, location_type: str
+    ) -> str:
         """
         Generate a description for a location using AI.
 
@@ -205,16 +263,48 @@ class WorldGenerator:
         """
         # Base NPCs by location type
         base_npcs = {
-            "aldeia": ["Ancião da Aldeia", "Ferreiro", "Comerciante", "Fazendeiro", "Caçador"],
+            "aldeia": [
+                "Ancião da Aldeia",
+                "Ferreiro",
+                "Comerciante",
+                "Fazendeiro",
+                "Caçador",
+            ],
             "vila": ["Prefeito", "Guarda", "Mercador", "Estalajadeiro", "Artesão"],
-            "cidade": ["Nobre", "Capitão da Guarda", "Mercador Rico", "Sacerdote", "Mago da Corte"],
-            "fortaleza": ["Comandante", "Soldado", "Armeiro", "Sentinela", "Prisioneiro"],
-            "acampamento": ["Líder do Acampamento", "Batedor", "Cozinheiro", "Guerreiro", "Xamã"],
-            "porto": ["Capitão do Porto", "Marinheiro", "Pescador", "Contrabandista", "Viajante"]
+            "cidade": [
+                "Nobre",
+                "Capitão da Guarda",
+                "Mercador Rico",
+                "Sacerdote",
+                "Mago da Corte",
+            ],
+            "fortaleza": [
+                "Comandante",
+                "Soldado",
+                "Armeiro",
+                "Sentinela",
+                "Prisioneiro",
+            ],
+            "acampamento": [
+                "Líder do Acampamento",
+                "Batedor",
+                "Cozinheiro",
+                "Guerreiro",
+                "Xamã",
+            ],
+            "porto": [
+                "Capitão do Porto",
+                "Marinheiro",
+                "Pescador",
+                "Contrabandista",
+                "Viajante",
+            ],
         }
 
         # Get base NPCs for this location type
-        npc_pool = base_npcs.get(location_type.lower(), ["Viajante", "Morador", "Guarda"])
+        npc_pool = base_npcs.get(
+            location_type.lower(), ["Viajante", "Morador", "Guarda"]
+        )
 
         # Select 2-4 NPCs
         num_npcs = random.randint(2, 4)
@@ -231,7 +321,7 @@ class WorldGenerator:
 
             response = self.ai_client.generate_response(prompt)
             if isinstance(response, str) and response.strip():
-                unique_npc = response.strip().split('\n')[0]  # Get first line only
+                unique_npc = response.strip().split("\n")[0]  # Get first line only
                 npcs.append(unique_npc)
         except Exception as e:
             logger.error(f"Error generating unique NPC: {e}")
@@ -254,22 +344,25 @@ class WorldGenerator:
             "aldeia": [
                 "Uma brisa suave sopra pela aldeia.",
                 "Crianças brincam na praça central.",
-                "O sino da pequena capela toca ao longe."
+                "O sino da pequena capela toca ao longe.",
             ],
             "vila": [
                 "Mercadores organizam suas barracas na praça do mercado.",
                 "Guardas patrulham as ruas principais.",
-                "Um bardo toca música na taverna local."
+                "Um bardo toca música na taverna local.",
             ],
             "cidade": [
                 "Nobres passeiam em suas carruagens pelas ruas.",
                 "Pregadores anunciam decretos reais na praça central.",
-                "Mercadores de terras distantes vendem itens exóticos."
-            ]
+                "Mercadores de terras distantes vendem itens exóticos.",
+            ],
         }
 
         # Get base events for this location type
-        event_pool = base_events.get(location_type.lower(), ["Viajantes passam pelo local.", "O vento sopra suavemente."])
+        event_pool = base_events.get(
+            location_type.lower(),
+            ["Viajantes passam pelo local.", "O vento sopra suavemente."],
+        )
 
         # Select 1-2 events
         num_events = random.randint(1, 2)
@@ -285,14 +378,16 @@ class WorldGenerator:
 
             response = self.ai_client.generate_response(prompt)
             if isinstance(response, str) and response.strip():
-                unique_event = response.strip().split('\n')[0]  # Get first line only
+                unique_event = response.strip().split("\n")[0]  # Get first line only
                 events.append(unique_event)
         except Exception as e:
             logger.error(f"Error generating unique event: {e}")
 
         return events
 
-    def generate_adjacent_location(self, current_location_id: str, direction: str, world_data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_adjacent_location(
+        self, current_location_id: str, direction: str, world_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Generate a new location adjacent to the current one.
 
@@ -322,9 +417,11 @@ class WorldGenerator:
         # Check if there's already a location at these coordinates
         for loc_id, loc_data in world_data["locations"].items():
             loc_coords = loc_data.get("coordinates", {})
-            if (loc_coords.get("x") == new_coords["x"] and 
-                loc_coords.get("y") == new_coords["y"] and
-                loc_coords.get("z") == new_coords["z"]):
+            if (
+                loc_coords.get("x") == new_coords["x"]
+                and loc_coords.get("y") == new_coords["y"]
+                and loc_coords.get("z") == new_coords["z"]
+            ):
                 # Return existing location
                 return loc_data
 
@@ -333,13 +430,19 @@ class WorldGenerator:
 
         if distance_from_origin <= 1:
             # Close to origin - civilized areas
-            location_types = self.SETTLEMENT_TYPES[:4]  # aldeia, vila, cidade, fortaleza
+            location_types = self.SETTLEMENT_TYPES[
+                :4
+            ]  # aldeia, vila, cidade, fortaleza
         elif distance_from_origin <= 3:
             # Medium distance - mix of settlements and wilderness
-            location_types = self.SETTLEMENT_TYPES + [f"{biome}" for biome in self.BIOMES[:5]]
+            location_types = self.SETTLEMENT_TYPES + [
+                f"{biome}" for biome in self.BIOMES[:5]
+            ]
         else:
             # Far from origin - mostly wilderness with occasional settlements
-            location_types = [f"{biome}" for biome in self.BIOMES] + self.SETTLEMENT_TYPES[4:]
+            location_types = [
+                f"{biome}" for biome in self.BIOMES
+            ] + self.SETTLEMENT_TYPES[4:]
 
         location_type = random.choice(location_types)
 
@@ -375,7 +478,7 @@ class WorldGenerator:
                 self._get_opposite_direction(direction): current_location_id
             },
             "discovered": True,
-            "visited": False
+            "visited": False,
         }
 
         # Update connections in current location
@@ -393,11 +496,13 @@ class WorldGenerator:
             "east": "west",
             "west": "east",
             "up": "down",
-            "down": "up"
+            "down": "up",
         }
         return opposites.get(direction, "unknown")
 
-    def get_available_directions(self, location_id: str, world_data: Dict[str, Any]) -> Dict[str, str]:
+    def get_available_directions(
+        self, location_id: str, world_data: Dict[str, Any]
+    ) -> Dict[str, str]:
         """
         Get available directions from a location.
 
@@ -411,7 +516,9 @@ class WorldGenerator:
         location = world_data["locations"].get(location_id, {})
         return location.get("connections", {})
 
-    def get_location_by_coordinates(self, coords: Dict[str, int], world_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def get_location_by_coordinates(
+        self, coords: Dict[str, int], world_data: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         """
         Find a location by its coordinates.
 
@@ -424,8 +531,10 @@ class WorldGenerator:
         """
         for loc_id, loc_data in world_data["locations"].items():
             loc_coords = loc_data.get("coordinates", {})
-            if (loc_coords.get("x") == coords["x"] and 
-                loc_coords.get("y") == coords["y"] and
-                loc_coords.get("z") == coords["z"]):
+            if (
+                loc_coords.get("x") == coords["x"]
+                and loc_coords.get("y") == coords["y"]
+                and loc_coords.get("z") == coords["z"]
+            ):
                 return loc_data
         return None

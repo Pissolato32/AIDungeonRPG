@@ -28,24 +28,28 @@ app.secret_key = os.urandom(24)
 app.jinja_env.globals.update(get_text=get_text)
 app.register_blueprint(routes_bp)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
 
-@app.route('/game')
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+@app.route("/game")
 def game():
     # Inicializa a sessão se necessário
-    if 'language' not in session:
-        session['language'] = 'pt-br'
-    return render_template('game.html')
+    if "language" not in session:
+        session["language"] = "pt-br"
+    return render_template("game.html")
 
-@app.route('/character')
+
+@app.route("/character")
 def character():
     # Inicializa a sessão se necessário
-    if 'language' not in session:
-        session['language'] = 'pt-br'
-    return render_template('character.html')
+    if "language" not in session:
+        session["language"] = "pt-br"
+    return render_template("character.html")
+
 
 if __name__ == "__main__":
     logger.info("Iniciando aplicação RPG")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
