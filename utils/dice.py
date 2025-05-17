@@ -32,6 +32,7 @@ def roll_dice(num_dice: int, sides: int, modifier: int = 0) -> Dict[str, Any]:
     try:
         num_dice = max(1, num_dice)  # Ensure at least one die is rolled
         individual_rolls = [random.randint(1, sides) for _ in range(num_dice)]
+        # Ensure total is an int even if modifier is float, though modifier is int here.
         total = sum(individual_rolls) + modifier
 
         # Create formatted string representation
@@ -82,17 +83,10 @@ def calculate_attribute_modifier(attribute_score: int) -> int:
     return (attribute_score - 10) // 2
 
 
-import random
-import logging
-from typing import Dict, Any, Optional
-
-logger = logging.getLogger(__name__)
-
-
 def calculate_damage(
     attacker_stats: Dict[str, int],
     defender_stats: Dict[str, Any],  # resistência pode ser dict dentro do dict
-    attack_type: str = "basic",
+    attack_type: Optional[str] = "basic",  # Allow None, default to "basic" string
     weapon_stats: Optional[Dict[str, Any]] = None,
     skill_stats: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
@@ -110,8 +104,11 @@ def calculate_damage(
         Dict containing damage info, hit status, critical hit, and effects
     """
     try:
+        # Ensure attack_type_str is always a string for internal use
+        current_attack_type: str = attack_type if attack_type is not None else "basic"
+
         # Get base attack parameters (implementação separada)
-        attack_params = _get_attack_parameters(attack_type, attacker_stats)
+        attack_params = _get_attack_parameters(current_attack_type, attacker_stats)
         min_damage, max_damage, hit_chance = attack_params
 
         # Apply weapon modifiers if present
@@ -156,7 +153,7 @@ def calculate_damage(
         resistance = 0.0
         resist_dict = defender_stats.get("resistance", {})
         if isinstance(resist_dict, dict):
-            resistance = resist_dict.get(attack_type, 0.0)
+            resistance = resist_dict.get(current_attack_type, 0.0)
         else:
             logger.warning(
                 f"defender_stats['resistance'] is not dict but {type(resist_dict)}"

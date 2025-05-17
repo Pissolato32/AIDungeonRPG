@@ -65,6 +65,17 @@ class Character:
         """Gets the strength attribute from the attributes dictionary."""
         return self.attributes.get("strength", 0)
 
+    @property
+    def health(self) -> int:
+        """Gets the current health points (current_hp) from the attributes dictionary."""
+        return self.attributes.get("current_hp", 0)
+
+    @health.setter
+    def health(self, value: int) -> None:
+        """Sets the current health points (current_hp), clamping between 0 and max_hp."""
+        # Uses the existing max_hp property to get the maximum health value
+        self.attributes["current_hp"] = max(0, min(value, self.max_hp))
+
     # Você pode adicionar mais properties conforme a necessidade, ex:
     # @property
     # def mana(self) -> int:

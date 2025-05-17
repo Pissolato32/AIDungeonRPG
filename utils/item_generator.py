@@ -519,7 +519,7 @@ class ItemGenerator:
         return item_data
 
     def generate_quest_item(
-        self, quest_name: str = None, level: int = 1
+        self, quest_name: Optional[str] = None, level: int = 1
     ) -> Dict[str, Any]:
         base_item_type = random.choice(self.ITEM_TYPES["quest"])
 
