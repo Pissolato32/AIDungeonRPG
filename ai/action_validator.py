@@ -4,7 +4,6 @@ Action validator module.
 This module provides functions for validating player actions using artificial intelligence.
 """
 
-from flask import flash  # Import flash for error messages
 import logging
 from typing import Dict, Any, Optional
 from ai.response_processor import (
@@ -50,12 +49,13 @@ def validate_action_with_ai(
         
         Responda APENAS com um JSON no seguinte formato:
         {{
-            "valid": true/false,
-            "reason": "Explicação breve se não for válida"
+            "valid": true,  // ou false
+            "reason": "Explicação breve se não for válida, caso contrário, uma string vazia ou uma confirmação."
         }}
+        Exemplo de resposta válida: {{"valid": true, "reason": "Ação parece razoável."}}
+        Exemplo de resposta inválida: {{"valid": false, "reason": "Não é possível voar sem asas."}}
         """
 
-        flash("Ação validada com sucesso.", "success")  # Flash success message
         # Enviar para a inteligência artificial
         response = ai_client.generate_response(prompt)
 
@@ -63,9 +63,15 @@ def validate_action_with_ai(
         result = process_ai_response(response)
         if not isinstance(result, dict) or "valid" not in result:
             logger.warning(
-                "Formato de resposta inesperado", extra={"response": str(result)[:100]}
+                f"Formato de resposta inesperado da IA para validação de ação: {str(result)[:200]}"
             )
+            # Mantendo o comportamento de fallback para True, mas idealmente isso seria False ou tratado de forma diferente.
             return {"valid": True}
+
+        # Se a ação for válida, podemos logar ou retornar a razão fornecida pela IA.
+        # Se a ação for inválida, a razão é importante.
+        # Não usaremos flash aqui, o chamador decide como usar a informação.
+        return result
 
     except Exception as e:
         logger.error(f"Error validating action with artificial intelligence: {e}")

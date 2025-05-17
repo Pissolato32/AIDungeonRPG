@@ -6,50 +6,31 @@ Script de inicialização para o jogo RPG.
 import os
 import sys
 import logging
-from flask import Flask, render_template, session
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Adiciona o diretório raiz do projeto ao path do Python
-root_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.abspath(
+    os.path.join(os.path.dirname(__file__))
+)  # Corrected root_dir definition
 sys.path.insert(0, root_dir)
 
-# Importa a função de tradução simplificada
-from translations.simple import get_text
-from app.routes import bp as routes_bp
-
-# Cria uma aplicação Flask simples para iniciar
-app = Flask(__name__)
-app.secret_key = os.urandom(24)
-
-# Adiciona a função get_text aos templates
-app.jinja_env.globals.update(get_text=get_text)
-app.register_blueprint(routes_bp)
-
-
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-
-@app.route("/game")
-def game():
-    # Inicializa a sessão se necessário
-    if "language" not in session:
-        session["language"] = "pt-br"
-    return render_template("game.html")
-
-
-@app.route("/character")
-def character():
-    # Inicializa a sessão se necessário
-    if "language" not in session:
-        session["language"] = "pt-br"
-    return render_template("character.html")
-
+# Importa a instância principal da aplicação de app.app
+# Esta instância já tem tudo configurado (rotas, blueprints, etc.)
+from app.app import application, _game_app_instance
 
 if __name__ == "__main__":
     logger.info("Iniciando aplicação RPG")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Usa a configuração definida em app.app.py através do método run da instância GameApp
+    # ou diretamente a configuração do Flask se preferir.
+    # _game_app_instance.run() # Isso chamará o app.run com a configuração interna
+
+    # Ou, se você quiser controlar host/port/debug diretamente aqui:
+    config = _game_app_instance._get_app_config()
+    application.run(
+        host=config.get("host", "0.0.0.0"),
+        port=config.get("port", 5000),
+        debug=config.get("debug", True),
+    )

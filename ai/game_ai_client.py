@@ -4,8 +4,8 @@ This module handles AI model interactions for generating game content
 and responses."""
 
 import logging
-from typing import Dict, Any, TypedDict, Optional, cast
-from core.game_engine import GameState
+from typing import Dict, Any, TypedDict, Optional, cast, TYPE_CHECKING
+from core.game_state_model import GameState
 
 logger = logging.getLogger(__name__)
 

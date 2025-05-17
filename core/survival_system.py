@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class SurvivalStats(TypedDict):
     """Definição de tipo para estatísticas de sobrevivência."""
+
     health: int
     hunger: int
     thirst: int
@@ -23,6 +24,7 @@ class SurvivalStats(TypedDict):
 
 class EnvironmentalEffect(TypedDict):
     """Definição de tipo para efeitos ambientais."""
+
     name: str
     description: str
     stats_modifier: Dict[str, int]
@@ -49,18 +51,14 @@ class SurvivalSystem:
             "hunger": 100,
             "thirst": 100,
             "energy": 100,
-            "temperature": 100
+            "temperature": 100,
         }
-        self._depletion_rates = {
-            "hunger": 2,
-            "thirst": 3,
-            "energy": 1
-        }
+        self._depletion_rates = {"hunger": 2, "thirst": 3, "energy": 1}
         self._critical_thresholds = {
             "hunger": 20,
             "thirst": 15,
             "energy": 10,
-            "temperature": (35, 65)  # (min, max) intervalo confortável
+            "temperature": (35, 65),  # (min, max) intervalo confortável
         }
 
     def initialize_stats(self, character: Character) -> None:
@@ -72,10 +70,7 @@ class SurvivalSystem:
         character.survival_stats = stats
 
     def update_stats(
-        self,
-        character: Character,
-        action: str,
-        environment: str = "normal"
+        self, character: Character, action: str, environment: str = "normal"
     ) -> Dict[str, Any]:
         """
         Atualiza as estatísticas do personagem.
@@ -88,8 +83,13 @@ class SurvivalSystem:
         Returns:
             Dict com estatísticas atualizadas e mensagens
         """
-        if not hasattr(character, "survival_stats"):
+        # Ensure survival_stats is properly initialized if it doesn't exist,
+        # is None, or is an empty dictionary.
+        if not getattr(character, "survival_stats", None):
             self.initialize_stats(character)
+            logger.info(
+                f"Initialized survival stats for character {getattr(character, 'name', 'Unknown')}"
+            )
 
         stats = character.survival_stats
         messages: List[str] = []
@@ -108,10 +108,9 @@ class SurvivalSystem:
             for stat, modifier in effect["stats_modifier"].items():
                 if stat in stats:
                     new_val = stats[stat] + modifier
-                    stats[stat] = max(0, min(
-                        self._max_stats[stat],
-                        new_val
-                    ))        # Verificar condições críticas
+                    stats[stat] = max(
+                        0, min(self._max_stats[stat], new_val)
+                    )  # Verificar condições críticas
         typed_stats = cast(SurvivalStats, stats)
         critical_msgs = self._check_critical_conditions(typed_stats)
         messages.extend(critical_msgs)
@@ -127,11 +126,7 @@ class SurvivalSystem:
         # Salvar estatísticas atualizadas
         character.survival_stats = stats
 
-        return {
-            "stats": stats,
-            "messages": messages,
-            "effects": effects
-        }
+        return {"stats": stats, "messages": messages, "effects": effects}
 
     def _get_action_costs(self, action: str) -> Dict[str, int]:
         """Calcula custos de energia para ações."""
@@ -144,123 +139,85 @@ class SurvivalSystem:
             "rest": {"energy": -30, "hunger": 5},
             "eat": {"hunger": -40},
             "drink": {"thirst": -50},
-            "sleep": {"energy": -100, "hunger": 10, "thirst": 15}
+            "sleep": {"energy": -100, "hunger": 10, "thirst": 15},
         }
         return costs.get(action, {"energy": 1})
 
-    def _get_environmental_effects(
-        self,
-        environment: str
-    ) -> List[EnvironmentalEffect]:
+    def _get_environmental_effects(self, environment: str) -> List[EnvironmentalEffect]:
         """Obtém efeitos do ambiente atual."""
         effects: Dict[str, List[EnvironmentalEffect]] = {
             "desert": [
                 {
                     "name": "Calor Extremo",
                     "description": "O sol escaldante drena sua energia",
-                    "stats_modifier": {
-                        "thirst": -8,
-                        "temperature": 15,
-                        "energy": -3
-                    },
-                    "duration": 5
+                    "stats_modifier": {"thirst": -8, "temperature": 15, "energy": -3},
+                    "duration": 5,
                 }
             ],
             "snow": [
                 {
                     "name": "Frio Intenso",
                     "description": "O frio congela seus ossos",
-                    "stats_modifier": {
-                        "temperature": -15,
-                        "energy": -5
-                    },
-                    "duration": 5
+                    "stats_modifier": {"temperature": -15, "energy": -5},
+                    "duration": 5,
                 }
             ],
             "forest": [
                 {
                     "name": "Umidade",
                     "description": "A umidade da floresta é revigorante",
-                    "stats_modifier": {
-                        "temperature": -2,
-                        "thirst": -1
-                    },
-                    "duration": 3
+                    "stats_modifier": {"temperature": -2, "thirst": -1},
+                    "duration": 3,
                 }
             ],
             "mountain": [
                 {
                     "name": "Altitude",
                     "description": "O ar rarefeito dificulta a respiração",
-                    "stats_modifier": {
-                        "energy": -5,
-                        "temperature": -10
-                    },
-                    "duration": 4
+                    "stats_modifier": {"energy": -5, "temperature": -10},
+                    "duration": 4,
                 }
-            ]
+            ],
         }
         return effects.get(environment, [])
 
-    def _check_critical_conditions(
-        self,
-        stats: SurvivalStats
-    ) -> List[str]:
+    def _check_critical_conditions(self, stats: SurvivalStats) -> List[str]:
         """Verifica condições críticas de sobrevivência."""
         messages = []
 
         if stats["hunger"] <= self._critical_thresholds["hunger"]:
             messages.append(
-                "Seu estômago está doendo de fome. "
-                "Precisa comer algo logo!"
+                "Seu estômago está doendo de fome. " "Precisa comer algo logo!"
             )
 
         if stats["thirst"] <= self._critical_thresholds["thirst"]:
             messages.append(
-                "Sua garganta está seca. "
-                "Precisa encontrar água rapidamente!"
+                "Sua garganta está seca. " "Precisa encontrar água rapidamente!"
             )
 
         if stats["energy"] <= self._critical_thresholds["energy"]:
             messages.append(
-                "Você mal consegue manter os olhos abertos. "
-                "Precisa descansar!"
+                "Você mal consegue manter os olhos abertos. " "Precisa descansar!"
             )
 
         temp_min, temp_max = self._critical_thresholds["temperature"]
         if stats["temperature"] < temp_min:
-            messages.append(
-                "Você está tremendo de frio. "
-                "Precisa se aquecer!"
-            )
+            messages.append("Você está tremendo de frio. " "Precisa se aquecer!")
         elif stats["temperature"] > temp_max:
-            messages.append(
-                "O calor está insuportável. "
-                "Precisa se refrescar!"
-            )
+            messages.append("O calor está insuportável. " "Precisa se refrescar!")
 
         return messages
 
-    def _apply_vital_effects(
-        self,
-        stats: SurvivalStats,
-        messages: List[str]
-    ) -> None:
+    def _apply_vital_effects(self, stats: SurvivalStats, messages: List[str]) -> None:
         """Aplica efeitos nas estatísticas vitais."""
         if stats["health"] <= 0:
-            messages.append(
-                "Você está gravemente ferido e precisa de cura!"
-            )
+            messages.append("Você está gravemente ferido e precisa de cura!")
         if stats["hunger"] <= 0:
             stats["health"] = max(0, stats["health"] - 5)
             messages.append("Você está morrendo de fome!")
         if stats["thirst"] <= 0:
             stats["health"] = max(0, stats["health"] - 10)
-            messages.append(
-                "Você está severamente desidratado!"
-            )
+            messages.append("Você está severamente desidratado!")
         if stats["energy"] <= 0:
             stats["health"] = max(0, stats["health"] - 3)
-            messages.append(
-                "Você está exausto e precisa descansar!"
-            )
+            messages.append("Você está exausto e precisa descansar!")

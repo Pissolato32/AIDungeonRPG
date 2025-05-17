@@ -1,0 +1,13 @@
+version = 1
+
+[[analyzers]]
+name = "python"
+enabled = true
+
+  [analyzers.meta]
+  # Altere para a versão do Python que seu projeto usa
+  runtime_version = "3.11.0"
+
+[[transformers]]
+name = "python-autofix"
+enabled = true

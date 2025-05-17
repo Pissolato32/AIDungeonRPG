@@ -5,130 +5,15 @@ import json
 
 import os
 import random
-from typing import Dict, List, Any, Optional, TypedDict, cast
-from dataclasses import dataclass, field
+from typing import Dict, List, Any, Optional, cast
+
+# Assume ActionHandler is in core.actions, adjust if necessary
 from core.actions import ActionHandler
 from core.models import Character
-from core.npc import NPC
 
-
-class LocationCoords(TypedDict):
-    """Type definition for location coordinates."""
-
-    x: int
-    y: int
-
-
-class LocationData(TypedDict, total=False):
-    """Type definition for location data."""
-
-    name: str
-    type: str
-    description: str
-    coordinates: LocationCoords
-    visited: bool
-    connections: Dict[str, str]  # conexões com outras localizações (id: direção)
-    resources: Optional[Dict[str, int]]
-    danger_level: Optional[int]
-    events: List[str]
-    welcome: Optional[str]
-
-
-@dataclass
-class GameState:
-    """Represents the current state of the game."""
-
-    current_location: str = ""
-    scene_description: str = ""
-    npcs_present: List[str] = field(default_factory=list)
-    known_npcs: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    messages: List[str] = field(default_factory=list)
-    coordinates: LocationCoords = field(
-        default_factory=lambda: {"x": 0, "y": 0, "z": 0}
-    )  # Added z coordinate
-    current_action: str = ""
-    discovered_locations: Dict[str, LocationData] = field(default_factory=dict)
-    npcs_by_location: Dict[str, List[str]] = field(default_factory=dict)
-    npc_relationships: Dict[str, int] = field(default_factory=dict)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert game state to a dictionary."""
-        return {
-            "current_location": self.current_location,
-            "scene_description": self.scene_description,
-            "npcs_present": self.npcs_present,
-            "known_npcs": self.known_npcs,
-            "messages": self.messages,
-            "coordinates": self.coordinates,
-            "current_action": self.current_action,
-            "discovered_locations": self.discovered_locations,
-            "npcs_by_location": self.npcs_by_location,
-            "npc_relationships": self.npc_relationships,
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "GameState":
-        """Create GameState from dictionary data."""
-        return cls(
-            current_location=data.get("current_location", ""),
-            scene_description=data.get("scene_description", ""),
-            npcs_present=data.get("npcs_present", []),
-            known_npcs=data.get("known_npcs", {}),
-            messages=data.get("messages", []),
-            coordinates=data.get(
-                "coordinates", {"x": 0, "y": 0, "z": 0}
-            ),  # Ensure z is handled
-            current_action=data.get("current_action", ""),
-            discovered_locations=data.get("discovered_locations", {}),
-            npcs_by_location=data.get("npcs_by_location", {}),
-            npc_relationships=data.get("npc_relationships", {}),
-        )
-
-    def add_message(self, message: str) -> None:
-        """Add a message to game state history."""
-        self.messages.append(message)
-        if len(self.messages) > 50:
-            self.messages = self.messages[-50:]
-
-    def discover_location(self, location_id: str, location_data: LocationData) -> None:
-        """Add a new discovered location."""
-        self.discovered_locations[location_id] = location_data
-        self.add_message(
-            f"Você descobriu: {location_data.get('name', 'um novo local desconhecido')}!"
-        )
-
-    def add_npc(self, npc_id: str, npc: Dict[str, Any]) -> None:
-        """Add or update an NPC in the game state."""
-        self.known_npcs[npc_id] = npc
-
-        if location := npc.get("location"):
-            if location not in self.npcs_by_location:
-                self.npcs_by_location[location] = []
-            self.npcs_by_location[location].append(npc_id)
-
-    def get_npc(self, npc_id: str) -> Optional[NPC]:
-        """Get an NPC by ID."""
-        if npc_data := self.known_npcs.get(npc_id):
-            return NPC(**npc_data)
-        return None
-
-    def get_npcs_in_location(self, location: str) -> List[NPC]:
-        """Get all NPCs in a specific location."""
-        npc_ids = self.npcs_by_location.get(location, [])
-        return [
-            NPC(**self.known_npcs[npc_id])
-            for npc_id in npc_ids
-            if npc_id in self.known_npcs
-        ]
-
-    def update_npc_relationship(
-        self, npc_id: str, change: int, max_value: int = 100
-    ) -> None:
-        """Update relationship with an NPC."""
-        current = self.npc_relationships.get(npc_id, 0)
-        self.npc_relationships[npc_id] = max(
-            -max_value, min(max_value, current + change)
-        )
+# Assume GameAIClient is in ai.game_ai_client, adjust if necessary
+from ai.game_ai_client import GameAIClient
+from .game_state_model import GameState, LocationCoords, LocationData
 
 
 class GameEngine:
@@ -248,7 +133,9 @@ class GameEngine:
         details: str,
         character: Character,
         game_state: GameState,
-        action_handler: Optional[ActionHandler] = None,
+        action_handler: Optional[
+            ActionHandler
+        ] = None,  # ActionHandler should be imported
         ai_client=None,
     ) -> Dict[str, Any]:
         """Process a player action."""
@@ -269,7 +156,7 @@ class GameEngine:
         # Process through AI if available
         if ai_client is not None:
             try:
-                from ai.game_ai_client import GameAIClient
+                # GameAIClient should be imported at the top level
 
                 game_ai = GameAIClient(ai_client)
                 ai_result = game_ai.process_action(
@@ -364,17 +251,6 @@ class GameEngine:
         # Example: Check map boundaries, terrain restrictions, etc.
         return True
 
-    def _determine_location_type(self, name: str) -> str:
-        """Determine location type from name."""
-        name_lower = name.lower()
-
-        for loc_type, keywords in self._location_types.items():
-            if any(word in name_lower for word in keywords):
-                return loc_type
-
-        # Default to random type if no matches
-        return random.choice(list(self._location_types.keys()))
-
     def _get_direction(
         self, from_coords: LocationCoords, to_coords: LocationCoords
     ) -> Optional[str]:
@@ -421,7 +297,12 @@ class GameEngine:
         self, result: Dict[str, Any], new_coords: LocationCoords, loc_id: str
     ) -> LocationData:
         """Create location data from the result and new coordinates."""
-        location_type = self._determine_location_type(loc_id)
+        # Prioritize location_type from the action result (AI or ActionHandler)
+        location_type = result.get("location_type")
+        if not location_type or location_type not in self._location_types:
+            # Fallback to a random type if not provided or invalid
+            location_type = random.choice(list(self._location_types.keys()))
+
         return {
             "name": result.get(
                 "location_name", self._generate_location_name(location_type)

@@ -7,7 +7,7 @@
       name="description"
       content="AI Dungeon RPG - An interactive text-based adventure game"
     />
-    <title>{{ get_text('game_title') }}</title>
+    <title>AI Dungeon RPG - Em Jogo</title>
     <link
       rel="stylesheet"
       href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css"
@@ -22,20 +22,6 @@
     />
   </head>
   <body>
-    <div class="language-selector p-2 text-end">
-      <a
-        href="{{ url_for('routes.change_language', lang='pt-br', next=request.path) }}"
-        class="btn btn-sm {{ 'btn-primary active' if session.get('language', 'pt-br') == 'pt-br' else 'btn-secondary' }}"
-        aria-label="Mudar idioma para Português"
-        >PT-BR</a
-      >
-      <a
-        href="{{ url_for('routes.change_language', lang='en', next=request.path) }}"
-        class="btn btn-sm {{ 'btn-primary active' if session.get('language', 'pt-br') == 'en' else 'btn-secondary' }}"
-        aria-label="Change language to English"
-        >EN</a
-      >
-    </div>
     <div class="game-container">
       <!-- Top Navigation Bar -->
       <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
@@ -60,13 +46,12 @@
             <ul class="navbar-nav me-auto">
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('routes.character') }}">
-                  <i class="bi bi-person-badge me-1"></i> {{
-                  get_text('character') }}
+                  <i class="bi bi-person-badge me-1"></i> Personagem
                 </a>
               </li>
               <li class="nav-item">
                 <button class="nav-link" id="restButton">
-                  <i class="bi bi-moon-stars me-1"></i> {{ get_text('rest') }}
+                  <i class="bi bi-moon-stars me-1"></i> Descansar
                 </button>
               </li>
             </ul>
@@ -78,8 +63,7 @@
                 >
               </span>
               <span class="me-3">
-                <i class="bi bi-star-fill me-1 text-warning"></i> {{
-                get_text('level_short') }}
+                <i class="bi bi-star-fill me-1 text-warning"></i> Nv.
                 <span id="navbarCharacterLevel"
                   >{{ character.level if character else 1 }}</span
                 >
@@ -99,8 +83,8 @@
                 <h5 class="mb-0">
                   <i class="bi bi-compass me-2"></i
                   ><span id="currentLocationDisplay"
-                    >{{ game_state.current_location if game_state else
-                    get_text('unknown_location') }}</span
+                    >{{ game_state.current_location if game_state else 'Local
+                    Desconhecido' }}</span
                   >
                 </h5>
                 <div>
@@ -108,8 +92,8 @@
                     class="btn btn-sm btn-outline-danger"
                     id="resetGameBtn"
                   >
-                    <i class="bi bi-arrow-clockwise me-1"></i>{{
-                    get_text('reset_game_button') }}
+                    <i class="bi bi-arrow-clockwise me-1"></i>{{ 'Resetar Jogo'
+                    }}
                   </button>
                 </div>
               </div>
@@ -119,20 +103,20 @@
               <!-- Story Output -->
               <div class="game-output p-3">
                 <div id="sceneDescription" class="scene-description mb-3">
-                  {{ game_state.scene_description if game_state else
-                  get_text('scene_loading') }}
+                  {{ game_state.scene_description if game_state else 'Carregando
+                  cena...' }}
                 </div>
 
                 {% if game_state.npcs_present %}
                 <div id="npcsPresent" class="npcs-present mb-3">
-                  <strong>{{ get_text('npcs_present') }}:</strong>
+                  <strong>NPCs Presentes:</strong>
                   <span id="npcList"
                     >{{ ', '.join(game_state.npcs_present) }}</span
                   >
                 </div>
                 {% endif %} {% if game_state.events %}
                 <div id="currentEvents" class="events mb-3">
-                  <strong>{{ get_text('events') }}:</strong>
+                  <strong>Eventos:</strong>
                   <span id="eventList">{{ ', '.join(game_state.events) }}</span>
                 </div>
                 {% endif %}
@@ -156,7 +140,7 @@
                       <span id="enemyName"
                         >{{ game_state.combat.enemy.name if game_state and
                         game_state.combat and game_state.combat.get('enemy')
-                        else get_text('enemy') }}</span
+                        else 'Inimigo' }}</span
                       >
                       <span
                         >HP:
@@ -190,18 +174,17 @@
                     <p id="enemyDescription" class="mb-1 small">
                       {{ game_state.combat.enemy.description if game_state and
                       game_state.combat and game_state.combat.get('enemy') else
-                      get_text('enemy_description_placeholder') }}
+                      'Uma criatura ameaçadora está diante de você.' }}
                     </p>
 
                     <div class="combat-log mt-3">
-                      <h6 class="border-top pt-2">
-                        {{ get_text('combat_log') }}:
-                      </h6>
+                      <h6 class="border-top pt-2">Registro de Combate:</h6>
                       <div id="combatLog" class="small">
                         {% if game_state and game_state.combat and
                         game_state.combat.get('log') %} {% for entry in
                         game_state.combat.log %}
                         <div>{{ entry }}</div>
+
                         {% endfor %} {% endif %}
                       </div>
                     </div>
@@ -213,25 +196,22 @@
                     id="attackBasic"
                     class="btn btn-outline-primary flex-grow-1"
                   >
-                    <i class="bi bi-slash-circle me-1"></i>{{
-                    get_text('basic_attack') }}
+                    <i class="bi bi-slash-circle me-1"></i>{{ 'Ataque Básico' }}
                   </button>
                   <button
                     id="attackLight"
                     class="btn btn-outline-success flex-grow-1"
                   >
-                    <i class="bi bi-wind me-1"></i>{{ get_text('light_attack')
-                    }}
+                    <i class="bi bi-wind me-1"></i>Ataque Leve
                   </button>
                   <button
                     id="attackHeavy"
                     class="btn btn-outline-danger flex-grow-1"
                   >
-                    <i class="bi bi-lightning-charge me-1"></i>{{
-                    get_text('heavy_attack') }}
+                    <i class="bi bi-lightning-charge me-1"></i>Ataque Pesado
                   </button>
                   <button id="fleeButton" class="btn btn-outline-secondary">
-                    <i class="bi bi-door-open me-1"></i>{{ get_text('flee') }}
+                    <i class="bi bi-door-open me-1"></i>Fugir
                   </button>
                 </div>
               </div>
@@ -248,27 +228,17 @@
                       class="form-select flex-grow-0"
                       style="width: 120px"
                     >
-                      <option value="move">
-                        {{ get_text('move_action') }}
-                      </option>
-                      <option value="look">
-                        {{ get_text('look_action') }}
-                      </option>
-                      <option value="talk">
-                        {{ get_text('talk_action') }}
-                      </option>
-                      <option value="search">
-                        {{ get_text('search_action') }}
-                      </option>
-                      <option value="custom">
-                        {{ get_text('custom_action') }}
-                      </option>
+                      <option value="move">Mover</option>
+                      <option value="look">Olhar</option>
+                      <option value="talk">Falar</option>
+                      <option value="search">Procurar</option>
+                      <option value="custom">Outro</option>
                     </select>
                     <input
                       type="text"
                       id="actionDetails"
                       class="form-control"
-                      placeholder="{{ get_text('enter_action_details_placeholder') }}"
+                      placeholder="O que você quer fazer?"
                     />
                     <button type="submit" class="btn btn-primary">
                       <i class="bi bi-send"></i>
@@ -294,7 +264,7 @@
                     role="tab"
                     aria-controls="inventoryTab"
                     aria-selected="true"
-                    >{{ get_text('inventory') }}</a
+                    >Inventário</a
                   >
                 </li>
                 <li class="nav-item" role="presentation">
@@ -306,7 +276,7 @@
                     role="tab"
                     aria-controls="statsTab"
                     aria-selected="false"
-                    >{{ get_text('stats') }}</a
+                    >Atributos</a
                   >
                 </li>
                 <li class="nav-item" role="presentation">
@@ -318,7 +288,7 @@
                     role="tab"
                     aria-controls="questsTab"
                     aria-selected="false"
-                    >{{ get_text('quests') }}</a
+                    >Missões</a
                   >
                 </li>
                 <li class="nav-item" role="presentation">
@@ -330,7 +300,7 @@
                     role="tab"
                     aria-controls="mapTab"
                     aria-selected="false"
-                    >{{ get_text('map') }}</a
+                    >Mapa</a
                   >
                 </li>
               </ul>
@@ -345,13 +315,13 @@
                 aria-labelledby="inventory-tab-button"
               >
                 <div class="d-flex justify-content-between mb-3">
-                  <h5 class="mb-0">{{ get_text('inventory') }}</h5>
+                  <h5 class="mb-0">Inventário</h5>
                   <span class="gold-display"
                     ><i class="bi bi-coin text-warning me-1"></i
                     ><span id="characterGold"
                       >{{ character.gold if character else 0 }}</span
                     >
-                    {{ get_text('gold') }}</span
+                    Ouro</span
                   >
                 </div>
                 <div class="inventory-list">
@@ -367,9 +337,7 @@
                         {% if character.equipment and item_name in
                         character.equipment.values() %}
                         <strong>{{ item_name }}*</strong>
-                        <span class="badge bg-success ms-2"
-                          >{{ get_text('equipped') }}</span
-                        >
+                        <span class="badge bg-success ms-2">Equipado</span>
                         {% else %} {{ item_name }} {% endif %} {% if
                         item.get('durability') is not none %}
                         <span class="badge bg-secondary ms-2"
@@ -386,7 +354,7 @@
                         class="btn btn-sm btn-outline-primary use-item-btn"
                         data-item-name="{{ item_name }}"
                       >
-                        {{ get_text('use_item_action_short') }}
+                        Usar
                       </button>
                       {% else %} {# Item is a simple string #}
                       <span>{{ item }}</span>
@@ -394,7 +362,7 @@
                         class="btn btn-sm btn-outline-primary use-item-btn"
                         data-item-name="{{ item }}"
                       >
-                        {{ get_text('use_item_action_short') }}
+                        Usar
                       </button>
                       {% endif %}
                     </div>
@@ -406,7 +374,7 @@
                     class="text-center text-secondary p-3"
                   >
                     <i class="bi bi-inbox-fill fs-4"></i>
-                    <p class="mt-2">{{ get_text('inventory_empty') }}</p>
+                    <p class="mt-2">Inventário vazio.</p>
                   </div>
                   {% endif %}
                 </div>
@@ -423,16 +391,14 @@
                     {{ character.name if character else 'N/A' }}
                   </h4>
                   <div id="characterClassRaceLevelStats">
-                    {{ get_text('level_short') }} {{ character.level if
-                    character else 1 }} {{ get_text(character.race|lower if
-                    character else 'unknown') }} {{
-                    get_text(character.character_class|lower if character else
-                    'unknown') }}
+                    Nv. {{ character.level if character else 1 }} {{
+                    character.race if character else 'Desconhecido' }} {{
+                    character.character_class if character else 'Desconhecido'
+                    }}
                   </div>
                   <div id="experienceDisplayStats" class="text-secondary">
-                    {{ get_text('experience') }}: {{ character.experience if
-                    character else 0 }} / {{ (character.level if character else
-                    1) * 100 }}
+                    Experiência: {{ character.experience if character else 0 }}
+                    / {{ (character.level if character else 1) * 100 }}
                   </div>
                   <div class="progress mt-2 mb-3">
                     <div
@@ -449,7 +415,7 @@
                 <div class="status-bars mb-4">
                   <div class="mb-2">
                     <div class="d-flex justify-content-between mb-1">
-                      <span>{{ get_text('health') }}</span>
+                      <span>Saúde</span>
                       <span id="hpDisplay"
                         >{{ character.current_hp if character else 0 }} / {{
                         character.max_hp if character else 0 }}</span
@@ -469,7 +435,7 @@
                   </div>
                   <div class="mb-2">
                     <div class="d-flex justify-content-between mb-1">
-                      <span>{{ get_text('stamina') }}</span>
+                      <span>Vigor</span>
                       <span id="staminaDisplay"
                         >{{ character.current_stamina if character else 0 }} /
                         {{ character.max_stamina if character else 0 }}</span
@@ -489,7 +455,7 @@
                   </div>
                   <div class="mb-2">
                     <div class="d-flex justify-content-between mb-1">
-                      <span>{{ get_text('hunger') }}</span>
+                      <span>Fome</span>
                       <span id="hungerDisplay"
                         >{{ character.current_hunger if character else 0 }} / {{
                         character.max_hunger if character else 0 }}</span
@@ -509,7 +475,7 @@
                   </div>
                   <div class="mb-2">
                     <div class="d-flex justify-content-between mb-1">
-                      <span>{{ get_text('thirst') }}</span>
+                      <span>Sede</span>
                       <span id="thirstDisplay"
                         >{{ character.current_thirst if character else 0 }} / {{
                         character.max_thirst if character else 0 }}</span
@@ -530,13 +496,12 @@
                 </div>
 
                 <div class="attributes">
-                  <h5 class="mb-3">{{ get_text('attributes') }}</h5>
+                  <h5 class="mb-3">Atributos</h5>
                   <div class="row">
                     <div class="col-6 mb-2">
                       <div class="attribute">
                         <span class="attribute-name"
-                          ><i class="bi bi-shield-fill me-1"></i>{{
-                          get_text('strength') }}</span
+                          ><i class="bi bi-shield-fill me-1"></i>Força</span
                         >
                         <span class="attribute-value" id="strengthValue"
                           >{{ character.strength if character else 0 }}</span
@@ -546,8 +511,8 @@
                     <div class="col-6 mb-2">
                       <div class="attribute">
                         <span class="attribute-name"
-                          ><i class="bi bi-arrow-up-right me-1"></i>{{
-                          get_text('dexterity') }}</span
+                          ><i class="bi bi-arrow-up-right me-1"></i
+                          >Destreza</span
                         >
                         <span class="attribute-value" id="dexterityValue"
                           >{{ character.dexterity if character else 0 }}</span
@@ -557,8 +522,7 @@
                     <div class="col-6 mb-2">
                       <div class="attribute">
                         <span class="attribute-name"
-                          ><i class="bi bi-heart me-1"></i>{{
-                          get_text('constitution') }}</span
+                          ><i class="bi bi-heart me-1"></i>Constituição</span
                         >
                         <span class="attribute-value" id="constitutionValue"
                           >{{ character.constitution if character else 0
@@ -569,8 +533,8 @@
                     <div class="col-6 mb-2">
                       <div class="attribute">
                         <span class="attribute-name"
-                          ><i class="bi bi-lightbulb me-1"></i>{{
-                          get_text('intelligence') }}</span
+                          ><i class="bi bi-lightbulb me-1"></i
+                          >Inteligência</span
                         >
                         <span class="attribute-value" id="intelligenceValue"
                           >{{ character.intelligence if character else 0
@@ -581,8 +545,7 @@
                     <div class="col-6 mb-2">
                       <div class="attribute">
                         <span class="attribute-name"
-                          ><i class="bi bi-book me-1"></i>{{ get_text('wisdom')
-                          }}</span
+                          ><i class="bi bi-book me-1"></i>Sabedoria</span
                         >
                         <span class="attribute-value" id="wisdomValue"
                           >{{ character.wisdom if character else 0 }}</span
@@ -592,8 +555,7 @@
                     <div class="col-6 mb-2">
                       <div class="attribute">
                         <span class="attribute-name"
-                          ><i class="bi bi-chat me-1"></i>{{
-                          get_text('charisma') }}</span
+                          ><i class="bi bi-chat me-1"></i>Carisma</span
                         >
                         <span class="attribute-value" id="charismaValue"
                           >{{ character.charisma if character else 0 }}</span
@@ -610,7 +572,7 @@
                 role="tabpanel"
                 aria-labelledby="quests-tab-button"
               >
-                <h5 class="mb-3">{{ get_text('quests') }}</h5>
+                <h5 class="mb-3">Missões</h5>
                 <ul class="list-group" id="questList">
                   {% if character and character.quests %} {% for quest in
                   character.quests %}
@@ -619,8 +581,10 @@
                       <strong>{{ quest.title }}</strong>
                       <span
                         class="badge rounded-pill ms-2 {% if quest.status == 'completed' %}bg-success{% elif quest.status == 'in_progress' %}bg-warning{% else %}bg-secondary{% endif %}"
-                      >
-                        {{ get_text('quest_status_' ~ quest.status|lower) }}
+                        >{% if quest.status == 'completed' %}Completa {% elif
+                        quest.status == 'in_progress' %}Em Progresso {% elif
+                        quest.status == 'failed' %}Falhou {% else %}Pendente {%
+                        endif %}
                       </span>
                     </div>
                     <div class="small text-muted">{{ quest.description }}</div>
@@ -630,7 +594,7 @@
                     id="noQuestsMessage"
                     class="list-group-item text-secondary"
                   >
-                    {{ get_text('no_active_quests') }}
+                    Nenhuma missão ativa.
                   </li>
                   {% endif %}
                 </ul>
@@ -642,7 +606,7 @@
                 role="tabpanel"
                 aria-labelledby="map-tab-button"
               >
-                <h5 class="mb-3">{{ get_text('map') }}</h5>
+                <h5 class="mb-3">Mapa</h5>
                 <pre
                   id="gameMapDisplay"
                   class="border p-2 bg-light text-dark"
@@ -652,7 +616,7 @@
                     font-family: monospace;
                   "
                 >
-{{ game_state.world_map_ascii if game_state and game_state.world_map_ascii else get_text('map_not_available') }}</pre
+{{ game_state.world_map_ascii if game_state and game_state.world_map_ascii else 'Mapa não disponível.' }}</pre
                 >
               </div>
             </div>
@@ -672,21 +636,23 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="resetGameModalLabel">
-              {{ get_text('reset_game_button') }}
-            </h5>
+            <h5 class="modal-title" id="resetGameModalLabel">Resetar Jogo</h5>
             <button
               type="button"
               class="btn-close"
               data-bs-dismiss="modal"
-              aria-label="{{ get_text('close_modal') }}"
+              aria-label="Fechar"
             ></button>
           </div>
           <div class="modal-body">
-            <p>{{ get_text('reset_game_confirmation') }}</p>
+            <p>
+              Tem certeza que deseja resetar o progresso do jogo? Seu personagem
+              será mantido, mas o estado do mundo e missões serão reiniciados.
+            </p>
             <div class="alert alert-info">
               <i class="bi bi-info-circle-fill me-2"></i>
-              {{ get_text('reset_game_details_info') }}
+              Isso não pode ser desfeito. Você poderá editar seu personagem
+              antes de começar uma nova aventura.
             </div>
           </div>
           <div class="modal-footer">
@@ -695,10 +661,10 @@
               class="btn btn-secondary"
               data-bs-dismiss="modal"
             >
-              {{ get_text('cancel_button') }}
+              Cancelar
             </button>
             <button type="button" class="btn btn-danger" id="confirmResetBtn">
-              {{ get_text('reset_game_button') }}
+              Resetar Jogo
             </button>
           </div>
         </div>

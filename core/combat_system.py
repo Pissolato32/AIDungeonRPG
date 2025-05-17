@@ -100,12 +100,12 @@ class CombatSystem:
         initiatives = []
 
         # Iniciativa do personagem
-        char_init = roll_dice(20) + character.agility
+        char_init = roll_dice(1, 20) + character.agility
         initiatives.append(("character", char_init))
 
         # Iniciativa dos inimigos
         for i, enemy in enumerate(enemies):
-            enemy_init = roll_dice(20) + enemy.get("agility", 0)
+            enemy_init = roll_dice(1, 20) + enemy.get("agility", 0)
             initiatives.append((f"enemy_{i}", enemy_init))
 
         # Ordenar por iniciativa
@@ -123,28 +123,72 @@ class CombatSystem:
         target_id = action.get("target")
 
         if action_type == "attack":
+            if not target_id:
+                return {
+                    "success": False,
+                    "message": "Alvo não especificado para o ataque.",
+                }
+            defender_enemy = self._find_enemy(enemies, target_id)
+            if not defender_enemy:
+                return {
+                    "success": False,
+                    "message": f"Inimigo alvo com ID '{target_id}' não encontrado.",
+                }
             return self._process_attack(
                 attacker=character,
-                defender=self._find_enemy(enemies, target_id),
+                defender=defender_enemy,
                 is_character=True,
             )
         elif action_type == "skill":
+            skill_id_val = action.get("skill_id")
+            if not isinstance(skill_id_val, str):
+                return {
+                    "success": False,
+                    "message": "Ação de habilidade requer um 'skill_id' (string).",
+                }
+
+            target_enemy_for_skill = self._find_enemy(enemies, target_id)
+            # If a target_id was provided, but the enemy was not found, it's an error.
+            if target_id and not target_enemy_for_skill:
+                return {
+                    "success": False,
+                    "message": f"Alvo com ID '{target_id}' não encontrado para a habilidade.",
+                }
+
             return self._process_skill(
                 character=character,
-                skill_id=action.get("skill_id"),
-                target=self._find_enemy(enemies, target_id),
+                skill_id=skill_id_val,
+                target=target_enemy_for_skill,
             )
         elif action_type == "item":
+            item_id_val = action.get("item_id")
+            if not isinstance(item_id_val, str):
+                return {
+                    "success": False,
+                    "message": "Ação de item requer um 'item_id' (string).",
+                }
+
+            target_enemy_for_item = self._find_enemy(enemies, target_id)
+            # If a target_id was provided, but the enemy was not found, it's an error.
+            if target_id and not target_enemy_for_item:
+                return {
+                    "success": False,
+                    "message": f"Alvo com ID '{target_id}' não encontrado para o item.",
+                }
+
             return self._process_item_use(
                 character=character,
-                item_id=action.get("item_id"),
-                target=self._find_enemy(enemies, target_id),
+                item_id=item_id_val,
+                target=target_enemy_for_item,
             )
         else:
             return {"success": False, "message": "Ação inválida"}
 
     def _process_attack(
-        self, attacker: Any, defender: Any, is_character: bool = False
+        self,
+        attacker: Any,
+        defender: Any,
+        is_character: bool = False,  # defender will be Character or Dict
     ) -> Dict[str, Any]:
         """Processa um ataque básico."""
         # Calcular chance de acerto
@@ -152,7 +196,9 @@ class CombatSystem:
         accuracy = attacker.agility if is_character else attacker.get("agility", 0)
         defense = defender.agility if not is_character else defender.get("agility", 0)
 
-        if hit_roll + accuracy <= defense:
+        if (
+            roll_dice(1, 20) + accuracy <= defense
+        ):  # hit_roll was not used here, direct roll
             self.combat_log.add_action(
                 actor=attacker.name if is_character else attacker["name"],
                 target=defender["name"] if is_character else defender.name,
@@ -165,11 +211,13 @@ class CombatSystem:
             }
 
         # Calcular dano
-        damage_roll = roll_dice(6)
+        damage_roll = roll_dice(1, 6)
         damage_bonus = attacker.strength if is_character else attacker.get("damage", 0)
 
         # Verificar crítico
-        is_critical = hit_roll == 20
+        is_critical = (
+            roll_dice(1, 20) == 20
+        )  # Assuming critical check is a new d20 roll, or use the previous hit_roll
         if is_critical:
             damage_roll *= 2
 

@@ -3,26 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ get_text('create_character', session.get('language', 'pt-br')) }} - WebChatRPG</title>
+    <title>{% if character %}Editar Personagem{% else %}Criar Personagem{% endif %} - WebChatRPG</title>
     <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="language-selector">
-        <a href="{{ url_for('routes.change_language', lang='pt-br') }}" class="btn btn-sm {{ 'btn-primary' if session.get('language') == 'pt-br' else 'btn-secondary' }}">PT-BR</a>
-        <a href="{{ url_for('routes.change_language', lang='en') }}" class="btn btn-sm {{ 'btn-primary' if session.get('language') == 'en' else 'btn-secondary' }}">EN</a>
-    </div>
     <div class="container py-4">
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1>
                         <i class="bi bi-person-badge me-2"></i>
-                        {% if character %}{{ get_text('edit_character', session.get('language', 'pt-br')) }}{% else %}{{ get_text('create_character', session.get('language', 'pt-br')) }}{% endif %}
+                        {% if character %}Editar Personagem{% else %}Criar Personagem{% endif %}
                     </h1>
-                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-house-door me-1"></i> {{ get_text('home', session.get('language', 'pt-br')) }}
+                    <a href="{{ url_for('routes.index') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-house-door me-1"></i> Início
                     </a>
                 </div>
                 
@@ -64,52 +60,52 @@
 
                 <div class="card bg-dark mb-4">
                     <div class="card-body">
-                        <form action="{{ url_for('character') }}" method="post">
+                        <form action="{{ url_for('routes.character') }}" method="post">
                             <div class="mb-4 row">
                                 <div class="col-md-4 mb-3">
-                                    <label for="name" class="form-label">{{ get_text('character_name', session.get('language', 'pt-br')) }}</label>
+                                    <label for="name" class="form-label">Nome do Personagem</label>
                                     <input type="text" class="form-control" id="name" name="name" value="{{ character.name if character else '' }}" required>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label for="race" class="form-label">{{ get_text('character_race', session.get('language', 'pt-br')) }}</label>
+                                    <label for="race" class="form-label">Raça do Personagem</label>
                                     <select class="form-select" id="race" name="race" required>
-                                        <option value="">{{ get_text('select_race', session.get('language', 'pt-br')) }}</option>
-                                        <option value="Human" {% if character and character.race == 'Human' %}selected{% endif %}>{{ get_text('human', session.get('language', 'pt-br')) }}</option>
-                                        <option value="Elf" {% if character and character.race == 'Elf' %}selected{% endif %}>{{ get_text('elf', session.get('language', 'pt-br')) }}</option>
-                                        <option value="Dwarf" {% if character and character.race == 'Dwarf' %}selected{% endif %}>{{ get_text('dwarf', session.get('language', 'pt-br')) }}</option>
-                                        <option value="Halfling" {% if character and character.race == 'Halfling' %}selected{% endif %}>{{ get_text('halfling', session.get('language', 'pt-br')) }}</option>
-                                        <option value="Orc" {% if character and character.race == 'Orc' %}selected{% endif %}>{{ get_text('orc', session.get('language', 'pt-br')) }}</option>
+                                        <option value="">Selecione a Raça</option>
+                                        <option value="Human" {% if character and character.race == 'Human' %}selected{% endif %}>Humano</option>
+                                        <option value="Elf" {% if character and character.race == 'Elf' %}selected{% endif %}>Elfo</option>
+                                        <option value="Dwarf" {% if character and character.race == 'Dwarf' %}selected{% endif %}>Anão</option>
+                                        <option value="Halfling" {% if character and character.race == 'Halfling' %}selected{% endif %}>Halfling</option>
+                                        <option value="Orc" {% if character and character.race == 'Orc' %}selected{% endif %}>Orc</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label for="class" class="form-label">{{ get_text('character_class', session.get('language', 'pt-br')) }}</label>
+                                    <label for="class" class="form-label">Classe do Personagem</label>
                                     <select class="form-select" id="class" name="class" required>
-                                        <option value="">{{ get_text('select_class', session.get('language', 'pt-br')) }}</option>
-                                        <option value="Warrior" {% if character and character.character_class == 'Warrior' %}selected{% endif %}>{{ get_text('warrior', session.get('language', 'pt-br')) }}</option>
-                                        <option value="Mage" {% if character and character.character_class == 'Mage' %}selected{% endif %}>{{ get_text('mage', session.get('language', 'pt-br')) }}</option>
-                                        <option value="Rogue" {% if character and character.character_class == 'Rogue' %}selected{% endif %}>{{ get_text('rogue', session.get('language', 'pt-br')) }}</option>
-                                        <option value="Cleric" {% if character and character.character_class == 'Cleric' %}selected{% endif %}>{{ get_text('cleric', session.get('language', 'pt-br')) }}</option>
-                                        <option value="Ranger" {% if character and character.character_class == 'Ranger' %}selected{% endif %}>{{ get_text('ranger', session.get('language', 'pt-br')) }}</option>
+                                        <option value="">Selecione a Classe</option>
+                                        <option value="Warrior" {% if character and character.character_class == 'Warrior' %}selected{% endif %}>Guerreiro</option>
+                                        <option value="Mage" {% if character and character.character_class == 'Mage' %}selected{% endif %}>Mago</option>
+                                        <option value="Rogue" {% if character and character.character_class == 'Rogue' %}selected{% endif %}>Ladino</option>
+                                        <option value="Cleric" {% if character and character.character_class == 'Cleric' %}selected{% endif %}>Clérigo</option>
+                                        <option value="Ranger" {% if character and character.character_class == 'Ranger' %}selected{% endif %}>Ranger</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="mb-4">
-                                <label for="description" class="form-label">{{ get_text('character_description', session.get('language', 'pt-br')) }}</label>
-                                <textarea class="form-control" id="description" name="description" rows="3" placeholder="{{ get_text('character_description_placeholder', session.get('language', 'pt-br')) }}">{{ character.description if character else '' }}</textarea>
-                                <small class="text-muted">{{ get_text('character_description_hint', session.get('language', 'pt-br')) }}</small>
+                                <label for="description" class="form-label">Descrição do Personagem</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" placeholder="Uma breve história ou aparência...">{{ character.description if character else '' }}</textarea>
+                                <small class="text-muted">Opcional, mas ajuda na imersão.</small>
                             </div>
-                            <h4 class="mb-3"><i class="bi bi-bar-chart-line me-2"></i>{{ get_text('attributes', session.get('language', 'pt-br')) }}</h4>
+                            <h4 class="mb-3"><i class="bi bi-bar-chart-line me-2"></i>Atributos</h4>
                             <div class="mb-3">
                                 <button type="button" id="rollDiceBtn" class="btn btn-outline-primary mb-3">
-                                    <i class="bi bi-dice-6 me-1"></i> {{ get_text('roll_dice', session.get('language', 'pt-br')) }} (<span id="remainingRolls">3</span>)
+                                    <i class="bi bi-dice-6 me-1"></i> Rolar Dados (<span id="remainingRolls">3</span>)
                                 </button>
                                 <div class="mb-2">
-                                    <small class="text-muted">{{ get_text('total_points', session.get('language', 'pt-br')) }}: <span id="totalPoints">0</span>/75</small>
+                                    <small class="text-muted">Total de Pontos: <span id="totalPoints">0</span>/75</small>
                                 </div>
                             </div>
                             <div class="row mb-4">
                                 <div class="col-md-4 mb-3">
-                                    <label for="strength" class="form-label">{{ get_text('strength', session.get('language', 'pt-br')) }}</label>
+                                    <label for="strength" class="form-label">Força</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-shield-fill"></i></span>
                                         <input type="number" class="form-control attribute-field" id="strength" name="strength" value="{{ character.strength if character else 10 }}" min="8" max="18" step="1">
@@ -117,7 +113,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label for="dexterity" class="form-label">{{ get_text('dexterity', session.get('language', 'pt-br')) }}</label>
+                                    <label for="dexterity" class="form-label">Destreza</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-arrow-up-right"></i></span>
                                         <input type="number" class="form-control attribute-field" id="dexterity" name="dexterity" value="{{ character.dexterity if character else 10 }}" min="8" max="18" step="1">
@@ -125,7 +121,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label for="constitution" class="form-label">{{ get_text('constitution', session.get('language', 'pt-br')) }}</label>
+                                    <label for="constitution" class="form-label">Constituição</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-heart"></i></span>
                                         <input type="number" class="form-control attribute-field" id="constitution" name="constitution" value="{{ character.constitution if character else 10 }}" min="8" max="18" step="1">
@@ -133,7 +129,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label for="intelligence" class="form-label">{{ get_text('intelligence', session.get('language', 'pt-br')) }}</label>
+                                    <label for="intelligence" class="form-label">Inteligência</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-lightbulb"></i></span>
                                         <input type="number" class="form-control attribute-field" id="intelligence" name="intelligence" value="{{ character.intelligence if character else 10 }}" min="8" max="18" step="1">
@@ -141,7 +137,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label for="wisdom" class="form-label">{{ get_text('wisdom', session.get('language', 'pt-br')) }}</label>
+                                    <label for="wisdom" class="form-label">Sabedoria</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-book"></i></span>
                                         <input type="number" class="form-control attribute-field" id="wisdom" name="wisdom" value="{{ character.wisdom if character else 10 }}" min="8" max="18" step="1">
@@ -149,7 +145,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label for="charisma" class="form-label">{{ get_text('charisma', session.get('language', 'pt-br')) }}</label>
+                                    <label for="charisma" class="form-label">Carisma</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-chat"></i></span>
                                         <input type="number" class="form-control attribute-field" id="charisma" name="charisma" value="{{ character.charisma if character else 10 }}" min="8" max="18" step="1">
@@ -157,45 +153,45 @@
                                     </div>
                                 </div>
                             </div>
-                            <h4 class="mb-3"><i class="bi bi-shield me-2"></i>{{ get_text('health_stamina', session.get('language', 'pt-br')) }}</h4>
+                            <h4 class="mb-3"><i class="bi bi-shield me-2"></i>Saúde e Vigor</h4>
                             <div class="alert alert-info">
                                 <i class="bi bi-info-circle-fill me-2"></i>
-                                {{ get_text('health_stamina_hint', session.get('language', 'pt-br')) }}
+                                Calculado automaticamente com base nos atributos e classe.
                             </div>
                             <div class="row mb-4">
                                 <div class="col-md-3 mb-3">
-                                    <label for="max_hp" class="form-label">{{ get_text('max_hp', session.get('language', 'pt-br')) }}</label>
+                                    <label for="max_hp" class="form-label">HP Máximo</label>
                                     <input type="number" class="form-control" id="max_hp" name="max_hp" value="{{ character.max_hp if character else 10 }}" readonly>
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <label for="current_hp" class="form-label">{{ get_text('current_hp', session.get('language', 'pt-br')) }}</label>
+                                    <label for="current_hp" class="form-label">HP Atual</label>
                                     <input type="number" class="form-control" id="current_hp" name="current_hp" value="{{ character.current_hp if character else 10 }}" readonly>
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <label for="max_stamina" class="form-label">{{ get_text('max_stamina', session.get('language', 'pt-br')) }}</label>
+                                    <label for="max_stamina" class="form-label">Vigor Máximo</label>
                                     <input type="number" class="form-control" id="max_stamina" name="max_stamina" value="{{ character.max_stamina if character else 10 }}" readonly>
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <label for="current_stamina" class="form-label">{{ get_text('current_stamina', session.get('language', 'pt-br')) }}</label>
+                                    <label for="current_stamina" class="form-label">Vigor Atual</label>
                                     <input type="number" class="form-control" id="current_stamina" name="current_stamina" value="{{ character.current_stamina if character else 10 }}" readonly>
                                 </div>
                             </div>
-                            <h4 class="mb-3"><i class="bi bi-info-circle me-2"></i>{{ get_text('additional_info', session.get('language', 'pt-br')) }}</h4>
+                            <h4 class="mb-3"><i class="bi bi-info-circle me-2"></i>Informações Adicionais</h4>
                             <div class="alert alert-info">
                                 <i class="bi bi-info-circle-fill me-2"></i>
-                                {{ get_text('additional_info_hint', session.get('language', 'pt-br')) }}
+                                Estes são definidos pelo jogo.
                             </div>
                             <div class="row mb-4">
                                 <div class="col-md-4 mb-3">
-                                    <label for="level" class="form-label">{{ get_text('level', session.get('language', 'pt-br')) }}</label>
+                                    <label for="level" class="form-label">Nível</label>
                                     <input type="number" class="form-control" id="level" name="level" value="1" min="1" readonly>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label for="experience" class="form-label">{{ get_text('experience', session.get('language', 'pt-br')) }}</label>
+                                    <label for="experience" class="form-label">Experiência</label>
                                     <input type="number" class="form-control" id="experience" name="experience" value="0" min="0" readonly>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label for="gold" class="form-label">{{ get_text('gold', session.get('language', 'pt-br')) }}</label>
+                                    <label for="gold" class="form-label">Ouro</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-coin"></i></span>
                                         <input type="number" class="form-control" id="gold" name="gold" value="{{ character.gold if character else 50 }}" min="0" readonly>
@@ -203,22 +199,22 @@
                                 </div>
                             </div>
                             <div class="mb-4">
-                                <label for="inventory" class="form-label">{{ get_text('inventory', session.get('language', 'pt-br')) }}</label>
+                                <label for="inventory" class="form-label">Inventário</label>
                                 <div class="alert alert-info">
                                     <i class="bi bi-info-circle-fill me-2"></i>
-                                    {{ get_text('inventory_hint', session.get('language', 'pt-br')) }}
+                                    Itens iniciais baseados na classe e raça.
                                 </div>
                                 <ul class="list-group" id="inventory-list">
-                                    <li class="list-group-item bg-dark text-light border-secondary">{{ get_text('loading', session.get('language', 'pt-br')) }}</li>
+                                    <li class="list-group-item bg-dark text-light border-secondary">Carregando...</li>
                                 </ul>
                                 <input type="hidden" id="inventory" name="inventory" value="{{ ','.join(character.inventory) if character and character.inventory else '' }}">
                             </div>
                             <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-primary btn-lg">
-                                    {% if character %}{{ get_text('save_changes', session.get('language', 'pt-br')) }}{% else %}{{ get_text('create_character', session.get('language', 'pt-br')) }}{% endif %}
+                                    {% if character %}Salvar Alterações{% else %}Criar Personagem{% endif %}
                                 </button>
                                 {% if character %}
-                                <a href="{{ url_for('game') }}" class="btn btn-success">{{ get_text('continue_game', session.get('language', 'pt-br')) }}</a>
+                                <a href="{{ url_for('routes.game') }}" class="btn btn-success">Continuar Jogo</a>
                                 {% endif %}
                             </div>
                         </form>

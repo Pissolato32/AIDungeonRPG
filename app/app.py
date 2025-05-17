@@ -1,3 +1,4 @@
+# filepath: c:\Users\rodri\Desktop\REPLIT RPG\app\app.py
 from flask import (
     Flask,
     render_template,
@@ -20,17 +21,19 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, root_dir)
 
 from core.models import Character
-from core.game_engine import GameEngine, GameState
+from core.game_engine import GameEngine
+from core.game_state_model import GameState  # Import GameState from its new location
 from ai.groq_client import GroqClient
 from web.config import Config
 from web.session_manager import SessionManager
 from web.logger import GameLogger
 from core.error_handler import (
     ErrorHandler,
-)  # Assuming core.error_handler is the one with get_text
+)
 from web.game_state_manager import GameStateManager
 from web.character_manager import CharacterManager
-from app.routes import bp as routes_bp
+
+# Não importe 'routes_bp' aqui ainda para evitar importação circular
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -47,20 +50,20 @@ class GameApp:
                 template_folder=os.path.join(root_dir, "templates"),
                 static_folder=os.path.join(root_dir, "static"),
             )
-            self.app.register_blueprint(routes_bp)
             self._configure_app()
-            self._register_routes()
+            # O blueprint será registrado após a criação da instância _game_app_instance
 
             # Initialize clients and engines
             self.groq_client = GroqClient()
-            self.game_engine = GameEngine()
+            self.game_engine = GameEngine()  # GameEngine agora tem seu próprio data_dir
 
-            # Ensure data directory exists
+            # data_dir para GameApp, se necessário para outros fins (embora GameEngine lide com saves)
             self.data_dir = os.path.join(root_dir, "data")
             if not os.path.exists(self.data_dir):
                 os.makedirs(self.data_dir)
         except Exception as e:
             logger.error(f"Error during app initialization: {e}")
+            logger.error(traceback.format_exc())
             raise
 
     def _configure_app(self):
@@ -69,19 +72,11 @@ class GameApp:
         self.app.config["SESSION_TYPE"] = os.environ.get("SESSION_TYPE", "filesystem")
         Session(self.app)
 
-    def _register_routes(self):
-        """Register all route handlers."""
-        # Main routes
-        self.app.route("/", methods=["GET"])(self.index)
-        self.app.route("/character", methods=["GET", "POST"])(self.character)
-        self.app.route("/game", methods=["GET"])(self.game)
-
-        # API routes
-        self.app.route("/api/action", methods=["POST"])(self.process_action)
-        self.app.route("/api/reset", methods=["POST"])(self.reset_game)
-
-        # Utility routes
-        # self.app.route("/change_language/<lang>", methods=["GET"])(self.change_language) # Rota removida
+    def _register_app_specific_routes(self):
+        """Register any application-specific routes not handled by blueprints."""
+        # Este método pode ser usado para rotas que não estão no blueprint principal.
+        # Por enquanto, está vazio, pois as rotas principais estão em routes.py
+        pass
 
     def run(self):
         """Run the Flask application."""
@@ -92,28 +87,31 @@ class GameApp:
         )
         self.app.run(**config)
 
-    # Route handlers
+    # Route handlers (these methods will be called by the blueprint routes)
     def index(self):
         """Handle the index route."""
         return render_template("index.html")
 
     def character(self):
         """Handle character creation and editing."""
-        # Ensure session is initialized
-        user_id = (
-            SessionManager.ensure_session_initialized()
-        )  # This already sets user_id and language in session
+        user_id = SessionManager.ensure_session_initialized()
 
         try:
             if request.method == "POST":
-                # Get form data
                 character_data = request.form.to_dict()
-
-                # Create and save character
                 character = self._create_character_from_form(character_data)
+
+                # Safely check and set user_id.
+                # Use getattr for reading the attribute to be explicit for type checkers
+                # that 'user_id' might not be a statically known attribute.
+                # The assignment character.user_id = user_id is a dynamic attribute assignment.
+                current_char_user_id = getattr(character, "user_id", None)
+                if not current_char_user_id or current_char_user_id != user_id:
+                    # Use setattr to explicitly set the attribute, satisfying type checkers
+                    setattr(character, "user_id", user_id)
+
                 self.game_engine.save_character(user_id, character)
 
-                # Initialize and save game state
                 game_state = self._create_initial_game_state()
                 self.game_engine.save_game_state(user_id, game_state)
 
@@ -122,253 +120,305 @@ class GameApp:
                     f"Name: {character.name}, Class: {character.character_class}",
                     user_id,
                 )
-                return redirect(url_for("game"))
-            else:
-                # GET request - check if character exists
+                flash(f"Personagem '{character.name}' criado com sucesso!", "success")
+                return redirect(url_for("routes.game"))
+            else:  # GET request
                 character_data = self.game_engine.load_character(user_id)
                 character = (
                     Character.from_dict(character_data) if character_data else None
                 )
-                if (
-                    not character and user_id in session
-                ):  # Only flash if a load was attempted for an existing session
-                    flash("Falha ao carregar personagem existente.", "error")
-                return render_template("character.html", character=character)
+                # Para a seção "Personagens Existentes" no template.
+                # Por enquanto, passaremos uma lista vazia.
+                # A lógica para carregar múltiplos personagens precisaria ser implementada
+                # no GameEngine e aqui, se essa funcionalidade for desejada.
+                existing_characters_list = []
+                # Se 'character' existe e você quer mostrá-lo na lista de "existentes" (para o user_id atual):
+                # if character:
+                #     char_obj_for_list = Character.from_dict({**character.to_dict(), "user_id": user_id})
+                #     existing_characters_list = [char_obj_for_list]
+                return render_template(
+                    "character.html",
+                    character=character,
+                    existing_characters=existing_characters_list,
+                )
 
         except ValueError as e:
             logger.error(f"ValueError in character route: {e}")
             flash(f"Entrada inválida: {str(e)}", "error")
-            return render_template("character.html", character=None, error=str(e))
+            # Ensure existing_characters is passed even in error cases
+            return render_template(
+                "character.html", character=None, error=str(e), existing_characters=[]
+            )
         except Exception as e:
             logger.error(f"Unexpected error in character route: {e}")
             logger.error(traceback.format_exc())
-            flash(f"Erro inesperado: {str(e)}", "error")
-            return render_template("character.html", character=None, error=str(e))
+            flash(
+                f"Erro inesperado ao processar dados do personagem: {str(e)}", "error"
+            )
+            # Ensure existing_characters is passed even in error cases
+            return render_template(
+                "character.html", character=None, error=str(e), existing_characters=[]
+            )
 
     def game(self):
         """Handle the main game view."""
-        if "user_id" not in session:
-            session["user_id"] = os.urandom(16).hex()
-            return redirect(url_for("character"))
-        user_id = session["user_id"]
+        user_id = session.get("user_id")
+        if not user_id:
+            flash(
+                "Sessão não encontrada, por favor crie ou selecione um personagem.",
+                "warning",
+            )
+            return redirect(url_for("routes.character"))
+
         character_data = self.game_engine.load_character(user_id)
         character = Character.from_dict(character_data) if character_data else None
-        game_state = self._load_game_state(session["user_id"])
+
         if not character:
-            return redirect(url_for("character"))
+            flash(
+                "Personagem não encontrado. Por favor, crie ou selecione um personagem.",
+                "warning",
+            )
+            return redirect(url_for("routes.character"))
+
+        game_state = self._load_game_state(user_id)
+        if not game_state:
+            logger.warning(
+                f"Game state not found for user {user_id}. Creating a new one."
+            )
+            game_state = self._create_initial_game_state()
+            self.game_engine.save_game_state(user_id, game_state)
 
         return render_template("game.html", character=character, game_state=game_state)
 
     def process_action(self):
         """Process a game action from the API."""
-        if "user_id" not in session:
+        user_id = session.get("user_id")
+        if not user_id:
             return self._error_response("no_active_session")
 
-        action_name_for_log = "unknown_action"
-        # Get action data
+        action_name_for_log: str = "unknown_action"  # Ensure type for all paths
         try:
             data = request.json
-            action = data.get("action")
-            action_name_for_log = action if action else "unknown_action"
+            if not data:
+                return self._error_response(
+                    "invalid_input", "Nenhum dado JSON recebido."
+                )
+
+            action_input = data.get("action")
+            # Garante que 'action' seja uma string para o GameEngine
+            action_for_engine = (
+                action_input if isinstance(action_input, str) else "unknown"
+            )
+            action_name_for_log = action_for_engine
             details = data.get("details", "")
 
-            GameLogger.log_game_action(action, details, session["user_id"])
-
-            # Load character and game state
-            character, game_state = self._load_character_and_state()
-
-            if not character:
-                return self._error_response("no_character_found")
-
-            # Process action
-            result = self.game_engine.process_action(
-                action, details, character, game_state, self.groq_client
+            GameLogger.log_game_action(
+                action_name_for_log, details, user_id or "unknown_user_process_action"
             )
 
-            # Save updated character and game state
+            character, game_state = self._load_character_and_state()
+
+            if not character:  # character pode ser None
+                return self._error_response("no_character_found")
+            if not game_state:
+                logger.error(
+                    f"Game state missing for user {user_id} in process_action. This should not happen."
+                )
+                game_state = self._create_initial_game_state()
+
+            result = self.game_engine.process_action(
+                action=action_for_engine,  # Usa a action garantida como string
+                details=details,
+                character=character,
+                game_state=game_state,
+                # action_handler é deixado como padrão (None)
+                ai_client=self.groq_client,  # Passa groq_client para o parâmetro correto
+            )
+
             self._save_character_and_state(character, game_state)
 
             return jsonify(result)
         except ValueError as e:
             GameLogger.log_game_action(
-                action, f"ValueError: {str(e)}", session["user_id"], "error"
+                action_name_for_log,  # Already guaranteed to be a string
+                f"ValueError: {str(e)}",
+                user_id or "unknown_user_value_error",
+                "error",
             )
             return self._error_response("invalid_input", str(e))
         except Exception as e:
             GameLogger.log_game_action(
-                action_name_for_log,
+                action_name_for_log,  # Already guaranteed to be a string
                 f"Unexpected error: {str(e)}",
-                session["user_id"],
+                user_id or "unknown_user_exception",
                 "error",
             )
             logger.error(traceback.format_exc())
             return self._error_response("unexpected", str(e))
 
     def reset_game(self):
-        """Reset the game state."""
-        if "user_id" not in session:
+        """Reset the game state but keeps character basic info for re-creation."""
+        user_id = session.get("user_id")
+        if not user_id:
             return self._error_response("no_active_session")
 
         try:
-            # Delete character
             try:
-                self.game_engine.delete_character(session["user_id"])
-            except Exception as e:
+                self.game_engine.delete_game_state(user_id)
                 GameLogger.log_game_action(
-                    "reset_game",
-                    f"Error deleting character: {str(e)}",
-                    session["user_id"],
-                    "error",
+                    "reset_game_state", "Game state deleted.", user_id
                 )
-                return self._error_response("reset_error_character", str(e))
-
-            # Delete game state
-            try:
-                self.game_engine.delete_game_state(session["user_id"])
             except Exception as e:
                 GameLogger.log_game_action(
-                    "reset_game",
+                    "reset_game_state",
                     f"Error deleting game state: {str(e)}",
-                    session["user_id"],
+                    user_id,
                     "error",
                 )
-                return self._error_response("reset_error_game_state", str(e))
+                logger.error(
+                    f"Failed to delete game state for {user_id} during reset: {e}"
+                )
 
-            # Generate new user ID
-            session["user_id"] = os.urandom(16).hex()
+            flash(
+                "Progresso do jogo resetado. Você pode editar seu personagem ou começar de novo.",
+                "info",
+            )
+            return jsonify(
+                {"success": True, "redirect_url": url_for("routes.character")}
+            )
 
-            return jsonify({"success": True})
         except Exception as e:
             GameLogger.log_game_action(
-                "reset_game", f"Unexpected error: {e}", session["user_id"], "error"
+                "reset_game",
+                f"Unexpected error: {e}",
+                user_id,  # user_id is checked at the beginning of the function
+                "error",
             )
+            logger.error(traceback.format_exc())
             return self._error_response("reset_error", str(e))
 
-    # def change_language(self, lang): # Método removido
-    #     """Change the user's language preference."""
-    #     # session["language"] = lang # Idioma agora é fixo
-    #     # logger.info(f"Language change attempt to {lang} for session {session.get('user_id')}, but language is fixed.")
-    #     return redirect(request.referrer or url_for("index"))
+    def select_character(self, user_id: str):
+        """Handle character selection (placeholder)."""
+        # Implementar lógica para carregar o personagem com user_id
+        # e definir na sessão, depois redirecionar para o jogo.
+        logger.info(f"Attempting to select character with user_id: {user_id}")
+        # Exemplo: session["user_id"] = user_id
+        # self.game_engine.load_character(user_id) etc.
+        flash(
+            f"Seleção de personagem para {user_id} ainda não implementada.", "warning"
+        )
+        return redirect(
+            url_for("routes.character")
+        )  # Redireciona de volta para a criação/edição
+
+    def delete_character(self, user_id: str):
+        """Handle character deletion (placeholder)."""
+        # Implementar lógica para deletar o personagem com user_id.
+        logger.info(f"Attempting to delete character with user_id: {user_id}")
+        # Exemplo: self.game_engine.delete_character(user_id)
+        # self.game_engine.delete_game_state(user_id)
+        flash(
+            f"Exclusão de personagem para {user_id} ainda não implementada.", "warning"
+        )
+        return redirect(url_for("routes.character"))
+
     # Helper methods
-
     def _create_initial_game_state(self) -> GameState:
-        """
-        Create an initial game state for a new character.
-
-        Returns:
-            GameState: A newly initialized game state
-        """
         return GameStateManager.create_initial_game_state()
 
     def _create_character_from_form(self, character_data: Dict[str, Any]) -> Character:
-        """
-        Create a character object from form data.
-
-        Args:
-            character_data: Dictionary containing character form data
-
-        Returns:
-            Character: A newly created character object
-        """
-        # Use CharacterManager to process attributes and create character
         return CharacterManager.create_character_from_form(character_data)
 
     def _get_character_attributes(
         self, character_data: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """
-        Extract and convert character attributes from form data.
-
-        Args:
-            character_data: Dictionary containing character form data
-
-        Returns:
-            Dictionary with properly typed character attributes
-        """
-        # Use CharacterManager to process attributes
         return CharacterManager.get_character_attributes(character_data)
 
-    def _load_game_state(self, user_id: str) -> GameState:
-        """
-        Load game state for a user.
-
-        Args:
-            user_id: The user's unique identifier
-
-        Returns:
-            GameState object
-        """
-        return GameStateManager.load_game_state(self.game_engine, user_id)
+    def _load_game_state(self, user_id: str) -> Optional[GameState]:
+        gs = GameStateManager.load_game_state(self.game_engine, user_id)
+        if not gs:
+            logger.info(
+                f"No game state found for user {user_id}, will create new if needed."
+            )
+        return gs
 
     def _load_character_and_state(
         self,
     ) -> Tuple[Optional[Character], Optional[GameState]]:
-        """
-        Load both character and game state for the current user.
+        user_id = session.get("user_id")
+        if not user_id:
+            return None, None
 
-        Returns:
-            Tuple containing character and game state objects
-        """
-        character_data = self.game_engine.load_character(session["user_id"])
+        character_data = self.game_engine.load_character(user_id)
         character = Character.from_dict(character_data) if character_data else None
-        game_state = self._load_game_state(session["user_id"])
+        game_state = self._load_game_state(user_id)
+
+        if character and not game_state:
+            logger.warning(
+                f"Character {character.name if character else 'Unknown'} found but no game state for user {user_id}. Creating new game state."
+            )
+            game_state = self._create_initial_game_state()
+            self.game_engine.save_game_state(user_id, game_state)
+
         return character, game_state
 
     def _save_character_and_state(
         self, character: Character, game_state: GameState
     ) -> None:
-        """
-        Save both character and game state for the current user.
-
-        Args:
-            character: Character object to save
-            game_state: GameState object to save
-        """
-        self.game_engine.save_character(session["user_id"], character)
-        self.game_engine.save_game_state(session["user_id"], game_state)
+        user_id = session.get("user_id")
+        if not user_id:
+            logger.error(
+                "Attempted to save character/state without user_id in session."
+            )
+            return
+        self.game_engine.save_character(user_id, character)
+        self.game_engine.save_game_state(user_id, game_state)
 
     def _error_response(self, error_key: str, error_details: str = "") -> Any:
-        """
-        Create a standardized error response.
-
-        Args:
-            error_key: Key for the error message in translations
-            error_details: Additional error details
-
-        Returns:
-            JSON response with error message
-        """
-        return ErrorHandler.create_error_response(
-            error_key, "pt-br", error_details
-        )  # Hardcode pt-br for now
+        return ErrorHandler.create_error_response(error_key, "pt-br", error_details)
 
     def _log_game_action(
-        self, action: str, details: str = "", user_id: str = None, level: str = "info"
+        self,
+        action: str,
+        details: str = "",
+        user_id: Optional[str] = None,
+        level: str = "info",
     ) -> None:
-        """
-        Log game actions with consistent formatting and optional context.
+        # Determine effective_user_id, ensuring it's a string
+        _effective_user_id: Optional[str] = user_id or session.get("user_id")
+        effective_user_id_str: str = (
+            _effective_user_id if _effective_user_id is not None else "anonymous"
+        )
 
-        Args:
-            action: The action being performed
-            details: Additional details about the action
-            user_id: Optional user ID for context
-            level: Log level ('debug', 'info', 'warning', 'error', 'critical')
-        """
-        GameLogger.log_game_action(action, details, user_id, level)
+        # Ensure action and details are strings if they somehow become None
+        GameLogger.log_game_action(
+            action if action is not None else "unspecified_action",
+            details if details is not None else "",
+            effective_user_id_str,  # Pass the guaranteed string
+            level,
+        )
 
     def _get_app_config(self) -> Dict[str, Any]:
-        """
-        Get application configuration from environment variables with sensible defaults.
-
-        Returns:
-            Dictionary with application configuration
-        """
         return Config.get_app_config()
 
 
-# Create and run the application
+# --- Application Setup ---
+# 1. Create the GameApp instance (which creates the Flask app instance)
 _game_app_instance = GameApp()
-application = _game_app_instance.app  # Export the Flask application object
 
+# 2. Get the Flask app from the GameApp instance
+application = _game_app_instance.app
+
+# 3. NOW import the blueprint from app.routes
+# This import needs _game_app_instance to be defined.
+from app.routes import bp as routes_bp
+
+# 4. Register the blueprint with the Flask app instance
+application.register_blueprint(routes_bp)
+
+# 5. Register any app-specific routes (if any)
+_game_app_instance._register_app_specific_routes()  # Renamed for clarity
+
+# --- Run the Application ---
 if __name__ == "__main__":
     _game_app_instance.run()
