@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional  # Added List
 
 from core.enemy import Enemy  # Import Enemy class
 from core.models import Character
+
 # Direct import for generate_quest
 from utils.quest_generator import generate_quest
 
@@ -37,12 +38,9 @@ class ActionHandler:
                 details if details else 'unknown'}' is not recognized or not implemented.",
         }
 
-    def ai_response(self,
-                    action: str,
-                    details: str,
-                    character: "Character",
-                    game_state: Any) -> Dict[str,
-                                             Any]:
+    def ai_response(
+        self, action: str, details: str, character: "Character", game_state: Any
+    ) -> Dict[str, Any]:
         """Fallback AI response if a specific handler doesn't fully process."""
         return {
             "success": False,
@@ -57,12 +55,9 @@ class ActionHandler:
         """Validate the action before processing."""
         return action in self.VALID_ACTIONS
 
-    def handle_action(self,
-                      action: str,
-                      details: str,
-                      character: "Character",
-                      game_state: Any) -> Dict[str,
-                                               Any]:
+    def handle_action(
+        self, action: str, details: str, character: "Character", game_state: Any
+    ) -> Dict[str, Any]:
         """Handle the action based on its type."""
         if not self.validate_action(action):
             logger.warning(f"Invalid action attempted: {action}")
@@ -79,10 +74,7 @@ class MoveActionHandler(ActionHandler):
         self, details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
         # Init world generator
-        data_dir = os.path.join(
-            os.path.dirname(
-                os.path.abspath(__file__)),
-            "data")
+        data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
         world_generator = WorldGenerator(data_dir)
 
         destination = details.strip().lower() if isinstance(details, str) else ""
@@ -127,12 +119,10 @@ class MoveActionHandler(ActionHandler):
             new_location = world_generator.generate_adjacent_location(
                 current_location_id, normalized_direction, game_state.world_map
             )
-            game_state.world_map["locations"][new_location["id"]
-                                              ] = new_location
-            current_location.setdefault(
-                "connections",
-                {})[normalized_direction] = (
-                new_location["id"])
+            game_state.world_map["locations"][new_location["id"]] = new_location
+            current_location.setdefault("connections", {})[normalized_direction] = (
+                new_location["id"]
+            )
             world_generator.save_world(game_state.world_map)
             next_location_id = new_location["id"]
 
@@ -215,32 +205,35 @@ class LookActionHandler(ActionHandler):
         target = details.strip().lower() if isinstance(details, str) else ""
 
         # Se o jogador tentar olhar para algo específico
-        if target and hasattr(game_state,
-                              "npcs_present") and game_state.npcs_present:
+        if target and hasattr(game_state, "npcs_present") and game_state.npcs_present:
             # Verifica se o alvo está entre os NPCs presentes
             npc_name = next(
-                (npc for npc in game_state.npcs_present if npc.lower() == target), None)
+                (npc for npc in game_state.npcs_present if npc.lower() == target), None
+            )
 
             if npc_name:
-                npc_details = self.get_npc_details(
-                    npc_name, character, game_state)
+                npc_details = self.get_npc_details(npc_name, character, game_state)
 
                 return {
                     "success": True,
                     "message": (
-                        f"You observe {npc_name} closely. " f"{
+                        f"You observe {npc_name} closely. "
+                        f"{
                             npc_details.get(
                                 'race',
                                 'A humanoid')} who works as a {
                             npc_details.get(
                                 'profession',
-                                'unknown')}. " f"{npc_name} seems {
+                                'unknown')}. "
+                        f"{npc_name} seems {
                             npc_details.get(
                                 'personality',
-                                'ordinary')}. " f"By their appearance and posture, you estimate they are about level {
+                                'ordinary')}. "
+                        f"By their appearance and posture, you estimate they are about level {
                                     npc_details.get(
                                         'level',
-                                        '?')}."),
+                                        '?')}."
+                    ),
                 }
 
         # Caso contrário, executa a resposta padrão do cenário
@@ -272,7 +265,8 @@ class TalkActionHandler(ActionHandler):
             # Check if the NPC is present in the location
             npc_name = details.strip()
             if game_state.npcs_present and any(
-                    npc.lower() == npc_name.lower() for npc in game_state.npcs_present):
+                npc.lower() == npc_name.lower() for npc in game_state.npcs_present
+            ):
                 # Find the exact name of the NPC (preserving case)
                 npc_name = next(
                     npc
@@ -289,30 +283,35 @@ class TalkActionHandler(ActionHandler):
                     npc_details = game_state.known_npcs[npc_name]
 
                     # Update the interaction count
-                    npc_details["interactions"] = npc_details.get(
-                        "interactions", 0) + 1
+                    npc_details["interactions"] = npc_details.get("interactions", 0) + 1
 
                     # Use the details to enrich the AI response
-                    result = self.ai_response(
-                        "talk", details, character, game_state)
+                    result = self.ai_response("talk", details, character, game_state)
 
                     # Add NPC information to the response based on the
                     # familiarity level
                     if "message" in result:
                         if npc_details["interactions"] <= 2:
-                            result["message"] += f"\n\nYou recognize {npc_name}, a {
+                            result[
+                                "message"
+                            ] += f"\n\nYou recognize {npc_name}, a {
                                 npc_details['race']} {
                                 npc_details['profession']}."
                         else:
                             # More details for NPCs the player has interacted
                             # with multiple times
-                            result["message"] += f"\n\n{npc_name} smiles at a familiar face. As an experienced {
+                            result[
+                                "message"
+                            ] += f"\n\n{npc_name} smiles at a familiar face. As an experienced {
                                 npc_details['profession']}, {npc_name} has many stories to tell."
 
                             # Add a hint about quests if the NPC has any
-                            if (npc_details.get("quests")
-                                    and random.random() < 0.7):  # 70% chance
-                                result["message"] += f" {npc_name} mentions needing help with '{
+                            if (
+                                npc_details.get("quests") and random.random() < 0.7
+                            ):  # 70% chance
+                                result[
+                                    "message"
+                                ] += f" {npc_name} mentions needing help with '{
                                     random.choice(
                                         npc_details['quests'])}'."
 
@@ -321,16 +320,16 @@ class TalkActionHandler(ActionHandler):
 
                     return result
                 # First interaction with this NPC
-                npc_details = self.get_npc_details(
-                    npc_name, character, game_state)
+                npc_details = self.get_npc_details(npc_name, character, game_state)
 
                 # Use the details to enrich the AI response
-                result = self.ai_response(
-                    "talk", details, character, game_state)
+                result = self.ai_response("talk", details, character, game_state)
 
                 # Add NPC information to the response
                 if "message" in result:
-                    result["message"] += f"\n\nYou notice that {npc_name} is a {
+                    result[
+                        "message"
+                    ] += f"\n\nYou notice that {npc_name} is a {
                         npc_details['race']} {
                         npc_details['profession']}."
 
@@ -341,7 +340,9 @@ class TalkActionHandler(ActionHandler):
                         ] += f" It seems that {npc_name} knows about {', '.join(npc_details['knowledge'][:2])}."
 
                     if npc_details.get("quests"):
-                        result["message"] += f" {npc_name} mentions something about '{
+                        result[
+                            "message"
+                        ] += f" {npc_name} mentions something about '{
                             npc_details['quests'][0]}'."
 
                 # Record the NPC as known
@@ -385,9 +386,7 @@ class SearchActionHandler(ActionHandler):
         details_lower = details.lower() if isinstance(details, str) else ""
         if "quest" in details_lower:
             # Check if there are NPCs present who can offer quests
-            if not hasattr(
-                    game_state,
-                    "npcs_present") or not game_state.npcs_present:
+            if not hasattr(game_state, "npcs_present") or not game_state.npcs_present:
                 return {
                     "success": False,
                     "message": "There is no one around who can offer quests at the moment.",
@@ -457,7 +456,8 @@ class AttackActionHandler(ActionHandler):
             ):
                 # Find the exact name of the NPC (preserving case)
                 npc_name = next(
-                    npc for npc in game_state.npcs_present if npc.lower() == target)
+                    npc for npc in game_state.npcs_present if npc.lower() == target
+                )
 
                 # Create an enemy based on the NPC
                 enemy = Enemy(
@@ -564,10 +564,10 @@ class UseItemActionHandler(ActionHandler):
 
         # Look for the exact item or partial match
         for i, inv_item in enumerate(character.inventory):
-            if isinstance(
-                inv_item, str) and (
-                inv_item.lower() == item_name_query.lower() or (
-                    item_name_query and inv_item.lower() in item_name_query.lower())):
+            if isinstance(inv_item, str) and (
+                inv_item.lower() == item_name_query.lower()
+                or (item_name_query and inv_item.lower() in item_name_query.lower())
+            ):
                 item_found = True
                 item_index = i
                 actual_item_name = (
@@ -602,8 +602,7 @@ class UseItemActionHandler(ActionHandler):
             # Logic for different item types
             if item_type == "weapon":
                 # Equip weapon
-                if not hasattr(character,
-                               "equipment") or character.equipment is None:
+                if not hasattr(character, "equipment") or character.equipment is None:
                     character.equipment = {}
 
                 # Store the previously equipped item, if any
@@ -634,8 +633,7 @@ class UseItemActionHandler(ActionHandler):
 
             if item_type == "armor":
                 # Equip armor
-                if not hasattr(character,
-                               "equipment") or character.equipment is None:
+                if not hasattr(character, "equipment") or character.equipment is None:
                     character.equipment = {}
 
                 # Determine the slot based on the subtype
@@ -708,8 +706,7 @@ class UseItemActionHandler(ActionHandler):
                         # For stamina, assuming it's in attributes like hp
                         if effect_type == "stamina":
                             old_value = character.attributes.get(attr_name, 0)
-                            max_value = character.attributes.get(
-                                max_attr_name, 0)
+                            max_value = character.attributes.get(max_attr_name, 0)
                             character.attributes[attr_name] = min(
                                 old_value + effect_value, max_value
                             )
@@ -820,9 +817,7 @@ class UseItemActionHandler(ActionHandler):
                 equip_type = "helmet"
 
             # Initialize equipment if it doesn't exist
-            if not hasattr(
-                    character,
-                    "equipment") or character.equipment is None:
+            if not hasattr(character, "equipment") or character.equipment is None:
                 character.equipment = {}
 
             # Store the previously equipped item, if any
@@ -864,8 +859,7 @@ class UseItemActionHandler(ActionHandler):
             ):
                 hunger_restore = 20
                 character.survival_stats["current_hunger"] = min(
-                    character.survival_stats["current_hunger"] +
-                    hunger_restore,
+                    character.survival_stats["current_hunger"] + hunger_restore,
                     character.survival_stats["max_hunger"],
                 )
 
@@ -875,8 +869,7 @@ class UseItemActionHandler(ActionHandler):
             ):
                 thirst_restore = 20
                 character.survival_stats["current_thirst"] = min(
-                    character.survival_stats["current_thirst"] +
-                    thirst_restore,
+                    character.survival_stats["current_thirst"] + thirst_restore,
                     character.survival_stats["max_thirst"],
                 )
 
@@ -1097,8 +1090,10 @@ class CustomActionHandler(ActionHandler):
                 # Start the combat
                 if not hasattr(game_state, "combat") or not game_state.combat:
                     game_state.combat = {
-                        "enemy": enemy, "round": 1, "log": [
-                            f"A {enemy_name} appeared and you attacked it!"], }
+                        "enemy": enemy,
+                        "round": 1,
+                        "log": [f"A {enemy_name} appeared and you attacked it!"],
+                    }
 
                     return {
                         "success": True,
@@ -1117,8 +1112,7 @@ class CustomActionHandler(ActionHandler):
             has_map_item = False
             if hasattr(character, "inventory"):
                 map_items = ["Map", "Map Scroll", "Compass", "Regional Map"]
-                has_map_item = any(
-                    item in character.inventory for item in map_items)
+                has_map_item = any(item in character.inventory for item in map_items)
 
             if has_map_item:
                 # Player has a map, show the current location
@@ -1134,10 +1128,10 @@ class CustomActionHandler(ActionHandler):
                             loc_coords = game_state.world_map[loc_id].get(
                                 "coordinates", {}
                             )
-                            distance = ((loc_coords.get("x", 0) -
-                                         coords.get("x", 0)) ** 2 +
-                                        (loc_coords.get("y", 0) -
-                                         coords.get("y", 0)) ** 2) ** 0.5
+                            distance = (
+                                (loc_coords.get("x", 0) - coords.get("x", 0)) ** 2
+                                + (loc_coords.get("y", 0) - coords.get("y", 0)) ** 2
+                            ) ** 0.5
                             if distance <= 2:  # Locations up to 2 units away
                                 known_locations.append(
                                     f"{loc_info['name']} ({loc_coords.get('x', 0)}, {loc_coords.get('y', 0)})"
@@ -1152,8 +1146,8 @@ class CustomActionHandler(ActionHandler):
                                 0)}, {
                             coords.get(
                                 'y',
-                                0)}). " +
-                        f"Nearby locations you know: {
+                                0)}). "
+                        + f"Nearby locations you know: {
                             ', '.join(known_locations) if known_locations else 'none besides this one'}.",
                     }
                 return {

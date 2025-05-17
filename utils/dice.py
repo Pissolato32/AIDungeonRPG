@@ -109,8 +109,7 @@ def calculate_damage(
         current_attack_type: str = attack_type if attack_type is not None else "basic"
 
         # Get base attack parameters (implementação separada)
-        attack_params = _get_attack_parameters(
-            current_attack_type, attacker_stats)
+        attack_params = _get_attack_parameters(current_attack_type, attacker_stats)
         min_damage, max_damage, hit_chance = attack_params
 
         # Apply weapon modifiers if present
@@ -159,7 +158,8 @@ def calculate_damage(
         else:
             logger.warning(
                 f"defender_stats['resistance'] is not dict but {
-                    type(resist_dict)}")
+                    type(resist_dict)}"
+            )
 
         # Clamp resistance entre 0 e 1
         resistance = max(0.0, min(resistance, 1.0))

@@ -144,16 +144,14 @@ def _generate_quest_details(quest_type: str, location: str) -> Dict[str, str]:
     if quest_type == "rescue":
         rescued_person_type = target_name  # e.g. "Sobrevivente Preso"
         name = f"Resgatar: {rescued_person_type.capitalize()}"
-        description = (
-            f"Alguém precisa de resgate ({
-                rescued_person_type.lower()}) em {location}.")
+        description = f"Alguém precisa de resgate ({
+                rescued_person_type.lower()}) em {location}."
 
     elif quest_type == "repair_fortify":
         item_to_fix = target_name  # e.g. "Gerador do Abrigo"
         name = f"Reparar: {item_to_fix.capitalize()}"
-        description = (
-            f"O {
-                item_to_fix.lower()} em {location} precisa de reparos urgentes.")
+        description = f"O {
+                item_to_fix.lower()} em {location} precisa de reparos urgentes."
 
     return {"name": name, "description": description}
 
@@ -219,8 +217,9 @@ def _generate_quest_rewards(difficulty: int, quest_type: str) -> List[str]:
         else:
             rewards.append(
                 random.choice(
-                    possible_rewards["mid_tier"] +
-                    possible_rewards["high_tier"]))
+                    possible_rewards["mid_tier"] + possible_rewards["high_tier"]
+                )
+            )
 
     return list(set(rewards))  # Ensure unique rewards if multiple are chosen
 

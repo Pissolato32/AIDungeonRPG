@@ -72,8 +72,7 @@ class CharacterManager:
         return max(1, max_hp)
 
     @classmethod
-    def create_character_from_form(
-            cls, character_data: Dict[str, Any]) -> "Character":
+    def create_character_from_form(cls, character_data: Dict[str, Any]) -> "Character":
         from utils.character_utils import (
             calculate_initial_gold,
             generate_initial_inventory,
@@ -82,8 +81,7 @@ class CharacterManager:
         # This dictionary will hold all attributes parsed from the form and defaults.
         # Some will be passed directly to Character init, others will go into
         # Character.attributes.
-        parsed_attributes_from_form = cls.get_character_attributes(
-            character_data)
+        parsed_attributes_from_form = cls.get_character_attributes(character_data)
 
         # Extract values for direct Character __init__ parameters
         name_val = parsed_attributes_from_form.pop("name", "Unknown")
@@ -108,8 +106,7 @@ class CharacterManager:
         # current_hp, max_hp, current_stamina, max_stamina, gold.
         # We will update hp, stamina, and gold in this dictionary.
         # type: ignore
-        final_character_attributes_dict: Dict[str,
-                                              int] = parsed_attributes_from_form
+        final_character_attributes_dict: Dict[str, int] = parsed_attributes_from_form
 
         # Calculate and update HP in the attributes dictionary
         constitution_for_hp_calc = final_character_attributes_dict.get(
@@ -131,8 +128,9 @@ class CharacterManager:
         stamina_base = 10  # Valor base inicial de Stamina
         dex_mod_stamina = (dexterity_for_stamina_calc - 10) // 2
         con_mod_stamina = (constitution_for_stamina_calc - 10) // 2
-        max_stamina_val = (stamina_base + (dex_mod_stamina *
-                           level_val) + (con_mod_stamina * level_val))
+        max_stamina_val = (
+            stamina_base + (dex_mod_stamina * level_val) + (con_mod_stamina * level_val)
+        )
         # Ensure stamina is at least 1
         max_stamina_val = max(1, max_stamina_val)
         final_character_attributes_dict["max_stamina"] = max_stamina_val
@@ -146,10 +144,8 @@ class CharacterManager:
         # Generate initial inventory (this is a direct Character field)
         # Use stats from the final_character_attributes_dict for generation if
         # needed
-        strength_for_inv_calc = final_character_attributes_dict.get(
-            "strength", 10)
-        dexterity_for_inv_calc = final_character_attributes_dict.get(
-            "dexterity", 10)
+        strength_for_inv_calc = final_character_attributes_dict.get("strength", 10)
+        dexterity_for_inv_calc = final_character_attributes_dict.get("dexterity", 10)
         intelligence_for_inv_calc = final_character_attributes_dict.get(
             "intelligence", 10
         )
@@ -183,8 +179,7 @@ class CharacterManager:
         )
 
     @classmethod
-    def get_character_attributes(
-            cls, character_data: Dict[str, Any]) -> Dict[str, Any]:
+    def get_character_attributes(cls, character_data: Dict[str, Any]) -> Dict[str, Any]:
         attributes = {}
 
         for attr, default in cls.ATTRIBUTE_DEFAULTS["int"].items():
@@ -193,8 +188,7 @@ class CharacterManager:
                 attributes[attr] = int(value)
             except (ValueError, TypeError):
                 attributes[attr] = default
-                logger.warning(
-                    "Invalid value for %s, using default: %s", attr, default)
+                logger.warning("Invalid value for %s, using default: %s", attr, default)
 
         for attr, default in cls.ATTRIBUTE_DEFAULTS["str"].items():
             form_key = "class" if attr == "character_class" else attr

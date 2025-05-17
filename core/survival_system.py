@@ -93,7 +93,8 @@ class SurvivalSystem:
                     getattr(
                         character,
                         'name',
-                        'Unknown')}")
+                        'Unknown')}"
+            )
 
         stats = character.survival_stats
         messages: List[str] = []
@@ -147,36 +148,42 @@ class SurvivalSystem:
         }
         return costs.get(action, {"energy": 1})
 
-    def _get_environmental_effects(
-            self, environment: str) -> List[EnvironmentalEffect]:
+    def _get_environmental_effects(self, environment: str) -> List[EnvironmentalEffect]:
         """Obtém efeitos do ambiente atual."""
-        effects: Dict[str,
-                      List[EnvironmentalEffect]] = {"desert": [{"name": "Calor Extremo",
-                                                                "description": "O sol escaldante drena sua energia",
-                                                                "stats_modifier": {"thirst": -8,
-                                                                                   "temperature": 15,
-                                                                                   "energy": -3},
-                                                                "duration": 5,
-                                                                }],
-                                                    "snow": [{"name": "Frio Intenso",
-                                                              "description": "O frio congela seus ossos",
-                                                              "stats_modifier": {"temperature": -15,
-                                                                                 "energy": -5},
-                                                              "duration": 5,
-                                                              }],
-                                                    "forest": [{"name": "Umidade",
-                                                                "description": "A umidade da floresta é revigorante",
-                                                                "stats_modifier": {"temperature": -2,
-                                                                                   "thirst": -1},
-                                                                "duration": 3,
-                                                                }],
-                                                    "mountain": [{"name": "Altitude",
-                                                                  "description": "O ar rarefeito dificulta a respiração",
-                                                                  "stats_modifier": {"energy": -5,
-                                                                                     "temperature": -10},
-                                                                  "duration": 4,
-                                                                  }],
-                                                    }
+        effects: Dict[str, List[EnvironmentalEffect]] = {
+            "desert": [
+                {
+                    "name": "Calor Extremo",
+                    "description": "O sol escaldante drena sua energia",
+                    "stats_modifier": {"thirst": -8, "temperature": 15, "energy": -3},
+                    "duration": 5,
+                }
+            ],
+            "snow": [
+                {
+                    "name": "Frio Intenso",
+                    "description": "O frio congela seus ossos",
+                    "stats_modifier": {"temperature": -15, "energy": -5},
+                    "duration": 5,
+                }
+            ],
+            "forest": [
+                {
+                    "name": "Umidade",
+                    "description": "A umidade da floresta é revigorante",
+                    "stats_modifier": {"temperature": -2, "thirst": -1},
+                    "duration": 3,
+                }
+            ],
+            "mountain": [
+                {
+                    "name": "Altitude",
+                    "description": "O ar rarefeito dificulta a respiração",
+                    "stats_modifier": {"energy": -5, "temperature": -10},
+                    "duration": 4,
+                }
+            ],
+        }
         return effects.get(environment, [])
 
     def _check_critical_conditions(self, stats: SurvivalStats) -> List[str]:
@@ -190,30 +197,23 @@ class SurvivalSystem:
 
         if stats["thirst"] <= self._critical_thresholds["thirst"]:
             messages.append(
-                "Sua garganta está seca. "
-                "Precisa encontrar água rapidamente!")
+                "Sua garganta está seca. " "Precisa encontrar água rapidamente!"
+            )
 
         if stats["energy"] <= self._critical_thresholds["energy"]:
             messages.append(
-                "Você mal consegue manter os olhos abertos. "
-                "Precisa descansar!")
+                "Você mal consegue manter os olhos abertos. " "Precisa descansar!"
+            )
 
         temp_min, temp_max = self._critical_thresholds["temperature"]
         if stats["temperature"] < temp_min:
-            messages.append(
-                "Você está tremendo de frio. "
-                "Precisa se aquecer!")
+            messages.append("Você está tremendo de frio. " "Precisa se aquecer!")
         elif stats["temperature"] > temp_max:
-            messages.append(
-                "O calor está insuportável. "
-                "Precisa se refrescar!")
+            messages.append("O calor está insuportável. " "Precisa se refrescar!")
 
         return messages
 
-    def _apply_vital_effects(
-            self,
-            stats: SurvivalStats,
-            messages: List[str]) -> None:
+    def _apply_vital_effects(self, stats: SurvivalStats, messages: List[str]) -> None:
         """Aplica efeitos nas estatísticas vitais."""
         if stats["health"] <= 0:
             messages.append("Você está gravemente ferido e precisa de cura!")

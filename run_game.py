@@ -3,10 +3,11 @@
 Script de inicialização para o jogo RPG.
 """
 
-from app.app import _game_app_instance, application
 import logging
 import os
 import sys
+
+from app.app import _game_app_instance, application
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)

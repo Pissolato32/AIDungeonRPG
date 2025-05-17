@@ -81,8 +81,7 @@ class GameState:
     location_id: str = ""
     events: List[str] = field(default_factory=list)
     world_map: Dict[str, LocationData] = field(default_factory=dict)
-    visited_locations: Dict[str, VisitedLocationDetail] = field(
-        default_factory=dict)
+    visited_locations: Dict[str, VisitedLocationDetail] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert game state to a dictionary."""
@@ -129,17 +128,15 @@ class GameState:
         if len(self.messages) > 50:
             self.messages = self.messages[-50:]
 
-    def discover_location(
-            self,
-            location_id: str,
-            location_data: LocationData) -> None:
+    def discover_location(self, location_id: str, location_data: LocationData) -> None:
         """Add a new discovered location."""
         self.discovered_locations[location_id] = location_data
         self.add_message(
             f"Você descobriu: {
                 location_data.get(
                     'name',
-                    'um novo local desconhecido')}!")
+                    'um novo local desconhecido')}!"
+        )
 
     def add_npc(
         self, npc_id: str, npc_data: Dict[str, Any]

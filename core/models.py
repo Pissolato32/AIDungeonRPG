@@ -45,27 +45,15 @@ class Character:
 
     @property
     def max_hunger(self) -> int:
-        return max(
-            self.survival_stats.get(
-                "max_hunger",
-                1),
-            1)  # nunca menor que 1
+        return max(self.survival_stats.get("max_hunger", 1), 1)  # nunca menor que 1
 
     @property
     def current_thirst(self) -> int:
-        return max(
-            self.survival_stats.get(
-                "current_thirst",
-                1),
-            1)  # nunca menor que 1
+        return max(self.survival_stats.get("current_thirst", 1), 1)  # nunca menor que 1
 
     @property
     def max_thirst(self) -> int:
-        return max(
-            self.survival_stats.get(
-                "max_thirst",
-                1),
-            1)  # nunca menor que 1
+        return max(self.survival_stats.get("max_thirst", 1), 1)  # nunca menor que 1
 
     @property
     def agility(self) -> int:
@@ -134,8 +122,7 @@ class NPCBase:
     level: int = field(default=1)  # Nível de dificuldade ou poder do NPC
 
     is_hostile: bool = field(default=False)  # Se o NPC é hostil ou amigável
-    location_id: Optional[str] = field(
-        default=None)  # Onde o NPC se encontra no mundo
+    location_id: Optional[str] = field(default=None)  # Onde o NPC se encontra no mundo
 
     def speak(self, topic: str) -> str:
         """Retorna a fala do NPC sobre um tópico, ou frase padrão."""
@@ -153,6 +140,8 @@ class NPCBase:
                 self.name} is a level {
                 self.level} {
                 self.race} {
-                    self.profession} " f"who seems {
+                    self.profession} "
+            f"who seems {
                         self.personality}. {
-                            self.description}")
+                            self.description}"
+        )

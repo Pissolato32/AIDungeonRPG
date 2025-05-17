@@ -15,8 +15,9 @@ from .models import Character
 
 SkillType = Literal["active", "passive", "combat", "crafting", "survival"]
 ResourceType = Literal["stamina", "mana", "focus", "rage"]
-StatType = Literal["strength", "dexterity",
-                   "constitution", "intelligence", "wisdom", "charisma"]
+StatType = Literal[
+    "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"
+]
 
 
 class SkillEffect(TypedDict):
@@ -42,8 +43,7 @@ class Skill:
     description: str
     skill_type: SkillType
     level_requirement: int = 1
-    resource_cost: Optional[Dict[ResourceType, int]
-                            ] = None  # E.g. {"stamina": 10}
+    resource_cost: Optional[Dict[ResourceType, int]] = None  # E.g. {"stamina": 10}
     cooldown: int = 0  # Turns until skill can be used again
     effects: List[SkillEffect] = field(default_factory=list)
     prerequisites: List[str] = field(
@@ -140,8 +140,7 @@ class SkillManager:
         self, character: Character, skill_type: Optional[SkillType] = None
     ) -> List[Skill]:
         """Get all skills available to a character based on class and level."""
-        class_skills = self.class_skill_trees.get(
-            character.character_class, [])
+        class_skills = self.class_skill_trees.get(character.character_class, [])
         available = []
 
         for skill_id in class_skills:
@@ -160,9 +159,7 @@ class SkillManager:
     ) -> Dict[str, Any]:
         """Use a skill and apply its effects."""
         if skill_id not in character.skills:
-            return {
-                "success": False,
-                "message": "You haven't learned this skill yet"}
+            return {"success": False, "message": "You haven't learned this skill yet"}
 
         skill = self.available_skills.get(skill_id)
         if not skill:
@@ -182,17 +179,16 @@ class SkillManager:
         for effect in skill.effects:
             # Implement effect application based on type
             # This is where we'd integrate with combat/status systems
-            results.append(
-                f"{effect['type']} effect applied to {effect['target']}")
+            results.append(f"{effect['type']} effect applied to {effect['target']}")
 
         return {
             "success": True,
             "message": f"Used {
                 skill.name}",
-            "effects": results}
+            "effects": results,
+        }
 
-    def learn_skill(self, character: Character,
-                    skill_id: str) -> Dict[str, Any]:
+    def learn_skill(self, character: Character, skill_id: str) -> Dict[str, Any]:
         """Attempt to learn a new skill."""
         if skill_id in character.skills:
             return {"success": False, "message": "You already know this skill"}

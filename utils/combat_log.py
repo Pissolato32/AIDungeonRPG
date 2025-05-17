@@ -222,6 +222,9 @@ class CombatLog:
                     )
 
         return sorted(
-            highlights, key=lambda x: (
-                x["type"] == "kill", x["type"] == "critical", x["round"]), reverse=True, )[
-            :5]  # Retorna os 5 momentos mais interessantes
+            highlights,
+            key=lambda x: (x["type"] == "kill", x["type"] == "critical", x["round"]),
+            reverse=True,
+        )[
+            :5
+        ]  # Retorna os 5 momentos mais interessantes

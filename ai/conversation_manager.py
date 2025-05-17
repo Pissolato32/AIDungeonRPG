@@ -118,11 +118,13 @@ class ConversationManager:
 
         if history:
             prompt += "\nHistórico da conversa (mais recente primeiro, últimas 5 interações):\n"
-            for msg in reversed(
-                    history[-5:]):  # Mostrar as mais recentes primeiro
+            for msg in reversed(history[-5:]):  # Mostrar as mais recentes primeiro
                 role_prefix = (
-                    "Jogador:" if msg["role"] == "user" else f"{
-                        context.npc_name}:")
+                    "Jogador:"
+                    if msg["role"] == "user"
+                    else f"{
+                        context.npc_name}:"
+                )
                 prompt += f"{role_prefix} {msg['content']}\n"
 
         prompt += (
@@ -174,8 +176,7 @@ class ConversationManager:
         if context:  # Only update memory if context is provided
             self._update_npc_memory(npc_name, message, context)
 
-    def _get_conversation_history(
-            self, character_id: str) -> List[ConversationMessage]:
+    def _get_conversation_history(self, character_id: str) -> List[ConversationMessage]:
         """Retrieve conversation history for a character.
 
         Args:
@@ -207,17 +208,16 @@ class ConversationManager:
         """
         if npc_name not in self.npc_memory:
             self.npc_memory[npc_name] = NPCMemory(
-                topics=set(),
-                shared_info=set(),
-                mentioned_quests=set(),
-                trust_level=0)
+                topics=set(), shared_info=set(), mentioned_quests=set(), trust_level=0
+            )
 
         memory = self.npc_memory[npc_name]
 
         # Ensure context is a dictionary before proceeding
         if not isinstance(context, dict):
             logger.warning(
-                f"Context for NPC memory update is not a dict for {npc_name}. Context: {context}")
+                f"Context for NPC memory update is not a dict for {npc_name}. Context: {context}"
+            )
             return
 
         # Update memory sets safely
@@ -227,7 +227,8 @@ class ConversationManager:
         elif new_topics is not None:
             logger.warning(
                 f"Invalid type for 'topics' in context for {npc_name}: {
-                    type(new_topics)}")
+                    type(new_topics)}"
+            )
 
         new_shared_info = context.get("shared_info")
         if isinstance(new_shared_info, (list, set)):
@@ -235,7 +236,8 @@ class ConversationManager:
         elif new_shared_info is not None:
             logger.warning(
                 f"Invalid type for 'shared_info' in context for {npc_name}: {
-                    type(new_shared_info)}")
+                    type(new_shared_info)}"
+            )
 
         new_mentioned_quests = context.get(
             "quests"
@@ -245,7 +247,8 @@ class ConversationManager:
         elif new_mentioned_quests is not None:
             logger.warning(
                 f"Invalid type for 'quests' in context for {npc_name}: {
-                    type(new_mentioned_quests)}")
+                    type(new_mentioned_quests)}"
+            )
 
         # Update trust level with boundaries
         trust_change = context.get("trust_change")
@@ -257,4 +260,5 @@ class ConversationManager:
         elif trust_change is not None:
             logger.warning(
                 f"Invalid type for 'trust_change' in context for {npc_name}: {
-                    type(trust_change)}")
+                    type(trust_change)}"
+            )

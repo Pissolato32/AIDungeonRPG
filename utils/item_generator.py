@@ -219,11 +219,7 @@ class ItemGenerator:
             except Exception as e:
                 logger.error(f"Error loading items database: {e}")
 
-        return {
-            "items": {},
-            "metadata": {
-                "version": "1.0",
-                "created": "procedural"}}
+        return {"items": {}, "metadata": {"version": "1.0", "created": "procedural"}}
 
     def save_items_database(self) -> bool:
         """
@@ -320,19 +316,13 @@ class ItemGenerator:
 
         if random.random() < 0.6:
             if rarity in ["common", "uncommon"] and random.random() < 0.7:
-                name_parts.insert(
-                    0, random.choice(
-                        self.PREFIXES["condition_bad"]))
+                name_parts.insert(0, random.choice(self.PREFIXES["condition_bad"]))
             elif rarity in ["rare", "epic", "legendary"] and random.random() < 0.5:
-                name_parts.insert(
-                    0, random.choice(
-                        self.PREFIXES["condition_good"]))
+                name_parts.insert(0, random.choice(self.PREFIXES["condition_good"]))
             elif (
                 item_category == "consumable" and random.random() < 0.4
             ):  # Consumables might have effect prefixes
-                name_parts.insert(
-                    0, random.choice(
-                        self.PREFIXES["effect_positive"]))
+                name_parts.insert(0, random.choice(self.PREFIXES["effect_positive"]))
             elif (
                 item_category == "weapon" and random.random() < 0.3
             ):  # Weapons might have tactical prefixes
@@ -369,8 +359,7 @@ class ItemGenerator:
                 base_stats["capacity"] = random.randint(3, 10)
 
         rarity_mod = self.RARITIES[rarity]["modifier"]
-        modified_stats = self._apply_rarity_modifiers(
-            base_stats, rarity_mod, level)
+        modified_stats = self._apply_rarity_modifiers(base_stats, rarity_mod, level)
         name = self._generate_item_name(base_weapon_type, rarity, "weapon")
 
         item_data: Dict[str, Any] = {
@@ -423,8 +412,7 @@ class ItemGenerator:
             }
 
         rarity_mod = self.RARITIES[rarity]["modifier"]
-        modified_stats = self._apply_rarity_modifiers(
-            base_stats, rarity_mod, level)
+        modified_stats = self._apply_rarity_modifiers(base_stats, rarity_mod, level)
         name = self._generate_item_name(protection_type, rarity, "protection")
 
         item_data: Dict[str, Any] = {
@@ -460,8 +448,7 @@ class ItemGenerator:
                 ["consumable_medical", "consumable_food"]
             )
 
-        base_consumable_type = random.choice(
-            self.ITEM_TYPES[consumable_category])
+        base_consumable_type = random.choice(self.ITEM_TYPES[consumable_category])
         base_stats = self.BASE_ITEM_STATS.get(base_consumable_type, {}).copy()
 
         if not base_stats:
@@ -475,10 +462,8 @@ class ItemGenerator:
                 }
 
         rarity_mod = self.RARITIES[rarity]["modifier"]
-        modified_stats = self._apply_rarity_modifiers(
-            base_stats, rarity_mod, level)
-        name = self._generate_item_name(
-            base_consumable_type, rarity, "consumable")
+        modified_stats = self._apply_rarity_modifiers(base_stats, rarity_mod, level)
+        name = self._generate_item_name(base_consumable_type, rarity, "consumable")
 
         item_data: Dict[str, Any] = {
             "name": name,
@@ -523,12 +508,10 @@ class ItemGenerator:
             rarity in ["rare", "epic", "legendary"]
             and consumable_category == "consumable_medical"
         ):
-            item_data["effects"].append(
-                {"type": "cure_infection_low", "value": 1})
+            item_data["effects"].append({"type": "cure_infection_low", "value": 1})
         # Specific item effect
         if base_consumable_type == "Antibióticos (dose única)":
-            item_data["effects"].append(
-                {"type": "cure_infection_high", "value": 1})
+            item_data["effects"].append({"type": "cure_infection_high", "value": 1})
 
         item_id = self.generate_item_id(name)
         if "items" not in self.items_db:
@@ -592,8 +575,7 @@ class ItemGenerator:
         # Adjusted weights: more consumables and materials, fewer tools
         # initially
         weights = [0.25, 0.15, 0.35, 0.10, 0.15]
-        chosen_category_type = random.choices(
-            item_categories, weights=weights, k=1)[0]
+        chosen_category_type = random.choices(item_categories, weights=weights, k=1)[0]
 
         if chosen_category_type == "weapon":
             return self.generate_weapon(level)
@@ -625,7 +607,8 @@ class ItemGenerator:
         # Should not be reached if weights sum to 1 and all categories are
         # handled
         logger.error(
-            f"Unhandled item category in generate_random_item: {chosen_category_type}")
+            f"Unhandled item category in generate_random_item: {chosen_category_type}"
+        )
         return self.generate_consumable(level)  # Final fallback
 
     def _select_rarity(self) -> str:
@@ -634,11 +617,8 @@ class ItemGenerator:
         return random.choices(rarities, weights=chances, k=1)[0]
 
     def _generate_item_description(
-            self,
-            name: str,
-            item_subtype: str,
-            rarity: str,
-            item_category_for_prompt: str) -> str:
+        self, name: str, item_subtype: str, rarity: str, item_category_for_prompt: str
+    ) -> str:
         try:
             prompt = f"""
             Gere uma descrição curta e atmosférica para um item de um RPG de apocalipse zumbi chamado '{name}'.
@@ -659,8 +639,7 @@ class ItemGenerator:
             if isinstance(response, str) and response.strip():
                 return response.strip()
         except Exception as e:
-            logger.error(
-                f"Error generating item description for '{name}': {e}")
+            logger.error(f"Error generating item description for '{name}': {e}")
 
         fallbacks = {
             "Faca Improvisada": f"Uma {item_subtype} {rarity}. Parece que pode causar algum dano de perto.",
@@ -717,8 +696,7 @@ class ItemGenerator:
             if isinstance(response, str) and response.strip():
                 return response.strip()
         except Exception as e:
-            logger.error(
-                f"Error generating document content for '{doc_type}': {e}")
+            logger.error(f"Error generating document content for '{doc_type}': {e}")
 
         fallbacks = {
             "Diário de um Sobrevivente Desesperado": "As páginas estão manchadas e a caligrafia é apressada. Fala de perda e da luta diária pela sobrevivência. '...eles estão em toda parte... não sei quanto tempo mais...'",

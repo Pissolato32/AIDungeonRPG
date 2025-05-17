@@ -95,7 +95,8 @@ class CombatStats:
             effect_type: Type of effect to remove
         """
         self.status_effects = [
-            effect for effect in self.status_effects if effect["type"] != effect_type]
+            effect for effect in self.status_effects if effect["type"] != effect_type
+        ]
 
     def update_status_effects(self) -> List[Dict]:
         """
