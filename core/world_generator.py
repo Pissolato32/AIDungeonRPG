@@ -4,13 +4,13 @@ World Generator for the RPG game.
 This module handles procedural generation of the game world.
 """
 
-import json
-import logging
-import os
 import random
-from typing import Any, Dict, List, Optional
-
+import json
+import os
+import logging
+from typing import Dict, List, Any, Tuple, Optional
 from ai.groq_client import GroqClient
+
 
 logger = logging.getLogger(__name__)
 
@@ -147,31 +147,33 @@ class WorldGenerator:
             prefix = random.choice(self.NAME_PREFIXES)
             suffix = random.choice(self.NAME_SUFFIXES)
             return f"{prefix}{suffix}"
-        if not location_type:
-            location_type = random.choice(self.SETTLEMENT_TYPES)
+        else:  # 30% chance of type-based name
+            if not location_type:
+                location_type = random.choice(self.SETTLEMENT_TYPES)
 
-        adjectives = [  # Adjetivos mais temáticos
-            "Abandonada",
-            "Devastada",
-            "Contaminada",
-            "Fortificada",
-            "Isolada",
-            "Saqueada",
-            "Assombrada",
-        ]
-        elements = [
-            "do Norte",
-            "do Sul",
-            "do Leste",
-            "do Oeste",
-            "da Montanha",
-            "do Esgoto",
-            "da Zona Morta",
-        ]
+            adjectives = [  # Adjetivos mais temáticos
+                "Abandonada",
+                "Devastada",
+                "Contaminada",
+                "Fortificada",
+                "Isolada",
+                "Saqueada",
+                "Assombrada",
+            ]
+            elements = [
+                "do Norte",
+                "do Sul",
+                "do Leste",
+                "do Oeste",
+                "da Montanha",
+                "do Esgoto",
+                "da Zona Morta",
+            ]
 
-        if random.random() < 0.5:
-            return f"{random.choice(adjectives)} {location_type.capitalize()}"
-        return f"{location_type.capitalize()} {random.choice(elements)}"
+            if random.random() < 0.5:
+                return f"{random.choice(adjectives)} {location_type.capitalize()}"
+            else:
+                return f"{location_type.capitalize()} {random.choice(elements)}"
 
     def generate_starting_location(self) -> Dict[str, Any]:
         """
@@ -244,13 +246,13 @@ class WorldGenerator:
         prompt = f"""
         Gere uma descrição detalhada e atmosférica para um local chamado '{location_name}',
         que é um(a) {location_type} em um mundo pós-apocalíptico infestado por zumbis.
-        
+
         A descrição deve ter 2-3 parágrafos e incluir:
         - Aparência visual (destruição, abandono, sinais de luta, pichações de sobreviventes).
         - Atmosfera e sensações (cheiro de podridão, silêncio opressor, sons distantes de zumbis ou tiros).
         - Pistas sobre o que aconteceu ali (sinais de evacuação apressada, barricadas falhas, restos de suprimentos).
         - Alguma característica única que torne o local memorável (um grafite específico, um veículo abandonado de forma peculiar, um perigo óbvio ou uma oportunidade).
-        
+
         Mantenha a descrição imersiva e focada no tema de sobrevivência e perigo.
         """
 
