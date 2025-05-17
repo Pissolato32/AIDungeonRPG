@@ -4,13 +4,13 @@ World Generator for the RPG game.
 This module handles procedural generation of the game world.
 """
 
-import random
 import json
-import os
 import logging
-from typing import Dict, List, Any, Tuple, Optional
-from ai.groq_client import GroqClient
+import os
+import random
+from typing import Any, Dict, List, Optional, Tuple
 
+from ai.groq_client import GroqClient
 
 logger = logging.getLogger(__name__)
 
