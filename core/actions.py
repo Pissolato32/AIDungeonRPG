@@ -44,10 +44,11 @@ class ActionHandler:
             "message": f"The action '{details}' is not recognized or not implemented.",
         }
 
-    @staticmethod
-    def log_action(action: str, character: "Character") -> None:
+    def log_action(self, action: str, character: "Character") -> None:
         """Log the action performed by the character."""
-        logger.info(f"{character.name} performed action: {action}")
+        logger.info(
+            f"{character.name} performed action: {action} (handler: {self.__class__.__name__})"
+        )
 
     def validate_action(self, action: str) -> bool:
         """Validate the action before processing."""
@@ -1167,6 +1168,16 @@ def get_action_handler(action: str) -> ActionHandler:
         "flee": FleeActionHandler(),
         "rest": RestActionHandler(),
         "custom": CustomActionHandler(),  # Add support for freeform actions
+        # 'skill': SkillActionHandler(), # Removed to break circular import with skill_handler.py
     }
+
+    # TODO: Implement a more robust handler registration mechanism if handlers
+    # can come from different modules (e.g., for 'skill').
+    # For now, the 'skill' action might need to be handled specially by the
+    # GameEngine or SkillActionHandler could be moved into this file if preferred.
+    if action == "skill":
+        from .skill_handler import SkillActionHandler  # Local import to handle 'skill'
+
+        return SkillActionHandler()
 
     return action_handlers.get(action, UnknownActionHandler())
