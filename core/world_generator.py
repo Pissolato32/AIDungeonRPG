@@ -4,13 +4,13 @@ World Generator for the RPG game.
 This module handles procedural generation of the game world.
 """
 
-import random
 import json
-import os
 import logging
-from typing import Dict, List, Any, Tuple, Optional
-from ai.groq_client import GroqClient
+import os
+import random
+from typing import Any, Dict, List, Optional, Tuple
 
+from ai.groq_client import GroqClient
 
 logger = logging.getLogger(__name__)
 
@@ -147,33 +147,31 @@ class WorldGenerator:
             prefix = random.choice(self.NAME_PREFIXES)
             suffix = random.choice(self.NAME_SUFFIXES)
             return f"{prefix}{suffix}"
-        else:  # 30% chance of type-based name
-            if not location_type:
-                location_type = random.choice(self.SETTLEMENT_TYPES)
+        if not location_type:
+            location_type = random.choice(self.SETTLEMENT_TYPES)
 
-            adjectives = [  # Adjetivos mais temáticos
-                "Abandonada",
-                "Devastada",
-                "Contaminada",
-                "Fortificada",
-                "Isolada",
-                "Saqueada",
-                "Assombrada",
-            ]
-            elements = [
-                "do Norte",
-                "do Sul",
-                "do Leste",
-                "do Oeste",
-                "da Montanha",
-                "do Esgoto",
-                "da Zona Morta",
-            ]
+        adjectives = [  # Adjetivos mais temáticos
+            "Abandonada",
+            "Devastada",
+            "Contaminada",
+            "Fortificada",
+            "Isolada",
+            "Saqueada",
+            "Assombrada",
+        ]
+        elements = [
+            "do Norte",
+            "do Sul",
+            "do Leste",
+            "do Oeste",
+            "da Montanha",
+            "do Esgoto",
+            "da Zona Morta",
+        ]
 
-            if random.random() < 0.5:
-                return f"{random.choice(adjectives)} {location_type.capitalize()}"
-            else:
-                return f"{location_type.capitalize()} {random.choice(elements)}"
+        if random.random() < 0.5:
+            return f"{random.choice(adjectives)} {location_type.capitalize()}"
+        return f"{location_type.capitalize()} {random.choice(elements)}"
 
     def generate_starting_location(self) -> Dict[str, Any]:
         """

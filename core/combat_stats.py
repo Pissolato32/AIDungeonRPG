@@ -6,7 +6,7 @@ characters and enemies.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -146,6 +146,6 @@ class CombatStats:
         """
         if resource == "health":
             return (self.health / self.max_health) * 100
-        elif resource == "stamina":
+        if resource == "stamina":
             return (self.stamina / self.max_stamina) * 100
         return 0.0

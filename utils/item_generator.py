@@ -4,11 +4,11 @@ Item Generator for the RPG game.
 This module handles procedural generation of items with consistent attributes.
 """
 
-import random
 import json
-import os
 import logging
-from typing import Dict, List, Any, Optional
+import os
+import random
+from typing import Any, Dict, List, Optional
 
 # Assuming GroqClient is in a top-level 'ai' directory or 'core.ai'
 # Adjust the import path based on your project structure.
@@ -302,9 +302,7 @@ class ItemGenerator:
             if modified_stats["damage_min"] > modified_stats["damage_max"]:
                 modified_stats["damage_max"] = modified_stats[
                     "damage_min"
-                ] + random.randint(
-                    1, 3
-                )  # Ensure max is slightly higher
+                ] + random.randint(1, 3)  # Ensure max is slightly higher
         return modified_stats
 
     def _generate_item_name(
@@ -575,15 +573,15 @@ class ItemGenerator:
 
         if chosen_category_type == "weapon":
             return self.generate_weapon(level)
-        elif chosen_category_type == "protection":
+        if chosen_category_type == "protection":
             return self.generate_protection(level)
-        elif chosen_category_type == "consumable":
+        if chosen_category_type == "consumable":
             return self.generate_consumable(level)
         # TODO: Implement generate_tool and generate_material_crafting
         # For now, fallback to consumable if tool or material is chosen
         # This ensures the function always returns an item.
         # Replace with actual generation once those methods are implemented.
-        elif chosen_category_type == "tool":
+        if chosen_category_type == "tool":
             # Placeholder: return self.generate_tool(level)
             logger.warning(
                 "generate_tool not yet implemented, falling back to consumable."
@@ -591,7 +589,7 @@ class ItemGenerator:
             return self.generate_consumable(
                 level, consumable_category="consumable_food"
             )  # Example fallback
-        elif chosen_category_type == "material_crafting":
+        if chosen_category_type == "material_crafting":
             # Placeholder: return self.generate_material(level)
             logger.warning(
                 "generate_material_crafting not yet implemented, falling back to consumable."

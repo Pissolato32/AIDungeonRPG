@@ -5,7 +5,8 @@ Este módulo gerencia as mecânicas de combate entre personagens e inimigos.
 """
 
 import random
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
 from core.models import Character
 from utils.combat_log import CombatLog
 from utils.dice import roll_dice
@@ -139,7 +140,7 @@ class CombatSystem:
                 defender=defender_enemy,
                 is_character=True,
             )
-        elif action_type == "skill":
+        if action_type == "skill":
             skill_id_val = action.get("skill_id")
             if not isinstance(skill_id_val, str):
                 return {
@@ -160,7 +161,7 @@ class CombatSystem:
                 skill_id=skill_id_val,
                 target=target_enemy_for_skill,
             )
-        elif action_type == "item":
+        if action_type == "item":
             item_id_val = action.get("item_id")
             if not isinstance(item_id_val, str):
                 return {
@@ -181,8 +182,7 @@ class CombatSystem:
                 item_id=item_id_val,
                 target=target_enemy_for_item,
             )
-        else:
-            return {"success": False, "message": "Ação inválida"}
+        return {"success": False, "message": "Ação inválida"}
 
     def _process_attack(
         self,
@@ -359,12 +359,11 @@ class CombatSystem:
         """Gera mensagem de início de combate."""
         if len(enemies) == 1:
             return f"Um {enemies[0]['name']} aparece!"
-        else:
-            enemy_names = [e["name"] for e in enemies]
-            return (
-                f"Um grupo de {len(enemies)} inimigos aparece: "
-                f"{', '.join(enemy_names)}!"
-            )
+        enemy_names = [e["name"] for e in enemies]
+        return (
+            f"Um grupo de {len(enemies)} inimigos aparece: "
+            f"{', '.join(enemy_names)}!"
+        )
 
     def _generate_attack_message(
         self, attacker: str, damage: int, critical: bool
