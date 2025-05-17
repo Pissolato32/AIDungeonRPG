@@ -247,7 +247,7 @@ class ItemGenerator:
         """
         Get an item by its name.
         """
-        for item_id, item_data in self.items_db.get("items", {}).items():
+        for _, item_data in self.items_db.get("items", {}).items():
             if item_data.get("name", "").lower() == item_name.lower():
                 return item_data
         return None

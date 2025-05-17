@@ -66,7 +66,7 @@ class CharacterManager:
         )  # Default to 8 for survivor-types
         mod_const = (constitution - 10) // 2
         max_hp = hit_die + mod_const
-        for lvl in range(2, level + 1):
+        for _ in range(2, level + 1):
             avg = (hit_die // 2) + 1
             max_hp += avg + mod_const
         return max(1, max_hp)
