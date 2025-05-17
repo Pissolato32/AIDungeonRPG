@@ -100,12 +100,12 @@ class CombatSystem:
         initiatives = []
 
         # Iniciativa do personagem
-        char_init = roll_dice(1, 20) + character.agility
+        char_init = roll_dice(1, 20)["total"] + character.agility
         initiatives.append(("character", char_init))
 
         # Iniciativa dos inimigos
         for i, enemy in enumerate(enemies):
-            enemy_init = roll_dice(1, 20) + enemy.get("agility", 0)
+            enemy_init = roll_dice(1, 20)["total"] + enemy.get("agility", 0)
             initiatives.append((f"enemy_{i}", enemy_init))
 
         # Ordenar por iniciativa
@@ -192,13 +192,11 @@ class CombatSystem:
     ) -> Dict[str, Any]:
         """Processa um ataque básico."""
         # Calcular chance de acerto
-        hit_roll = roll_dice(20)
+        # hit_roll_result = roll_dice(1, 20) # This variable was defined but not used for the hit check below.
         accuracy = attacker.agility if is_character else attacker.get("agility", 0)
         defense = defender.agility if not is_character else defender.get("agility", 0)
 
-        if (
-            roll_dice(1, 20) + accuracy <= defense
-        ):  # hit_roll was not used here, direct roll
+        if roll_dice(1, 20)["total"] + accuracy <= defense:
             self.combat_log.add_action(
                 actor=attacker.name if is_character else attacker["name"],
                 target=defender["name"] if is_character else defender.name,
@@ -211,21 +209,19 @@ class CombatSystem:
             }
 
         # Calcular dano
-        damage_roll = roll_dice(1, 6)
+        damage_value = roll_dice(1, 6)["total"]
         damage_bonus = attacker.strength if is_character else attacker.get("damage", 0)
 
         # Verificar crítico
-        is_critical = (
-            roll_dice(1, 20) == 20
-        )  # Assuming critical check is a new d20 roll, or use the previous hit_roll
+        is_critical = roll_dice(1, 20)["total"] == 20
         if is_critical:
-            damage_roll *= 2
+            damage_value *= 2
 
-        total_damage = damage_roll + damage_bonus
+        total_damage = damage_value + damage_bonus
 
         # Aplicar dano
         if is_character:
-            defender["health"] -= total_damage
+            defender["health"] = defender.get("health", 0) - total_damage
         else:
             defender.health -= total_damage
 
