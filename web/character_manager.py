@@ -156,6 +156,12 @@ class CharacterManager:
         initial_inventory_list: List[Union[str, Dict[str, Any]]] = list(
             generated_inventory_items
         )
+<<<<<<< Updated upstream
+=======
+
+        # Ensure all items are strings or dicts as per the type hint
+        processed_inventory: List[Union[str, Dict[str, Any]]] = []
+>>>>>>> Stashed changes
 
         return Character(
             name=name_val,
