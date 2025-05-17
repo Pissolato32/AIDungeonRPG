@@ -1,10 +1,20 @@
 version = 1
 
-<<<<<<< HEAD
-exclude_patterns = ["data/**, .vscode/**, .pytest_cache/**, flask_session/**,"]
-=======
-exclude_patterns = ["data/**, .vscode/**, .pytest_cache/**, flask_session/**, "]
->>>>>>> b9114e79f332c938fc63d4a7d3f7de02416191fc
+test_patterns = [
+  ".pytest_cache/**",
+  "tests/**"
+]
+
+exclude_patterns = [
+  ".vscode/**",
+  "flask_session/**",
+  ".env",
+  ".gitignore",
+  "pyproject.toml",
+  "README.md",
+  "requirements.txt",
+  "uv.lock"
+]
 
 [[analyzers]]
 name = "python"
@@ -14,3 +24,9 @@ name = "python"
 
 [[transformers]]
 name = "black"
+
+[[transformers]]
+name = "ruff"
+
+[[transformers]]
+name = "isort"
