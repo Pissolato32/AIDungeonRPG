@@ -2,17 +2,17 @@
 Game engine module for handling game state and actions."""
 
 import json
-
 import os
 import random
-from typing import Dict, List, Any, Optional, cast
+from typing import Any, Dict, List, Optional, cast
+
+# Assume GameAIClient is in ai.game_ai_client, adjust if necessary
+from ai.game_ai_client import GameAIClient
 
 # Assume ActionHandler is in core.actions, adjust if necessary
 from core.actions import ActionHandler
 from core.models import Character
 
-# Assume GameAIClient is in ai.game_ai_client, adjust if necessary
-from ai.game_ai_client import GameAIClient
 from .game_state_model import GameState, LocationCoords, LocationData
 
 

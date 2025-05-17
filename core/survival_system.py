@@ -6,7 +6,8 @@ de personagens, como fome, sede, energia e temperatura.
 """
 
 import logging
-from typing import Dict, Any, List, TypedDict, cast
+from typing import Any, Dict, List, TypedDict, cast
+
 from core.models import Character
 
 logger = logging.getLogger(__name__)

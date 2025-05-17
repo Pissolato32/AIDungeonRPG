@@ -6,7 +6,7 @@ nível do personagem e condições do jogo.
 """
 
 import random
-from typing import Dict, Any, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional, TypedDict
 
 
 class EncounterEnemy(TypedDict):

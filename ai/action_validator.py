@@ -5,10 +5,11 @@ This module provides functions for validating player actions using artificial in
 """
 
 import logging
-from typing import Dict, Any, Optional
-from ai.response_processor import (
+from typing import Any, Dict, Optional
+
+from ai.response_processor import (  # Moved import to the top for clarity
     process_ai_response,
-)  # Moved import to the top for clarity
+)
 
 logger = logging.getLogger(__name__)
 

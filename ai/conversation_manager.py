@@ -6,9 +6,10 @@ and prompt generation.
 """
 
 import logging
-from typing import Dict, List, Any, Optional, Set
-from typing_extensions import TypedDict
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Set
+
+from typing_extensions import TypedDict
 
 logger = logging.getLogger(__name__)
 

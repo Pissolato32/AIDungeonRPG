@@ -1,5 +1,6 @@
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
 from core.models import Character
 
 logger = logging.getLogger(__name__)

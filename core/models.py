@@ -3,7 +3,8 @@ Models for game entities.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
 from core.combat_stats import CombatStats
 
 
