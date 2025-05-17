@@ -85,7 +85,8 @@ class GameStateManager:
             # Example of an outside location
             "ruined_street_01": {
                 "name": "Rua Devastada Próxima ao Abrigo",
-                "coordinates": {"x": 0, "y": 2, "z": 0},  # Assuming surface is y=2
+                # Assuming surface is y=2
+                "coordinates": {"x": 0, "y": 2, "z": 0},
                 "connections": {"south": "bunker_exit_tunnel"},
             },
         }
@@ -121,7 +122,8 @@ class GameStateManager:
 
         if game_state:
             logger.debug(
-                f"Loaded game state for user {user_id[:8]}..."  # Language attribute might not exist anymore
+                # Language attribute might not exist anymore
+                f"Loaded game state for user {user_id[:8]}..."
             )
         else:
             logger.warning(f"No game state found for user {user_id[:8]}...")

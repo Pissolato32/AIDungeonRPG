@@ -65,7 +65,8 @@ QUEST_LOCATIONS_CONTEXT = {  # For adding context to quest descriptions
     "shopping center saqueado": "no traiçoeiro shopping center saqueado",
     "ruas devastadas da cidade": "nas ruas infestadas da cidade",
     "abrigo subterrâneo": "dentro do nosso próprio abrigo",
-    "posto avançado de sobreviventes": "no posto avançado aliado de {nome_posto_avancado}",  # Placeholder
+    # Placeholder
+    "posto avançado de sobreviventes": "no posto avançado aliado de {nome_posto_avancado}",
 }
 
 
@@ -130,7 +131,10 @@ def _generate_quest_details(quest_type: str, location: str) -> Dict[str, str]:
     # Generic quest name and description structure
     # Specific quest types can override this if needed
     # Example: "Coletar: Comida Enlatada" or "Limpar Área: Ninho de Zumbis"
-    name = f"{quest_type.replace('_', ' ').capitalize()}: {target_name.capitalize()}"
+    name = f"{
+        quest_type.replace(
+            '_', ' ').capitalize()}: {
+        target_name.capitalize()}"
     # Example: "Precisamos de Comida Enlatada. Procure por algumas em {location}."
     description = (
         f"Complete a tarefa relacionada a {target_name.lower()} em {location}."
@@ -141,15 +145,15 @@ def _generate_quest_details(quest_type: str, location: str) -> Dict[str, str]:
         rescued_person_type = target_name  # e.g. "Sobrevivente Preso"
         name = f"Resgatar: {rescued_person_type.capitalize()}"
         description = (
-            f"Alguém precisa de resgate ({rescued_person_type.lower()}) em {location}."
-        )
+            f"Alguém precisa de resgate ({
+                rescued_person_type.lower()}) em {location}.")
 
     elif quest_type == "repair_fortify":
         item_to_fix = target_name  # e.g. "Gerador do Abrigo"
         name = f"Reparar: {item_to_fix.capitalize()}"
         description = (
-            f"O {item_to_fix.lower()} em {location} precisa de reparos urgentes."
-        )
+            f"O {
+                item_to_fix.lower()} em {location} precisa de reparos urgentes.")
 
     return {"name": name, "description": description}
 
@@ -192,7 +196,8 @@ def _generate_quest_rewards(difficulty: int, quest_type: str) -> List[str]:
 
     # Tailor rewards based on quest type
     if quest_type == "scavenge":
-        # Scavenge quests might give more of what was scavenged or related tools
+        # Scavenge quests might give more of what was scavenged or related
+        # tools
         if (
             "munição" in quest_type
         ):  # Simple check, ideally use target_name from _generate_quest_details
@@ -214,9 +219,8 @@ def _generate_quest_rewards(difficulty: int, quest_type: str) -> List[str]:
         else:
             rewards.append(
                 random.choice(
-                    possible_rewards["mid_tier"] + possible_rewards["high_tier"]
-                )
-            )
+                    possible_rewards["mid_tier"] +
+                    possible_rewards["high_tier"]))
 
     return list(set(rewards))  # Ensure unique rewards if multiple are chosen
 

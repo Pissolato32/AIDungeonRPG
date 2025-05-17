@@ -58,19 +58,20 @@ class ErrorHandler:
             # Adicione outras chaves de erro conforme necessário
         }
         return messages_pt_br.get(
-            error_key, f"Erro desconhecido: {error_key}. Detalhes: {error_details}"
-        )
+            error_key, f"Erro desconhecido: {error_key}. Detalhes: {error_details}")
 
     @staticmethod
     def create_error_response(
         error_key: str, language: str, error_details: str = ""
     ) -> Any:
-        # language parameter is kept for signature compatibility but will be 'pt-br'
+        # language parameter is kept for signature compatibility but will be
+        # 'pt-br'
         message = ErrorHandler._get_error_message(
             f"errors.{error_key}", language, error_details
         )
 
-        return jsonify({"success": False, "message": message, "error_key": error_key})
+        return jsonify(
+            {"success": False, "message": message, "error_key": error_key})
 
     @staticmethod
     def handle_route_error(
@@ -79,7 +80,8 @@ class ErrorHandler:
         # Log the error
         ErrorHandler.log_error(e, f"Error in {route_name} route")
 
-        # language parameter is kept for signature compatibility but will be 'pt-br'
+        # language parameter is kept for signature compatibility but will be
+        # 'pt-br'
         error_message_str = ErrorHandler._get_error_message(
             "errors.route_error", language, str(e)
         )

@@ -3,6 +3,7 @@
 Script de inicialização para o jogo RPG.
 """
 
+from app.app import _game_app_instance, application
 import logging
 import os
 import sys
@@ -19,13 +20,13 @@ sys.path.insert(0, root_dir)
 
 # Importa a instância principal da aplicação de app.app
 # Esta instância já tem tudo configurado (rotas, blueprints, etc.)
-from app.app import _game_app_instance, application
 
 if __name__ == "__main__":
     logger.info("Iniciando aplicação RPG")
     # Usa a configuração definida em app.app.py através do método run da instância GameApp
     # ou diretamente a configuração do Flask se preferir.
-    # _game_app_instance.run() # Isso chamará o app.run com a configuração interna
+    # _game_app_instance.run() # Isso chamará o app.run com a configuração
+    # interna
 
     # Ou, se você quiser controlar host/port/debug diretamente aqui:
     config = _game_app_instance._get_app_config()

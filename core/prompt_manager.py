@@ -98,7 +98,8 @@ class PromptManager:
             base_prompt += PromptManager._get_talk_prompt()
 
             if npc_details:
-                base_prompt += PromptManager._format_npc_details(npc_name, npc_details)
+                base_prompt += PromptManager._format_npc_details(
+                    npc_name, npc_details)
 
             base_prompt += PromptManager._get_talk_conclusion(details)
 
@@ -194,7 +195,10 @@ class PromptManager:
         )
 
     @staticmethod
-    def get_combat_prompt(character: Character, enemy: CombatEnemy, action: str) -> str:
+    def get_combat_prompt(
+            character: Character,
+            enemy: CombatEnemy,
+            action: str) -> str:
         """Generate a prompt for combat.
 
         Args:

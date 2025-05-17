@@ -74,8 +74,7 @@ class SessionManager:
         # Language is now fixed, so this method might be deprecated or do nothing.
         # session["language"] = "pt-br" # Or simply remove its usage
         logger.debug(
-            f"Attempted to set language to: {language}, but language is fixed to pt-br."
-        )
+            f"Attempted to set language to: {language}, but language is fixed to pt-br.")
 
     @staticmethod
     def regenerate_user_id() -> str:

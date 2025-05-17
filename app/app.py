@@ -1,4 +1,17 @@
 # filepath: c:\Users\rodri\Desktop\REPLIT RPG\app\app.py
+from app.routes import bp as routes_bp
+from web.session_manager import SessionManager
+from web.logger import GameLogger
+from web.game_state_manager import GameStateManager
+from web.config import Config
+from web.character_manager import CharacterManager
+from core.models import Character
+
+# Import GameState from its new location
+from core.game_state_model import GameState
+from core.game_engine import GameEngine
+from core.error_handler import ErrorHandler
+from ai.groq_client import GroqClient
 import logging
 import os
 import sys
@@ -22,16 +35,6 @@ from flask_session import Session
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, root_dir)
 
-from ai.groq_client import GroqClient
-from core.error_handler import ErrorHandler
-from core.game_engine import GameEngine
-from core.game_state_model import GameState  # Import GameState from its new location
-from core.models import Character
-from web.character_manager import CharacterManager
-from web.config import Config
-from web.game_state_manager import GameStateManager
-from web.logger import GameLogger
-from web.session_manager import SessionManager
 
 # Não importe 'routes_bp' aqui ainda para evitar importação circular
 
@@ -51,13 +54,15 @@ class GameApp:
                 static_folder=os.path.join(root_dir, "static"),
             )
             self._configure_app()
-            # O blueprint será registrado após a criação da instância _game_app_instance
+            # O blueprint será registrado após a criação da instância
+            # _game_app_instance
 
             # Initialize clients and engines
             self.groq_client = GroqClient()
             self.game_engine = GameEngine()  # GameEngine agora tem seu próprio data_dir
 
-            # data_dir para GameApp, se necessário para outros fins (embora GameEngine lide com saves)
+            # data_dir para GameApp, se necessário para outros fins (embora
+            # GameEngine lide com saves)
             self.data_dir = os.path.join(root_dir, "data")
             if not os.path.exists(self.data_dir):
                 os.makedirs(self.data_dir)
@@ -83,7 +88,10 @@ class GameApp:
         config = self._get_app_config()
         GameLogger.log_game_action(
             "startup",
-            f"Starting server on {config['host']}:{config['port']} (debug={config['debug']})",
+            f"Starting server on {
+                config['host']}:{
+                config['port']} (debug={
+                config['debug']})",
         )
         self.app.run(**config)
 
@@ -104,10 +112,12 @@ class GameApp:
                 # Safely check and set user_id.
                 # Use getattr for reading the attribute to be explicit for type checkers
                 # that 'user_id' might not be a statically known attribute.
-                # The assignment character.user_id = user_id is a dynamic attribute assignment.
+                # The assignment character.user_id = user_id is a dynamic
+                # attribute assignment.
                 current_char_user_id = getattr(character, "user_id", None)
                 if not current_char_user_id or current_char_user_id != user_id:
-                    # Use setattr to explicitly set the attribute, satisfying type checkers
+                    # Use setattr to explicitly set the attribute, satisfying
+                    # type checkers
                     setattr(character, "user_id", user_id)
 
                 self.game_engine.save_character(user_id, character)
@@ -117,10 +127,16 @@ class GameApp:
 
                 GameLogger.log_game_action(
                     "character_created",
-                    f"Name: {character.name}, Class: {character.character_class}",
+                    f"Name: {
+                        character.name}, Class: {
+                        character.character_class}",
                     user_id,
                 )
-                flash(f"Personagem '{character.name}' criado com sucesso!", "success")
+                flash(
+                    f"Personagem '{
+                        character.name}' criado com sucesso!",
+                    "success",
+                )
                 return redirect(url_for("routes.game"))
             character_data = self.game_engine.load_character(user_id)
             character = Character.from_dict(character_data) if character_data else None
@@ -150,7 +166,9 @@ class GameApp:
             logger.error(f"Unexpected error in character route: {e}")
             logger.error(traceback.format_exc())
             flash(
-                f"Erro inesperado ao processar dados do personagem: {str(e)}", "error"
+                f"Erro inesperado ao processar dados do personagem: {
+                    str(e)}",
+                "error",
             )
             # Ensure existing_characters is passed even in error cases
             return render_template(
@@ -352,7 +370,8 @@ class GameApp:
 
         if character and not game_state:
             logger.warning(
-                f"Character {character.name if character else 'Unknown'} found but no game state for user {user_id}. Creating new game state."
+                f"Character {
+                    character.name if character else 'Unknown'} found but no game state for user {user_id}. Creating new game state."
             )
             game_state = self._create_initial_game_state()
             self.game_engine.save_game_state(user_id, game_state)
@@ -408,7 +427,6 @@ application = _game_app_instance.app
 
 # 3. NOW import the blueprint from app.routes
 # This import needs _game_app_instance to be defined.
-from app.routes import bp as routes_bp
 
 # 4. Register the blueprint with the Flask app instance
 application.register_blueprint(routes_bp)

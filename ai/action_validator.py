@@ -30,24 +30,25 @@ def validate_action_with_ai(
         Dictionary with validation result
     """
     if not ai_client:
-        # If there is no artificial intelligence client, assume that the action is valid
+        # If there is no artificial intelligence client, assume that the action
+        # is valid
         return {"valid": True}
 
     try:
         # Create prompt for action validation
         prompt = f"""
         Você é um validador de ações em um jogo RPG. Sua tarefa é verificar se a ação do jogador faz sentido no contexto.
-        
+
         Detalhes:
         - Ação: {action}
         - Descrição: {details}
         - Local atual: {location}
-        
+
         Verifique se esta ação:
         1. Faz sentido logicamente
         2. É fisicamente possível
         3. Tem detalhes suficientes para ser executada
-        
+
         Responda APENAS com um JSON no seguinte formato:
         {{
             "valid": true,  // ou false
@@ -64,9 +65,11 @@ def validate_action_with_ai(
         result = process_ai_response(response)
         if not isinstance(result, dict) or "valid" not in result:
             logger.warning(
-                f"Formato de resposta inesperado da IA para validação de ação: {str(result)[:200]}"
-            )
-            # Mantendo o comportamento de fallback para True, mas idealmente isso seria False ou tratado de forma diferente.
+                f"Formato de resposta inesperado da IA para validação de ação: {
+                    str(result)[
+                        :200]}")
+            # Mantendo o comportamento de fallback para True, mas idealmente
+            # isso seria False ou tratado de forma diferente.
             return {"valid": True}
 
         # Se a ação for válida, podemos logar ou retornar a razão fornecida pela IA.
@@ -75,6 +78,7 @@ def validate_action_with_ai(
         return result
 
     except Exception as e:
-        logger.error(f"Error validating action with artificial intelligence: {e}")
+        logger.error(
+            f"Error validating action with artificial intelligence: {e}")
         # In case of error, assume that the action is valid
         return {"valid": True}

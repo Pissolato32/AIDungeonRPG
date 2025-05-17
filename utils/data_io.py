@@ -28,8 +28,10 @@ def save_data(data: Dict[str, Any], filename: str) -> bool:
         if not os.path.isabs(filename):
             # If relative path, prepend the data directory
             data_dir = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data"
-            )
+                os.path.dirname(
+                    os.path.dirname(
+                        os.path.abspath(__file__))),
+                "data")
             os.makedirs(data_dir, exist_ok=True)
             filename = os.path.join(data_dir, filename)
 
@@ -64,8 +66,10 @@ def load_data(filename: str) -> Optional[Dict[str, Any]]:
         if not os.path.isabs(filename):
             # If relative path, prepend the data directory
             data_dir = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data"
-            )
+                os.path.dirname(
+                    os.path.dirname(
+                        os.path.abspath(__file__))),
+                "data")
             filename = os.path.join(data_dir, filename)
 
         # Check if file exists

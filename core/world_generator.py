@@ -171,9 +171,13 @@ class WorldGenerator:
             ]
 
             if random.random() < 0.5:
-                return f"{random.choice(adjectives)} {location_type.capitalize()}"
+                return f"{
+                    random.choice(adjectives)} {
+                    location_type.capitalize()}"
             else:
-                return f"{location_type.capitalize()} {random.choice(elements)}"
+                return f"{
+                    location_type.capitalize()} {
+                    random.choice(elements)}"
 
     def generate_starting_location(self) -> Dict[str, Any]:
         """
@@ -222,7 +226,8 @@ class WorldGenerator:
             "description": description,
             "npcs": npcs,
             "events": events,
-            "coordinates": {"x": 0, "y": 0, "z": 0},  # Starting point is origin
+            # Starting point is origin
+            "coordinates": {"x": 0, "y": 0, "z": 0},
             "connections": {},  # Will be filled as player explores
             "discovered": True,
             "visited": True,
@@ -489,13 +494,39 @@ class WorldGenerator:
         if is_settlement:
             location_name = self.generate_location_name(location_type)
         else:
-            location_name = f"{random.choice(self.NAME_PREFIXES)} {location_type.capitalize().split(' ')[-1]} {random.choice(self.NAME_SUFFIXES)}"
+            location_name = f"{
+                random.choice(
+                    self.NAME_PREFIXES)} {
+                location_type.capitalize().split(' ')[
+                    -1]} {
+                random.choice(
+                    self.NAME_SUFFIXES)}"
 
         # Generate a unique ID for the location
-        base_location_id = f"{location_name.lower().replace(' ', '_').replace('ç', 'c').replace('ã', 'a').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u')}_{new_coords['x']}_{new_coords['y']}"
+        base_location_id = f"{
+            location_name.lower().replace(
+                ' ',
+                '_').replace(
+                'ç',
+                'c').replace(
+                'ã',
+                'a').replace(
+                    'á',
+                    'a').replace(
+                        'é',
+                        'e').replace(
+                            'í',
+                            'i').replace(
+                                'ó',
+                                'o').replace(
+                                    'ú',
+                                    'u')}_{
+                                        new_coords['x']}_{
+                                            new_coords['y']}"
         location_id = base_location_id
         counter = 0
-        # Ensure ID is unique within world_data, though coordinates should make it mostly unique
+        # Ensure ID is unique within world_data, though coordinates should make
+        # it mostly unique
         while location_id in world_data["locations"]:
             counter += 1
             location_id = f"{base_location_id}_{counter}"

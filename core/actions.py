@@ -5,7 +5,8 @@ from typing import Any, Dict, List, Optional  # Added List
 
 from core.enemy import Enemy  # Import Enemy class
 from core.models import Character
-from utils.quest_generator import generate_quest  # Direct import for generate_quest
+# Direct import for generate_quest
+from utils.quest_generator import generate_quest
 
 from .world_generator import WorldGenerator
 
@@ -32,12 +33,16 @@ class ActionHandler:
         # Default response for unhandled actions
         return {
             "success": False,
-            "message": f"The action '{details if details else 'unknown'}' is not recognized or not implemented.",
+            "message": f"The action '{
+                details if details else 'unknown'}' is not recognized or not implemented.",
         }
 
-    def ai_response(
-        self, action: str, details: str, character: "Character", game_state: Any
-    ) -> Dict[str, Any]:
+    def ai_response(self,
+                    action: str,
+                    details: str,
+                    character: "Character",
+                    game_state: Any) -> Dict[str,
+                                             Any]:
         """Fallback AI response if a specific handler doesn't fully process."""
         return {
             "success": False,
@@ -52,9 +57,12 @@ class ActionHandler:
         """Validate the action before processing."""
         return action in self.VALID_ACTIONS
 
-    def handle_action(
-        self, action: str, details: str, character: "Character", game_state: Any
-    ) -> Dict[str, Any]:
+    def handle_action(self,
+                      action: str,
+                      details: str,
+                      character: "Character",
+                      game_state: Any) -> Dict[str,
+                                               Any]:
         """Handle the action based on its type."""
         if not self.validate_action(action):
             logger.warning(f"Invalid action attempted: {action}")
@@ -71,7 +79,10 @@ class MoveActionHandler(ActionHandler):
         self, details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
         # Init world generator
-        data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+        data_dir = os.path.join(
+            os.path.dirname(
+                os.path.abspath(__file__)),
+            "data")
         world_generator = WorldGenerator(data_dir)
 
         destination = details.strip().lower() if isinstance(details, str) else ""
@@ -116,10 +127,12 @@ class MoveActionHandler(ActionHandler):
             new_location = world_generator.generate_adjacent_location(
                 current_location_id, normalized_direction, game_state.world_map
             )
-            game_state.world_map["locations"][new_location["id"]] = new_location
-            current_location.setdefault("connections", {})[normalized_direction] = (
-                new_location["id"]
-            )
+            game_state.world_map["locations"][new_location["id"]
+                                              ] = new_location
+            current_location.setdefault(
+                "connections",
+                {})[normalized_direction] = (
+                new_location["id"])
             world_generator.save_world(game_state.world_map)
             next_location_id = new_location["id"]
 
@@ -153,7 +166,9 @@ class MoveActionHandler(ActionHandler):
 
                 return {
                     "success": True,
-                    "message": f"You move to {next_location['name']}. {next_location['description']}",
+                    "message": f"You move to {
+                        next_location['name']}. {
+                        next_location['description']}",
                     "new_location": next_location["name"],
                     "description": next_location["description"],
                     "npcs": game_state.npcs_present,
@@ -176,7 +191,9 @@ class MoveActionHandler(ActionHandler):
 
             return {
                 "success": True,
-                "message": f"You arrive at {next_location['name']}. {next_location['description']}",
+                "message": f"You arrive at {
+                    next_location['name']}. {
+                    next_location['description']}",
                 "new_location": next_location["name"],
                 "description": next_location["description"],
                 "npcs": game_state.npcs_present,
@@ -198,23 +215,32 @@ class LookActionHandler(ActionHandler):
         target = details.strip().lower() if isinstance(details, str) else ""
 
         # Se o jogador tentar olhar para algo específico
-        if target and hasattr(game_state, "npcs_present") and game_state.npcs_present:
+        if target and hasattr(game_state,
+                              "npcs_present") and game_state.npcs_present:
             # Verifica se o alvo está entre os NPCs presentes
             npc_name = next(
-                (npc for npc in game_state.npcs_present if npc.lower() == target), None
-            )
+                (npc for npc in game_state.npcs_present if npc.lower() == target), None)
 
             if npc_name:
-                npc_details = self.get_npc_details(npc_name, character, game_state)
+                npc_details = self.get_npc_details(
+                    npc_name, character, game_state)
 
                 return {
                     "success": True,
                     "message": (
-                        f"You observe {npc_name} closely. "
-                        f"{npc_details.get('race', 'A humanoid')} who works as a {npc_details.get('profession', 'unknown')}. "
-                        f"{npc_name} seems {npc_details.get('personality', 'ordinary')}. "
-                        f"By their appearance and posture, you estimate they are about level {npc_details.get('level', '?')}."
-                    ),
+                        f"You observe {npc_name} closely. " f"{
+                            npc_details.get(
+                                'race',
+                                'A humanoid')} who works as a {
+                            npc_details.get(
+                                'profession',
+                                'unknown')}. " f"{npc_name} seems {
+                            npc_details.get(
+                                'personality',
+                                'ordinary')}. " f"By their appearance and posture, you estimate they are about level {
+                                    npc_details.get(
+                                        'level',
+                                        '?')}."),
                 }
 
         # Caso contrário, executa a resposta padrão do cenário
@@ -246,8 +272,7 @@ class TalkActionHandler(ActionHandler):
             # Check if the NPC is present in the location
             npc_name = details.strip()
             if game_state.npcs_present and any(
-                npc.lower() == npc_name.lower() for npc in game_state.npcs_present
-            ):
+                    npc.lower() == npc_name.lower() for npc in game_state.npcs_present):
                 # Find the exact name of the NPC (preserving case)
                 npc_name = next(
                     npc
@@ -264,46 +289,50 @@ class TalkActionHandler(ActionHandler):
                     npc_details = game_state.known_npcs[npc_name]
 
                     # Update the interaction count
-                    npc_details["interactions"] = npc_details.get("interactions", 0) + 1
+                    npc_details["interactions"] = npc_details.get(
+                        "interactions", 0) + 1
 
                     # Use the details to enrich the AI response
-                    result = self.ai_response("talk", details, character, game_state)
+                    result = self.ai_response(
+                        "talk", details, character, game_state)
 
-                    # Add NPC information to the response based on the familiarity level
+                    # Add NPC information to the response based on the
+                    # familiarity level
                     if "message" in result:
                         if npc_details["interactions"] <= 2:
-                            result[
-                                "message"
-                            ] += f"\n\nYou recognize {npc_name}, a {npc_details['race']} {npc_details['profession']}."
+                            result["message"] += f"\n\nYou recognize {npc_name}, a {
+                                npc_details['race']} {
+                                npc_details['profession']}."
                         else:
-                            # More details for NPCs the player has interacted with multiple times
-                            result[
-                                "message"
-                            ] += f"\n\n{npc_name} smiles at a familiar face. As an experienced {npc_details['profession']}, {npc_name} has many stories to tell."
+                            # More details for NPCs the player has interacted
+                            # with multiple times
+                            result["message"] += f"\n\n{npc_name} smiles at a familiar face. As an experienced {
+                                npc_details['profession']}, {npc_name} has many stories to tell."
 
                             # Add a hint about quests if the NPC has any
-                            if (
-                                npc_details.get("quests") and random.random() < 0.7
-                            ):  # 70% chance
-                                result[
-                                    "message"
-                                ] += f" {npc_name} mentions needing help with '{random.choice(npc_details['quests'])}'."
+                            if (npc_details.get("quests")
+                                    and random.random() < 0.7):  # 70% chance
+                                result["message"] += f" {npc_name} mentions needing help with '{
+                                    random.choice(
+                                        npc_details['quests'])}'."
 
                     # Update the NPC record
                     game_state.known_npcs[npc_name] = npc_details
 
                     return result
                 # First interaction with this NPC
-                npc_details = self.get_npc_details(npc_name, character, game_state)
+                npc_details = self.get_npc_details(
+                    npc_name, character, game_state)
 
                 # Use the details to enrich the AI response
-                result = self.ai_response("talk", details, character, game_state)
+                result = self.ai_response(
+                    "talk", details, character, game_state)
 
                 # Add NPC information to the response
                 if "message" in result:
-                    result[
-                        "message"
-                    ] += f"\n\nYou notice that {npc_name} is a {npc_details['race']} {npc_details['profession']}."
+                    result["message"] += f"\n\nYou notice that {npc_name} is a {
+                        npc_details['race']} {
+                        npc_details['profession']}."
 
                     # Add a hint about the NPC's knowledge or quests
                     if npc_details.get("knowledge"):
@@ -312,9 +341,8 @@ class TalkActionHandler(ActionHandler):
                         ] += f" It seems that {npc_name} knows about {', '.join(npc_details['knowledge'][:2])}."
 
                     if npc_details.get("quests"):
-                        result[
-                            "message"
-                        ] += f" {npc_name} mentions something about '{npc_details['quests'][0]}'."
+                        result["message"] += f" {npc_name} mentions something about '{
+                            npc_details['quests'][0]}'."
 
                 # Record the NPC as known
                 if hasattr(game_state, "known_npcs"):
@@ -357,7 +385,9 @@ class SearchActionHandler(ActionHandler):
         details_lower = details.lower() if isinstance(details, str) else ""
         if "quest" in details_lower:
             # Check if there are NPCs present who can offer quests
-            if not hasattr(game_state, "npcs_present") or not game_state.npcs_present:
+            if not hasattr(
+                    game_state,
+                    "npcs_present") or not game_state.npcs_present:
                 return {
                     "success": False,
                     "message": "There is no one around who can offer quests at the moment.",
@@ -385,7 +415,10 @@ class SearchActionHandler(ActionHandler):
             # Return information about the quest
             return {
                 "success": True,
-                "message": f"{quest_giver} offers a new quest: {new_quest['name']}. {new_quest['description']} Reward: {new_quest['reward_gold']} gold coins.",
+                "message": f"{quest_giver} offers a new quest: {
+                    new_quest['name']}. {
+                    new_quest['description']} Reward: {
+                    new_quest['reward_gold']} gold coins.",
             }
 
         # Default behavior for other searches
@@ -424,8 +457,7 @@ class AttackActionHandler(ActionHandler):
             ):
                 # Find the exact name of the NPC (preserving case)
                 npc_name = next(
-                    npc for npc in game_state.npcs_present if npc.lower() == target
-                )
+                    npc for npc in game_state.npcs_present if npc.lower() == target)
 
                 # Create an enemy based on the NPC
                 enemy = Enemy(
@@ -434,7 +466,8 @@ class AttackActionHandler(ActionHandler):
                     max_health=random.randint(
                         20, 50
                     ),  # Use max_health from CombatStats
-                    health=random.randint(20, 50),  # Use health from CombatStats
+                    # Use health from CombatStats
+                    health=random.randint(20, 50),
                     attack_damage_min=random.randint(3, 8),
                     attack_damage_max=random.randint(9, 15),
                     defense=random.randint(3, 10),
@@ -455,7 +488,8 @@ class AttackActionHandler(ActionHandler):
                         "combat": True,
                     }
 
-            # If the target is not an NPC present, try to start combat with a random enemy
+            # If the target is not an NPC present, try to start combat with a
+            # random enemy
             enemy_types = [
                 "Bandit",
                 "Wolf",
@@ -530,10 +564,10 @@ class UseItemActionHandler(ActionHandler):
 
         # Look for the exact item or partial match
         for i, inv_item in enumerate(character.inventory):
-            if isinstance(inv_item, str) and (
-                inv_item.lower() == item_name_query.lower()
-                or (item_name_query and inv_item.lower() in item_name_query.lower())
-            ):
+            if isinstance(
+                inv_item, str) and (
+                inv_item.lower() == item_name_query.lower() or (
+                    item_name_query and inv_item.lower() in item_name_query.lower())):
                 item_found = True
                 item_index = i
                 actual_item_name = (
@@ -568,7 +602,8 @@ class UseItemActionHandler(ActionHandler):
             # Logic for different item types
             if item_type == "weapon":
                 # Equip weapon
-                if not hasattr(character, "equipment") or character.equipment is None:
+                if not hasattr(character,
+                               "equipment") or character.equipment is None:
                     character.equipment = {}
 
                 # Store the previously equipped item, if any
@@ -577,7 +612,8 @@ class UseItemActionHandler(ActionHandler):
                 # Equip the new item
                 character.equipment["weapon"] = actual_item_name
 
-                # If there was a previously equipped item, put it back in the inventory
+                # If there was a previously equipped item, put it back in the
+                # inventory
                 if old_item:
                     character.inventory.append(old_item)
 
@@ -592,12 +628,14 @@ class UseItemActionHandler(ActionHandler):
 
                 return {
                     "success": True,
-                    "message": f"You equipped {actual_item_name}. {damage_info} {item_description} {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
+                    "message": f"You equipped {actual_item_name}. {damage_info} {item_description} {
+                        f'Your {old_item} was stored in the inventory.' if old_item else ''}",
                 }
 
             if item_type == "armor":
                 # Equip armor
-                if not hasattr(character, "equipment") or character.equipment is None:
+                if not hasattr(character,
+                               "equipment") or character.equipment is None:
                     character.equipment = {}
 
                 # Determine the slot based on the subtype
@@ -615,7 +653,8 @@ class UseItemActionHandler(ActionHandler):
                 # Equip the new item
                 character.equipment[slot] = actual_item_name
 
-                # If there was a previously equipped item, put it back in the inventory
+                # If there was a previously equipped item, put it back in the
+                # inventory
                 if old_item:
                     character.inventory.append(old_item)
 
@@ -629,7 +668,8 @@ class UseItemActionHandler(ActionHandler):
 
                 return {
                     "success": True,
-                    "message": f"You equipped {actual_item_name}. {defense_info} {item_description} {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
+                    "message": f"You equipped {actual_item_name}. {defense_info} {item_description} {
+                        f'Your {old_item} was stored in the inventory.' if old_item else ''}",
                 }
 
             if item_type == "consumable":
@@ -650,7 +690,9 @@ class UseItemActionHandler(ActionHandler):
 
                     return {
                         "success": True,
-                        "message": f"You used {actual_item_name} and restored {character.health - old_hp} health points. {item_description}",
+                        "message": f"You used {actual_item_name} and restored {
+                            character.health -
+                            old_hp} health points. {item_description}",
                     }
 
                 if (
@@ -666,7 +708,8 @@ class UseItemActionHandler(ActionHandler):
                         # For stamina, assuming it's in attributes like hp
                         if effect_type == "stamina":
                             old_value = character.attributes.get(attr_name, 0)
-                            max_value = character.attributes.get(max_attr_name, 0)
+                            max_value = character.attributes.get(
+                                max_attr_name, 0)
                             character.attributes[attr_name] = min(
                                 old_value + effect_value, max_value
                             )
@@ -711,7 +754,8 @@ class UseItemActionHandler(ActionHandler):
                 ):
                     return {
                         "success": True,
-                        "message": f"You examine {actual_item_name}. {item_description}\n\nContent: {item_data['content']}",
+                        "message": f"You examine {actual_item_name}. {item_description}\n\nContent: {
+                            item_data['content']}",
                     }
                 return {
                     "success": True,
@@ -733,7 +777,9 @@ class UseItemActionHandler(ActionHandler):
 
             return {
                 "success": True,
-                "message": f"You used {actual_item_name} and restored {character.health - old_hp} health points. Current HP: {character.health}/{max_hp}.",
+                "message": f"You used {actual_item_name} and restored {
+                    character.health - old_hp} health points. Current HP: {
+                    character.health}/{max_hp}.",
             }
 
         # Equipment (weapons, armor, etc.)
@@ -774,7 +820,9 @@ class UseItemActionHandler(ActionHandler):
                 equip_type = "helmet"
 
             # Initialize equipment if it doesn't exist
-            if not hasattr(character, "equipment") or character.equipment is None:
+            if not hasattr(
+                    character,
+                    "equipment") or character.equipment is None:
                 character.equipment = {}
 
             # Store the previously equipped item, if any
@@ -783,7 +831,8 @@ class UseItemActionHandler(ActionHandler):
             # Equip the new item
             character.equipment[equip_type] = actual_item_name
 
-            # If there was a previously equipped item, put it back in the inventory
+            # If there was a previously equipped item, put it back in the
+            # inventory
             if old_item:
                 character.inventory.append(old_item)
 
@@ -792,7 +841,8 @@ class UseItemActionHandler(ActionHandler):
 
             return {
                 "success": True,
-                "message": f"You equipped {actual_item_name}. {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
+                "message": f"You equipped {actual_item_name}. {
+                    f'Your {old_item} was stored in the inventory.' if old_item else ''}",
             }
 
         # Consumable items (food, drink)
@@ -814,7 +864,8 @@ class UseItemActionHandler(ActionHandler):
             ):
                 hunger_restore = 20
                 character.survival_stats["current_hunger"] = min(
-                    character.survival_stats["current_hunger"] + hunger_restore,
+                    character.survival_stats["current_hunger"] +
+                    hunger_restore,
                     character.survival_stats["max_hunger"],
                 )
 
@@ -824,7 +875,8 @@ class UseItemActionHandler(ActionHandler):
             ):
                 thirst_restore = 20
                 character.survival_stats["current_thirst"] = min(
-                    character.survival_stats["current_thirst"] + thirst_restore,
+                    character.survival_stats["current_thirst"] +
+                    thirst_restore,
                     character.survival_stats["max_thirst"],
                 )
 
@@ -850,7 +902,8 @@ class UseItemActionHandler(ActionHandler):
 
             return {
                 "success": True,
-                "message": f"You threw {actual_item_name}{f' at {target}' if target else ''}.",
+                "message": f"You threw {actual_item_name}{
+                    f' at {target}' if target else ''}.",
             }
 
         # For other item types, use the AI response
@@ -939,11 +992,13 @@ class CustomActionHandler(ActionHandler):
                 if item in details_lower:
                     items_to_add.append(item.capitalize())
 
-            # If no specific items were found, but the player seems to want to pick something up
+            # If no specific items were found, but the player seems to want to
+            # pick something up
             if not items_to_add and any(
                 verb in details.lower() for verb in ["get", "collect", "take"]
             ):
-                # Check if there are items in the environment (mentioned in the scene description)
+                # Check if there are items in the environment (mentioned in the
+                # scene description)
                 scene_items: List[str] = []
                 if hasattr(game_state, "scene_description"):
                     scene_text = game_state.scene_description.lower()
@@ -964,7 +1019,8 @@ class CustomActionHandler(ActionHandler):
 
                 return {
                     "success": True,
-                    "message": f"You added the following items to your inventory: {', '.join(items_to_add)}.",
+                    "message": f"You added the following items to your inventory: {
+                        ', '.join(items_to_add)}.",
                 }
 
         # Check if the player is trying to initiate combat
@@ -1041,10 +1097,8 @@ class CustomActionHandler(ActionHandler):
                 # Start the combat
                 if not hasattr(game_state, "combat") or not game_state.combat:
                     game_state.combat = {
-                        "enemy": enemy,
-                        "round": 1,
-                        "log": [f"A {enemy_name} appeared and you attacked it!"],
-                    }
+                        "enemy": enemy, "round": 1, "log": [
+                            f"A {enemy_name} appeared and you attacked it!"], }
 
                     return {
                         "success": True,
@@ -1063,7 +1117,8 @@ class CustomActionHandler(ActionHandler):
             has_map_item = False
             if hasattr(character, "inventory"):
                 map_items = ["Map", "Map Scroll", "Compass", "Regional Map"]
-                has_map_item = any(item in character.inventory for item in map_items)
+                has_map_item = any(
+                    item in character.inventory for item in map_items)
 
             if has_map_item:
                 # Player has a map, show the current location
@@ -1079,10 +1134,10 @@ class CustomActionHandler(ActionHandler):
                             loc_coords = game_state.world_map[loc_id].get(
                                 "coordinates", {}
                             )
-                            distance = (
-                                (loc_coords.get("x", 0) - coords.get("x", 0)) ** 2
-                                + (loc_coords.get("y", 0) - coords.get("y", 0)) ** 2
-                            ) ** 0.5
+                            distance = ((loc_coords.get("x", 0) -
+                                         coords.get("x", 0)) ** 2 +
+                                        (loc_coords.get("y", 0) -
+                                         coords.get("y", 0)) ** 2) ** 0.5
                             if distance <= 2:  # Locations up to 2 units away
                                 known_locations.append(
                                     f"{loc_info['name']} ({loc_coords.get('x', 0)}, {loc_coords.get('y', 0)})"
@@ -1090,12 +1145,21 @@ class CustomActionHandler(ActionHandler):
 
                     return {
                         "success": True,
-                        "message": f"You consult your map. You are in {game_state.current_location}, at the coordinates ({coords.get('x', 0)}, {coords.get('y', 0)}). "
-                        + f"Nearby locations you know: {', '.join(known_locations) if known_locations else 'none besides this one'}.",
+                        "message": f"You consult your map. You are in {
+                            game_state.current_location}, at the coordinates ({
+                            coords.get(
+                                'x',
+                                0)}, {
+                            coords.get(
+                                'y',
+                                0)}). " +
+                        f"Nearby locations you know: {
+                            ', '.join(known_locations) if known_locations else 'none besides this one'}.",
                     }
                 return {
                     "success": True,
-                    "message": f"You consult your map. You are in {game_state.current_location}.",
+                    "message": f"You consult your map. You are in {
+                        game_state.current_location}.",
                 }
             # Player doesn't have a map
             return {

@@ -23,7 +23,8 @@ class SkillActionHandler(ActionHandler):
         Handle skill usage. Details should contain the skill ID to use.
         """
         if not details:
-            available_skills = self.skill_manager.get_available_skills(character)
+            available_skills = self.skill_manager.get_available_skills(
+                character)
             skill_names = [skill.name for skill in available_skills]
             return {
                 "success": True,
@@ -52,7 +53,8 @@ class SkillActionHandler(ActionHandler):
 
         return result
 
-    def _apply_combat_effects(self, result: Dict[str, Any], game_state: Any) -> None:
+    def _apply_combat_effects(
+            self, result: Dict[str, Any], game_state: Any) -> None:
         """Apply skill effects in combat."""
         if not game_state.combat or not game_state.combat.get("enemy"):
             return

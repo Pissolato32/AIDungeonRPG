@@ -19,9 +19,11 @@ class Enemy(CombatStats):
     level: int = 1
     description: str = ""
 
-    # Combat stats are inherited from CombatStats (e.g., health, max_health, strength, agility, defense)
+    # Combat stats are inherited from CombatStats (e.g., health, max_health,
+    # strength, agility, defense)
 
-    # Specific damage range for this enemy type, to align with AttackActionHandler
+    # Specific damage range for this enemy type, to align with
+    # AttackActionHandler
     attack_damage_min: int = 3
     attack_damage_max: int = 8
 

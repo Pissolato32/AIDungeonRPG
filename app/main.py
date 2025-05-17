@@ -1,3 +1,4 @@
+from app.app import GameApp
 import os
 import sys
 
@@ -8,7 +9,6 @@ sys.path.insert(0, root_dir)
 # Importa a classe GameApp do módulo app
 # Assuming 'app' is a package at the root_dir level, and 'app.py' is a module within it.
 # If 'app.py' is directly in the 'app' directory (which is common for Flask):
-from app.app import GameApp
 
 if __name__ == "__main__":
     # Cria uma instância da aplicação e a executa

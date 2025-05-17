@@ -124,7 +124,8 @@ class GameAIClient:
             )
 
         try:
-            prompt = self._create_action_prompt(action, details, character, game_state)
+            prompt = self._create_action_prompt(
+                action, details, character, game_state)
             response = self.ai_client.generate_response(prompt)
 
             from .response_processor import process_ai_response
