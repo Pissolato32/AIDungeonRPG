@@ -23,15 +23,13 @@ sys.path.insert(0, root_dir)
 from core.models import Character
 from core.game_engine import GameEngine
 from core.game_state_model import GameState  # Import GameState from its new location
+from core.error_handler import ErrorHandler
 from ai.groq_client import GroqClient
 from web.config import Config
 from web.session_manager import SessionManager
 from web.logger import GameLogger
-from core.error_handler import (
-    ErrorHandler,
-)
-from web.game_state_manager import GameStateManager
 from web.character_manager import CharacterManager
+from web.game_state_manager import GameStateManager
 
 # Não importe 'routes_bp' aqui ainda para evitar importação circular
 

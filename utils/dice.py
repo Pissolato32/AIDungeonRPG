@@ -3,10 +3,9 @@ Dice rolling and combat calculation utilities.
 
 This module provides functions for dice rolling and combat-related calculations.
 """
-
 import random
 import logging
-from typing import Dict, Any, Optional, Tuple
+from typing import Any, Any, Dict, Dict, Optional, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -74,11 +73,6 @@ def calculate_attribute_modifier(attribute_score: int) -> int:
         Calculated modifier
     """
     return (attribute_score - 10) // 2
-
-
-import random
-import logging
-from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
