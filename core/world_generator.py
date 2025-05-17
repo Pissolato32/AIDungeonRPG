@@ -443,7 +443,7 @@ class WorldGenerator:
             new_coords["x"] -= 1
 
         # Check if there's already a location at these coordinates
-        for loc_id, loc_data in world_data["locations"].items():
+        for _, loc_data in world_data["locations"].items():
             loc_coords = loc_data.get("coordinates", {})
             if (
                 loc_coords.get("x") == new_coords["x"]
@@ -602,7 +602,7 @@ class WorldGenerator:
         Returns:
             Location data or None if not found
         """
-        for loc_id, loc_data in world_data["locations"].items():
+        for _, loc_data in world_data["locations"].items():
             loc_coords = loc_data.get("coordinates", {})
             if (
                 loc_coords.get("x") == coords["x"]
