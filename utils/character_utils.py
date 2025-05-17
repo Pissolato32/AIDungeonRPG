@@ -2,8 +2,8 @@
 Character utility functions for consistent attribute, gold, and inventory calculation.
 """
 
-from typing import List, Dict
 import random
+from typing import List
 
 
 def calculate_initial_gold(character_class: str, race: str) -> int:

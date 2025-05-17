@@ -9,7 +9,8 @@ This module provides the core skill system functionality including:
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Literal, TypedDict, Optional
+from typing import Any, Dict, List, Literal, Optional, TypedDict
+
 from .models import Character
 
 SkillType = Literal["active", "passive", "combat", "crafting", "survival"]

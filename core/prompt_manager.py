@@ -6,10 +6,12 @@ interactions, ensuring consistent and contextual responses.
 """
 
 import logging
-from typing import Dict, Any, List, TypedDict, Literal
 from dataclasses import dataclass
-from core.models import Character
+from typing import Any, Dict, List, Literal, TypedDict
+
 from typing_extensions import NotRequired
+
+from core.models import Character
 
 logger = logging.getLogger(__name__)
 

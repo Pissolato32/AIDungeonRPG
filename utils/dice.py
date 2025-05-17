@@ -4,15 +4,14 @@ Dice rolling and combat calculation utilities.
 This module provides functions for dice rolling and combat-related calculations.
 """
 
-import random
 import logging
-from typing import (
-    Dict,
+import random
+from typing import (  # Added Union for potential future use, Any is the key fix
     Any,
+    Dict,
     Optional,
     Tuple,
-    Union,
-)  # Added Union for potential future use, Any is the key fix
+)
 
 logger = logging.getLogger(__name__)
 

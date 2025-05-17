@@ -9,8 +9,8 @@ including JSON extraction and error handling.
 import json
 import logging
 import re
-from typing import Dict, TypedDict, Optional, cast
 from dataclasses import dataclass
+from typing import Dict, Optional, TypedDict, cast
 
 logger = logging.getLogger(__name__)
 

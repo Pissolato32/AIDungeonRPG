@@ -6,6 +6,7 @@ This module defines the web routes for the RPG game.
 """
 
 import logging
+
 from flask import Blueprint
 
 # Import the global app instance to call its methods

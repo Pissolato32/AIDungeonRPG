@@ -3,14 +3,13 @@ Module for game state data models.
 """
 
 from dataclasses import dataclass, field
-from typing import (
+from typing import (  # Added Set for visited_locations previous type
+    Any,
     Dict,
     List,
-    Any,
     Optional,
     TypedDict,
-    Set,
-)  # Added Set for visited_locations previous type
+)
 
 # Import NPC here if it's a clean dependency (i.e., npc.py doesn't import GameState)
 # If core.npc also imports GameState or related models, this might need further refactoring.

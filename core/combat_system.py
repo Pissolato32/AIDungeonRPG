@@ -4,8 +4,7 @@ Sistema de combate.
 Este módulo gerencia as mecânicas de combate entre personagens e inimigos.
 """
 
-import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from core.models import Character
 from utils.combat_log import CombatLog

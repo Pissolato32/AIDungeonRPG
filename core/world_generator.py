@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from ai.groq_client import GroqClient
 

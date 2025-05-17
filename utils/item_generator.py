@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import random
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 # Assuming GroqClient is in a top-level 'ai' directory or 'core.ai'
 # Adjust the import path based on your project structure.
@@ -302,7 +302,9 @@ class ItemGenerator:
             if modified_stats["damage_min"] > modified_stats["damage_max"]:
                 modified_stats["damage_max"] = modified_stats[
                     "damage_min"
-                ] + random.randint(1, 3)  # Ensure max is slightly higher
+                ] + random.randint(
+                    1, 3
+                )  # Ensure max is slightly higher
         return modified_stats
 
     def _generate_item_name(

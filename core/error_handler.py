@@ -6,7 +6,8 @@ This module provides functionality for handling errors in the web application.
 
 import logging
 import traceback
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from flask import jsonify
 
 logger = logging.getLogger(__name__)
