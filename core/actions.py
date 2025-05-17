@@ -703,7 +703,7 @@ class UseItemActionHandler(ActionHandler):
                     "message": f"You used {actual_item_name}. {item_description}",
                 }
 
-            elif item_type == "quest":
+            if item_type == "quest":
                 # Use quest item
                 if (
                     item_subtype in ["document", "map", "letter"]
@@ -1096,13 +1096,12 @@ class CustomActionHandler(ActionHandler):
                     "success": True,
                     "message": f"You consult your map. You are in {game_state.current_location}.",
                 }
-            else:
-                # Player doesn't have a map
-                return {
-                    "success": False,
-                    "message": "You don't have a map or compass to determine your exact location. You know you are in "
-                    + f"{game_state.current_location}, but can't pinpoint your coordinates.",
-                }
+            # Player doesn't have a map
+            return {
+                "success": False,
+                "message": "You don't have a map or compass to determine your exact location. You know you are in "
+                + f"{game_state.current_location}, but can't pinpoint your coordinates.",
+            }
 
         # Default behavior for other custom actions
         return self.ai_response("custom", details, character, game_state)
