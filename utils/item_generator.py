@@ -575,15 +575,15 @@ class ItemGenerator:
 
         if chosen_category_type == "weapon":
             return self.generate_weapon(level)
-        elif chosen_category_type == "protection":
+        if chosen_category_type == "protection":
             return self.generate_protection(level)
-        elif chosen_category_type == "consumable":
+        if chosen_category_type == "consumable":
             return self.generate_consumable(level)
         # TODO: Implement generate_tool and generate_material_crafting
         # For now, fallback to consumable if tool or material is chosen
         # This ensures the function always returns an item.
         # Replace with actual generation once those methods are implemented.
-        elif chosen_category_type == "tool":
+        if chosen_category_type == "tool":
             # Placeholder: return self.generate_tool(level)
             logger.warning(
                 "generate_tool not yet implemented, falling back to consumable."
@@ -591,7 +591,7 @@ class ItemGenerator:
             return self.generate_consumable(
                 level, consumable_category="consumable_food"
             )  # Example fallback
-        elif chosen_category_type == "material_crafting":
+        if chosen_category_type == "material_crafting":
             # Placeholder: return self.generate_material(level)
             logger.warning(
                 "generate_material_crafting not yet implemented, falling back to consumable."

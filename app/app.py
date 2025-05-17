@@ -122,25 +122,24 @@ class GameApp:
                 )
                 flash(f"Personagem '{character.name}' criado com sucesso!", "success")
                 return redirect(url_for("routes.game"))
-            else:  # GET request
-                character_data = self.game_engine.load_character(user_id)
-                character = (
-                    Character.from_dict(character_data) if character_data else None
-                )
-                # Para a seção "Personagens Existentes" no template.
-                # Por enquanto, passaremos uma lista vazia.
-                # A lógica para carregar múltiplos personagens precisaria ser implementada
-                # no GameEngine e aqui, se essa funcionalidade for desejada.
-                existing_characters_list = []
-                # Se 'character' existe e você quer mostrá-lo na lista de "existentes" (para o user_id atual):
-                # if character:
-                #     char_obj_for_list = Character.from_dict({**character.to_dict(), "user_id": user_id})
-                #     existing_characters_list = [char_obj_for_list]
-                return render_template(
-                    "character.html",
-                    character=character,
-                    existing_characters=existing_characters_list,
-                )
+            character_data = self.game_engine.load_character(user_id)
+            character = (
+                Character.from_dict(character_data) if character_data else None
+            )
+            # Para a seção "Personagens Existentes" no template.
+            # Por enquanto, passaremos uma lista vazia.
+            # A lógica para carregar múltiplos personagens precisaria ser implementada
+            # no GameEngine e aqui, se essa funcionalidade for desejada.
+            existing_characters_list = []
+            # Se 'character' existe e você quer mostrá-lo na lista de "existentes" (para o user_id atual):
+            # if character:
+            #     char_obj_for_list = Character.from_dict({**character.to_dict(), "user_id": user_id})
+            #     existing_characters_list = [char_obj_for_list]
+            return render_template(
+                "character.html",
+                character=character,
+                existing_characters=existing_characters_list,
+            )
 
         except ValueError as e:
             logger.error(f"ValueError in character route: {e}")

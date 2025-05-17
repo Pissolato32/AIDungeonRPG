@@ -260,7 +260,7 @@ class GameEngine:
 
         if abs(dx) > abs(dy):
             return "east" if dx > 0 else "west"
-        elif dy != 0:
+        if dy != 0:
             return "north" if dy > 0 else "south"
         return None
 

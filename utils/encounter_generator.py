@@ -348,9 +348,8 @@ class EncounterGenerator:
         # Verificar quantidade
         if len(enemies) == 1:
             return "single"
-        elif len(enemies) == 2:
+        if len(enemies) == 2:
             return "duo"
-        elif len(enemies) <= 4:
+        if len(enemies) <= 4:
             return "group"
-        else:
-            return "horde"
+        return "horde"
