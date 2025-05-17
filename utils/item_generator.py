@@ -184,7 +184,8 @@ class ItemGenerator:
         self.ai_client = GroqClient()
         self.items_db = self.load_items_database()
 
-    def _sanitize_for_id(self, name: str) -> str:
+    @staticmethod
+    def _sanitize_for_id(name: str) -> str:
         """Sanitizes a name to be used as part of an ID."""
         name = name.lower()
         replacements = {
@@ -264,8 +265,9 @@ class ItemGenerator:
             counter += 1
         return item_id
 
+    @staticmethod
     def _apply_rarity_modifiers(
-        self, base_stats: Dict[str, Any], rarity_mod: float, level: int
+        base_stats: Dict[str, Any], rarity_mod: float, level: int
     ) -> Dict[str, Any]:
         """Applies rarity modifiers to item stats."""
         modified_stats = base_stats.copy()

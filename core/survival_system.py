@@ -133,7 +133,8 @@ class SurvivalSystem:
 
         return {"stats": stats, "messages": messages, "effects": effects}
 
-    def _get_action_costs(self, action: str) -> Dict[str, int]:
+    @staticmethod
+    def _get_action_costs(action: str) -> Dict[str, int]:
         """Calcula custos de energia para ações."""
         costs = {
             "move": {"energy": 5, "thirst": 3, "hunger": 2},
@@ -148,7 +149,8 @@ class SurvivalSystem:
         }
         return costs.get(action, {"energy": 1})
 
-    def _get_environmental_effects(self, environment: str) -> List[EnvironmentalEffect]:
+    @staticmethod
+    def _get_environmental_effects(environment: str) -> List[EnvironmentalEffect]:
         """Obtém efeitos do ambiente atual."""
         effects: Dict[str, List[EnvironmentalEffect]] = {
             "desert": [
@@ -213,7 +215,8 @@ class SurvivalSystem:
 
         return messages
 
-    def _apply_vital_effects(self, stats: SurvivalStats, messages: List[str]) -> None:
+    @staticmethod
+    def _apply_vital_effects(stats: SurvivalStats, messages: List[str]) -> None:
         """Aplica efeitos nas estatísticas vitais."""
         if stats["health"] <= 0:
             messages.append("Você está gravemente ferido e precisa de cura!")

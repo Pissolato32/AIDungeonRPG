@@ -134,7 +134,8 @@ class EncounterGenerator:
             "escape_chance": escape_chance,
         }
 
-    def _calculate_difficulty(self, player_level: int, time_of_day: str) -> int:
+    @staticmethod
+    def _calculate_difficulty(player_level: int, time_of_day: str) -> int:
         """Calcula a dificuldade do encontro."""
         base_difficulty = random.randint(max(1, player_level - 2), player_level + 2)
 
@@ -209,7 +210,8 @@ class EncounterGenerator:
         )
         return random.choice(enemies)
 
-    def _generate_enemy_name(self, enemy_type: str) -> str:
+    @staticmethod
+    def _generate_enemy_name(enemy_type: str) -> str:
         """Gera um nome único para o inimigo."""
         prefixes = {
             "goblin": ["Astuto", "Cruel", "Sorrateiro"],
@@ -234,7 +236,8 @@ class EncounterGenerator:
 
         return effects
 
-    def _calculate_escape_chance(self, difficulty: int, location_type: str) -> float:
+    @staticmethod
+    def _calculate_escape_chance(difficulty: int, location_type: str) -> float:
         """Calcula a chance de fuga do encontro."""
         base_chance = 0.5  # 50% base
 
@@ -251,8 +254,9 @@ class EncounterGenerator:
 
         return min(0.9, max(0.1, base_chance * difficulty_mod + location_mod))
 
+    @staticmethod
     def _generate_description(
-        self, enemies: List[EncounterEnemy], location_type: str, time_of_day: str
+        enemies: List[EncounterEnemy], location_type: str, time_of_day: str
     ) -> str:
         """Gera uma descrição narrativa do encontro."""
         time_desc = (
@@ -293,7 +297,8 @@ class EncounterGenerator:
 
         return items
 
-    def _generate_common_item(self) -> Dict[str, Any]:
+    @staticmethod
+    def _generate_common_item() -> Dict[str, Any]:
         """Gera um item comum."""
         common_items = [
             {"name": "Poção de Cura", "type": "consumable", "value": 10},
@@ -303,7 +308,8 @@ class EncounterGenerator:
         ]
         return random.choice(common_items)
 
-    def _generate_rare_item(self, difficulty: int) -> Dict[str, Any]:
+    @staticmethod
+    def _generate_rare_item(difficulty: int) -> Dict[str, Any]:
         """Gera um item raro baseado na dificuldade."""
         rare_items = [
             {
@@ -327,7 +333,8 @@ class EncounterGenerator:
         ]
         return random.choice(rare_items)
 
-    def _generate_reputation_rewards(self, difficulty: int) -> Optional[Dict[str, int]]:
+    @staticmethod
+    def _generate_reputation_rewards(difficulty: int) -> Optional[Dict[str, int]]:
         """Gera recompensas de reputação com facções."""
         if random.random() < 0.3:  # 30% chance de afetar reputação
             factions = ["Vila", "Guilda", "Mercadores"]
@@ -335,7 +342,8 @@ class EncounterGenerator:
             return {faction: difficulty * 2}
         return None
 
-    def _determine_encounter_type(self, enemies: List[EncounterEnemy]) -> str:
+    @staticmethod
+    def _determine_encounter_type(enemies: List[EncounterEnemy]) -> str:
         """Determina o tipo do encontro baseado nos inimigos presentes."""
         if not enemies:
             return "empty"

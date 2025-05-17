@@ -561,7 +561,8 @@ class WorldGenerator:
 
         return location_data
 
-    def _get_opposite_direction(self, direction: str) -> str:
+    @staticmethod
+    def _get_opposite_direction(direction: str) -> str:
         """Get the opposite of a direction."""
         opposites = {
             "north": "south",
@@ -573,8 +574,9 @@ class WorldGenerator:
         }
         return opposites.get(direction, "unknown")
 
+    @staticmethod
     def get_available_directions(
-        self, location_id: str, world_data: Dict[str, Any]
+        location_id: str, world_data: Dict[str, Any]
     ) -> Dict[str, str]:
         """
         Get available directions from a location.
@@ -589,8 +591,9 @@ class WorldGenerator:
         location = world_data["locations"].get(location_id, {})
         return location.get("connections", {})
 
+    @staticmethod
     def get_location_by_coordinates(
-        self, coords: Dict[str, int], world_data: Dict[str, Any]
+        coords: Dict[str, int], world_data: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """
         Find a location by its coordinates.

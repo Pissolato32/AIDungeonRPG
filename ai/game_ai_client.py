@@ -34,8 +34,9 @@ class GameAIClient:
         """Initialize the Game AI Client."""
         self.ai_client = ai_client
 
+    @staticmethod
     def _create_action_prompt(
-        self, action: str, details: str, character: Any, game_state: GameState
+        action: str, details: str, character: Any, game_state: GameState
     ) -> AIPrompt:
         """Create a formatted prompt for the AI model.
 

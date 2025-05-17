@@ -96,7 +96,8 @@ class GameApp:
         self.app.run(**config)
 
     # Route handlers (these methods will be called by the blueprint routes)
-    def index(self):
+    @staticmethod
+    def index():
         """Handle the index route."""
         return render_template("index.html")
 
@@ -312,7 +313,8 @@ class GameApp:
             logger.error(traceback.format_exc())
             return self._error_response("reset_error", str(e))
 
-    def select_character(self, user_id: str):
+    @staticmethod
+    def select_character(user_id: str):
         """Handle character selection (placeholder)."""
         # Implementar lógica para carregar o personagem com user_id
         # e definir na sessão, depois redirecionar para o jogo.
@@ -326,7 +328,8 @@ class GameApp:
             url_for("routes.character")
         )  # Redireciona de volta para a criação/edição
 
-    def delete_character(self, user_id: str):
+    @staticmethod
+    def delete_character(user_id: str):
         """Handle character deletion (placeholder)."""
         # Implementar lógica para deletar o personagem com user_id.
         logger.info(f"Attempting to delete character with user_id: {user_id}")
@@ -338,14 +341,17 @@ class GameApp:
         return redirect(url_for("routes.character"))
 
     # Helper methods
-    def _create_initial_game_state(self) -> GameState:
+    @staticmethod
+    def _create_initial_game_state() -> GameState:
         return GameStateManager.create_initial_game_state()
 
-    def _create_character_from_form(self, character_data: Dict[str, Any]) -> Character:
+    @staticmethod
+    def _create_character_from_form(character_data: Dict[str, Any]) -> Character:
         return CharacterManager.create_character_from_form(character_data)
 
+    @staticmethod
     def _get_character_attributes(
-        self, character_data: Dict[str, Any]
+        character_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         return CharacterManager.get_character_attributes(character_data)
 
@@ -390,11 +396,12 @@ class GameApp:
         self.game_engine.save_character(user_id, character)
         self.game_engine.save_game_state(user_id, game_state)
 
-    def _error_response(self, error_key: str, error_details: str = "") -> Any:
+    @staticmethod
+    def _error_response(error_key: str, error_details: str = "") -> Any:
         return ErrorHandler.create_error_response(error_key, "pt-br", error_details)
 
+    @staticmethod
     def _log_game_action(
-        self,
         action: str,
         details: str = "",
         user_id: Optional[str] = None,
@@ -414,7 +421,8 @@ class GameApp:
             level,
         )
 
-    def get_app_config(self) -> Dict[str, Any]:
+    @staticmethod
+    def get_app_config() -> Dict[str, Any]:
         return Config.get_app_config()
 
 

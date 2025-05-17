@@ -93,8 +93,9 @@ class CombatSystem:
             "highlights": self.combat_log.get_highlight_moments(),
         }
 
+    @staticmethod
     def _determine_initiative(
-        self, character: Character, enemies: List[Dict[str, Any]]
+        character: Character, enemies: List[Dict[str, Any]]
     ) -> List[str]:
         """Determina a ordem de iniciativa no combate."""
         initiatives = []
@@ -254,8 +255,9 @@ class CombatSystem:
             ),
         }
 
+    @staticmethod
     def _process_skill(
-        self, character: Character, skill_id: str, target: Optional[Dict[str, Any]]
+        character: Character, skill_id: str, target: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Processa o uso de uma habilidade."""
         # Implementar lógica de habilidades aqui
@@ -265,16 +267,18 @@ class CombatSystem:
             "message": "Sistema de habilidades em desenvolvimento",
         }
 
+    @staticmethod
     def _process_item_use(
-        self, character: Character, item_id: str, target: Optional[Dict[str, Any]]
+        character: Character, item_id: str, target: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Processa o uso de um item."""
         # Implementar lógica de uso de itens aqui
         # Por enquanto retorna um erro
         return {"success": False, "message": "Sistema de itens em desenvolvimento"}
 
+    @staticmethod
     def _generate_enemy_action(
-        self, enemy: Dict[str, Any], character: Character
+        enemy: Dict[str, Any], character: Character
     ) -> Dict[str, Any]:
         """Gera uma ação para um inimigo."""
         # Por enquanto, inimigos apenas atacam
@@ -333,8 +337,9 @@ class CombatSystem:
                 effects=["poison"],
             )
 
+    @staticmethod
     def _check_combat_status(
-        self, character: Character, enemies: List[Dict[str, Any]]
+        character: Character, enemies: List[Dict[str, Any]]
     ) -> str:
         """Verifica o estado atual do combate."""
         if character.health <= 0:
@@ -345,8 +350,9 @@ class CombatSystem:
 
         return "ongoing"
 
+    @staticmethod
     def _find_enemy(
-        self, enemies: List[Dict[str, Any]], target_id: Optional[str]
+        enemies: List[Dict[str, Any]], target_id: Optional[str]
     ) -> Optional[Dict[str, Any]]:
         """Encontra um inimigo específico na lista."""
         if not target_id:
@@ -357,7 +363,8 @@ class CombatSystem:
                 return enemy
         return None
 
-    def _generate_combat_start_message(self, enemies: List[Dict[str, Any]]) -> str:
+    @staticmethod
+    def _generate_combat_start_message(enemies: List[Dict[str, Any]]) -> str:
         """Gera mensagem de início de combate."""
         if len(enemies) == 1:
             return f"Um {enemies[0]['name']} aparece!"
@@ -367,8 +374,9 @@ class CombatSystem:
             f"{', '.join(enemy_names)}!"
         )
 
+    @staticmethod
     def _generate_attack_message(
-        self, attacker: str, damage: int, critical: bool
+        attacker: str, damage: int, critical: bool
     ) -> str:
         """Gera mensagem descritiva de ataque."""
         if critical:

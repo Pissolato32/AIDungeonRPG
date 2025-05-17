@@ -12,7 +12,8 @@ class GroqClient:
     Replace this with actual API integration as needed.
     """
 
-    def generate_response(self, prompt: str) -> str:
+    @staticmethod
+    def generate_response(prompt: str) -> str:
         # Simula indisponibilidade da IA
         return '{"success": false, "message": "A inteligência artificial está temporariamente indisponível. Tente novamente mais tarde."}'
 

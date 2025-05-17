@@ -52,7 +52,8 @@ class SkillActionHandler(ActionHandler):
 
         return result
 
-    def _apply_combat_effects(self, result: Dict[str, Any], game_state: Any) -> None:
+    @staticmethod
+    def _apply_combat_effects(result: Dict[str, Any], game_state: Any) -> None:
         """Apply skill effects in combat."""
         if not game_state.combat or not game_state.combat.get("enemy"):
             return

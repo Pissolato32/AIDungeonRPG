@@ -240,7 +240,8 @@ class GameEngine:
             if self._is_valid_location(new_x, new_y, z, game_state):  # Pass z
                 return {"x": new_x, "y": new_y, "z": z}
 
-    def _is_valid_location(self, x: int, y: int, z: int, game_state: GameState) -> bool:
+    @staticmethod
+    def _is_valid_location(x: int, y: int, z: int, game_state: GameState) -> bool:
         """Check if coordinates are valid for a new location."""
         # Check if location already exists
         for loc in game_state.discovered_locations.values():
@@ -251,8 +252,9 @@ class GameEngine:
         # Example: Check map boundaries, terrain restrictions, etc.
         return True
 
+    @staticmethod
     def _get_direction(
-        self, from_coords: LocationCoords, to_coords: LocationCoords
+        from_coords: LocationCoords, to_coords: LocationCoords
     ) -> Optional[str]:
         """Get cardinal direction between two coordinates."""
         dx = to_coords.get("x", 0) - from_coords.get("x", 0)
@@ -264,7 +266,8 @@ class GameEngine:
             return "north" if dy > 0 else "south"
         return None
 
-    def _opposite_direction(self, direction: str) -> str:
+    @staticmethod
+    def _opposite_direction(direction: str) -> str:
         """Get opposite cardinal direction."""
         opposites = {"north": "south", "south": "north", "east": "west", "west": "east"}
         return opposites.get(direction, direction)
@@ -346,7 +349,8 @@ class GameEngine:
                     opp_dir = self._opposite_direction(direction)
                     loc["connections"][loc_id] = opp_dir
 
-    def _generate_location_name(self, location_type: str) -> str:
+    @staticmethod
+    def _generate_location_name(location_type: str) -> str:
         """Generate a thematic name for the location."""
         prefixes = {
             "abrigo": ["Abrigo", "Bunker", "Refúgio"],
@@ -372,7 +376,8 @@ class GameEngine:
             else f"{prefix} {random.choice(['Alfa', 'Beta', 'Gama', 'Delta'])}"
         )
 
-    def _generate_location_description(self, location_type: str) -> str:
+    @staticmethod
+    def _generate_location_description(location_type: str) -> str:
         """Generate a detailed description for the location."""
         descriptions = {
             "abrigo": "Um refúgio improvisado, mas relativamente seguro. As paredes são frias e úmidas, e o ar é pesado.",
@@ -386,8 +391,9 @@ class GameEngine:
             "Um local desolado e perigoso. Você sente um arrepio na espinha.",
         )
 
+    @staticmethod
     def _generate_location_resources(
-        self, location_type: str
+        location_type: str
     ) -> Optional[Dict[str, int]]:  # Changed to Dict
         """Generate available resources for the location."""
         resources = {
@@ -418,7 +424,8 @@ class GameEngine:
             else None
         )  # 60% chance of resources
 
-    def _generate_location_events(self, location_type: str) -> List[str]:
+    @staticmethod
+    def _generate_location_events(location_type: str) -> List[str]:
         """Generate random events for the location."""
         events = {
             "abrigo": [
