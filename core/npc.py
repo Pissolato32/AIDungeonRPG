@@ -113,7 +113,9 @@ class NPC(NPCBase):
             (
                 "hostile"
                 if self.relationship_level < -30
-                else "friendly" if self.relationship_level > 30 else "neutral"
+                else "friendly"
+                if self.relationship_level > 30
+                else "neutral"
             ),
         )
 
