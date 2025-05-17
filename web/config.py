@@ -27,7 +27,7 @@ class Config:
             Dictionary with application configuration
         """
         return {
-            "host": os.environ.get("FLASK_HOST", "0.0.0.0"),
+            "host": os.environ.get("FLASK_HOST", "127.0.0.1"),
             "port": int(os.environ.get("FLASK_PORT", 5000)),
             "debug": os.environ.get("FLASK_DEBUG", "True").lower()
             in ("true", "1", "t"),
