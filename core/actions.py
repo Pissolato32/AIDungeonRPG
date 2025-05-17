@@ -1,10 +1,12 @@
 import logging
 import os
 import random
-from typing import Dict, Any, Optional, Union, List  # Added List
+from typing import Any, Dict, List, Optional, Union  # Added List
+
 from core.enemy import Enemy  # Import Enemy class
-from utils.quest_generator import generate_quest  # Direct import for generate_quest
 from core.models import Character
+from utils.quest_generator import generate_quest  # Direct import for generate_quest
+
 from .world_generator import WorldGenerator
 
 logger = logging.getLogger(__name__)
@@ -271,22 +273,22 @@ class TalkActionHandler(ActionHandler):
                     # Add NPC information to the response based on the familiarity level
                     if "message" in result:
                         if npc_details["interactions"] <= 2:
-                            result[
-                                "message"
-                            ] += f"\n\nYou recognize {npc_name}, a {npc_details['race']} {npc_details['profession']}."
+                            result["message"] += (
+                                f"\n\nYou recognize {npc_name}, a {npc_details['race']} {npc_details['profession']}."
+                            )
                         else:
                             # More details for NPCs the player has interacted with multiple times
-                            result[
-                                "message"
-                            ] += f"\n\n{npc_name} smiles at a familiar face. As an experienced {npc_details['profession']}, {npc_name} has many stories to tell."
+                            result["message"] += (
+                                f"\n\n{npc_name} smiles at a familiar face. As an experienced {npc_details['profession']}, {npc_name} has many stories to tell."
+                            )
 
                             # Add a hint about quests if the NPC has any
                             if (
                                 npc_details.get("quests") and random.random() < 0.7
                             ):  # 70% chance
-                                result[
-                                    "message"
-                                ] += f" {npc_name} mentions needing help with '{random.choice(npc_details['quests'])}'."
+                                result["message"] += (
+                                    f" {npc_name} mentions needing help with '{random.choice(npc_details['quests'])}'."
+                                )
 
                     # Update the NPC record
                     game_state.known_npcs[npc_name] = npc_details
@@ -301,20 +303,20 @@ class TalkActionHandler(ActionHandler):
 
                     # Add NPC information to the response
                     if "message" in result:
-                        result[
-                            "message"
-                        ] += f"\n\nYou notice that {npc_name} is a {npc_details['race']} {npc_details['profession']}."
+                        result["message"] += (
+                            f"\n\nYou notice that {npc_name} is a {npc_details['race']} {npc_details['profession']}."
+                        )
 
                         # Add a hint about the NPC's knowledge or quests
                         if npc_details.get("knowledge"):
-                            result[
-                                "message"
-                            ] += f" It seems that {npc_name} knows about {', '.join(npc_details['knowledge'][:2])}."
+                            result["message"] += (
+                                f" It seems that {npc_name} knows about {', '.join(npc_details['knowledge'][:2])}."
+                            )
 
                         if npc_details.get("quests"):
-                            result[
-                                "message"
-                            ] += f" {npc_name} mentions something about '{npc_details['quests'][0]}'."
+                            result["message"] += (
+                                f" {npc_name} mentions something about '{npc_details['quests'][0]}'."
+                            )
 
                     # Record the NPC as known
                     if hasattr(game_state, "known_npcs"):
