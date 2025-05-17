@@ -1,17 +1,4 @@
 # filepath: c:\Users\rodri\Desktop\REPLIT RPG\app\app.py
-from app.routes import bp as routes_bp
-from web.session_manager import SessionManager
-from web.logger import GameLogger
-from web.game_state_manager import GameStateManager
-from web.config import Config
-from web.character_manager import CharacterManager
-from core.models import Character
-
-# Import GameState from its new location
-from core.game_state_model import GameState
-from core.game_engine import GameEngine
-from core.error_handler import ErrorHandler
-from ai.groq_client import GroqClient
 import logging
 import os
 import sys
@@ -29,7 +16,20 @@ from flask import (
     url_for,
 )
 
+from ai.groq_client import GroqClient
+from app.routes import bp as routes_bp
+from core.error_handler import ErrorHandler
+from core.game_engine import GameEngine
+
+# Import GameState from its new location
+from core.game_state_model import GameState
+from core.models import Character
 from flask_session import Session
+from web.character_manager import CharacterManager
+from web.config import Config
+from web.game_state_manager import GameStateManager
+from web.logger import GameLogger
+from web.session_manager import SessionManager
 
 # Add the project root directory to the Python path
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

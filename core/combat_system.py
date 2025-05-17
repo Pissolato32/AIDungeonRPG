@@ -76,8 +76,7 @@ class CombatSystem:
         for enemy in enemies:
             if enemy.get("health", 0) > 0:  # Apenas inimigos vivos agem
                 enemy_action = self._generate_enemy_action(enemy, character)
-                result = self._process_enemy_action(
-                    enemy, enemy_action, character)
+                result = self._process_enemy_action(enemy, enemy_action, character)
                 enemy_results.append(result)
 
         # Processar efeitos de status
@@ -196,10 +195,8 @@ class CombatSystem:
         # Calcular chance de acerto
         # hit_roll_result = roll_dice(1, 20) # This variable was defined but
         # not used for the hit check below.
-        accuracy = attacker.agility if is_character else attacker.get(
-            "agility", 0)
-        defense = defender.agility if not is_character else defender.get(
-            "agility", 0)
+        accuracy = attacker.agility if is_character else attacker.get("agility", 0)
+        defense = defender.agility if not is_character else defender.get("agility", 0)
 
         if roll_dice(1, 20)["total"] + accuracy <= defense:
             self.combat_log.add_action(
@@ -215,8 +212,7 @@ class CombatSystem:
 
         # Calcular dano
         damage_value = roll_dice(1, 6)["total"]
-        damage_bonus = attacker.strength if is_character else attacker.get(
-            "damage", 0)
+        damage_bonus = attacker.strength if is_character else attacker.get("damage", 0)
 
         # Verificar crítico
         is_critical = roll_dice(1, 20)["total"] == 20
@@ -258,8 +254,9 @@ class CombatSystem:
             ),
         }
 
-    def _process_skill(self, character: Character, skill_id: str,
-                       target: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    def _process_skill(
+        self, character: Character, skill_id: str, target: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Processa o uso de uma habilidade."""
         # Implementar lógica de habilidades aqui
         # Por enquanto retorna um erro
@@ -274,9 +271,7 @@ class CombatSystem:
         """Processa o uso de um item."""
         # Implementar lógica de uso de itens aqui
         # Por enquanto retorna um erro
-        return {
-            "success": False,
-            "message": "Sistema de itens em desenvolvimento"}
+        return {"success": False, "message": "Sistema de itens em desenvolvimento"}
 
     def _generate_enemy_action(
         self, enemy: Dict[str, Any], character: Character
@@ -362,8 +357,7 @@ class CombatSystem:
                 return enemy
         return None
 
-    def _generate_combat_start_message(
-            self, enemies: List[Dict[str, Any]]) -> str:
+    def _generate_combat_start_message(self, enemies: List[Dict[str, Any]]) -> str:
         """Gera mensagem de início de combate."""
         if len(enemies) == 1:
             return f"Um {enemies[0]['name']} aparece!"

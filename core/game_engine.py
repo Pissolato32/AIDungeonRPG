@@ -184,10 +184,7 @@ class GameEngine:
 
         return result
 
-    def _update_location(
-            self,
-            game_state: GameState,
-            new_location: str) -> None:
+    def _update_location(self, game_state: GameState, new_location: str) -> None:
         """Update the game state for a known location."""
         if loc := game_state.discovered_locations.get(new_location):
             game_state.current_location = new_location
@@ -243,14 +240,12 @@ class GameEngine:
             if self._is_valid_location(new_x, new_y, z, game_state):  # Pass z
                 return {"x": new_x, "y": new_y, "z": z}
 
-    def _is_valid_location(self, x: int, y: int, z: int,
-                           game_state: GameState) -> bool:
+    def _is_valid_location(self, x: int, y: int, z: int, game_state: GameState) -> bool:
         """Check if coordinates are valid for a new location."""
         # Check if location already exists
         for loc in game_state.discovered_locations.values():
             coords = loc.get("coordinates", {})
-            if coords.get("x") == x and coords.get(
-                    "y") == y and coords.get("z") == z:
+            if coords.get("x") == x and coords.get("y") == y and coords.get("z") == z:
                 return False
         # Add additional validation as needed
         # Example: Check map boundaries, terrain restrictions, etc.
@@ -271,15 +266,10 @@ class GameEngine:
 
     def _opposite_direction(self, direction: str) -> str:
         """Get opposite cardinal direction."""
-        opposites = {
-            "north": "south",
-            "south": "north",
-            "east": "west",
-            "west": "east"}
+        opposites = {"north": "south", "south": "north", "east": "west", "west": "east"}
         return opposites.get(direction, direction)
 
-    def _generate_location(self, game_state: GameState,
-                           result: Dict[str, Any]) -> None:
+    def _generate_location(self, game_state: GameState, result: Dict[str, Any]) -> None:
         """Generate a new location when moving to unexplored area."""
         coords = game_state.coordinates  # This should now include 'z'
         cache_key = f"{coords['x']},{coords['y']}"
@@ -295,7 +285,8 @@ class GameEngine:
             "new_location",
             f"loc_{
                 new_coords['x']}_{
-                new_coords['y']}")
+                new_coords['y']}",
+        )
 
         location_data = self._create_location_data(result, new_coords, loc_id)
         self._handle_connections(game_state, location_data, new_coords, loc_id)
@@ -319,19 +310,17 @@ class GameEngine:
 
         return {
             "name": result.get(
-                "location_name",
-                self._generate_location_name(location_type)),
+                "location_name", self._generate_location_name(location_type)
+            ),
             "coordinates": new_coords,
             "type": location_type,
             "description": result.get(
-                "description",
-                self._generate_location_description(location_type)),
+                "description", self._generate_location_description(location_type)
+            ),
             "visited": True,
             "connections": {},
             "resources": self._generate_location_resources(location_type),
-            "danger_level": random.randint(
-                1,
-                5),
+            "danger_level": random.randint(1, 5),
             "events": self._generate_location_events(location_type),
         }
 
@@ -459,7 +448,4 @@ class GameEngine:
             ],
         }
         available = events.get(location_type, ["O silêncio é perturbador."])
-        return random.sample(
-            available, k=random.randint(
-                1, min(
-                    2, len(available))))
+        return random.sample(available, k=random.randint(1, min(2, len(available))))

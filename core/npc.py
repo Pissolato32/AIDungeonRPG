@@ -113,14 +113,15 @@ class NPC(NPCBase):
             (
                 "hostile"
                 if self.relationship_level < -30
-                else "friendly" if self.relationship_level > 30 else "neutral"
+                else "friendly"
+                if self.relationship_level > 30
+                else "neutral"
             ),
         )
 
         return random.choice(greetings[disposition])
 
-    def get_dialogue_options(
-            self, context: Dict[str, Any]) -> List[DialogueOption]:
+    def get_dialogue_options(self, context: Dict[str, Any]) -> List[DialogueOption]:
         """Generate relevant dialogue options based on context.
 
         The options are determined by the NPC's profession, knowledge,
@@ -192,8 +193,7 @@ class NPC(NPCBase):
         self.interaction_count += 1
         self.last_interaction = action
 
-        response: InteractionResult = {
-            "success": True, "message": "", "options": []}
+        response: InteractionResult = {"success": True, "message": "", "options": []}
 
         if action == "greet":
             response["message"] = self.get_greeting()

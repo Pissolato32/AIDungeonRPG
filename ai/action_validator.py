@@ -67,7 +67,8 @@ def validate_action_with_ai(
             logger.warning(
                 f"Formato de resposta inesperado da IA para validação de ação: {
                     str(result)[
-                        :200]}")
+                        :200]}"
+            )
             # Mantendo o comportamento de fallback para True, mas idealmente
             # isso seria False ou tratado de forma diferente.
             return {"valid": True}
@@ -78,7 +79,6 @@ def validate_action_with_ai(
         return result
 
     except Exception as e:
-        logger.error(
-            f"Error validating action with artificial intelligence: {e}")
+        logger.error(f"Error validating action with artificial intelligence: {e}")
         # In case of error, assume that the action is valid
         return {"valid": True}

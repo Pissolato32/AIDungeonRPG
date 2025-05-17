@@ -58,7 +58,8 @@ class ErrorHandler:
             # Adicione outras chaves de erro conforme necessário
         }
         return messages_pt_br.get(
-            error_key, f"Erro desconhecido: {error_key}. Detalhes: {error_details}")
+            error_key, f"Erro desconhecido: {error_key}. Detalhes: {error_details}"
+        )
 
     @staticmethod
     def create_error_response(
@@ -70,8 +71,7 @@ class ErrorHandler:
             f"errors.{error_key}", language, error_details
         )
 
-        return jsonify(
-            {"success": False, "message": message, "error_key": error_key})
+        return jsonify({"success": False, "message": message, "error_key": error_key})
 
     @staticmethod
     def handle_route_error(

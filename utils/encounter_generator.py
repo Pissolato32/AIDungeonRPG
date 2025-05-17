@@ -83,23 +83,14 @@ class EncounterGenerator:
         }
 
         self._environment_effects = {
-            "forest": {
-                "cover": True,
-                "escape_bonus": 0.2,
-                "vision_penalty": -2},
+            "forest": {"cover": True, "escape_bonus": 0.2, "vision_penalty": -2},
             "mountain": {
                 "high_ground": True,
                 "damage_bonus": 2,
                 "movement_penalty": -1,
             },
-            "desert": {
-                "heat": True,
-                "stamina_drain": 2,
-                "accuracy_penalty": -1},
-            "cave": {
-                "darkness": True,
-                "vision_penalty": -3,
-                "echo": True},
+            "desert": {"heat": True, "stamina_drain": 2, "accuracy_penalty": -1},
+            "cave": {"darkness": True, "vision_penalty": -3, "echo": True},
         }
 
     def generate_encounter(
@@ -120,20 +111,16 @@ class EncounterGenerator:
         difficulty = self._calculate_difficulty(player_level, time_of_day)
 
         # Selecionar inimigos apropriados
-        enemies = self._generate_enemies(
-            difficulty, player_level, location_type)
+        enemies = self._generate_enemies(difficulty, player_level, location_type)
 
         # Gerar recompensas
-        rewards = self._generate_rewards(
-            difficulty, player_level, len(enemies))
+        rewards = self._generate_rewards(difficulty, player_level, len(enemies))
 
         # Aplicar efeitos ambientais
-        env_effects = self._get_environmental_effects(
-            location_type, time_of_day)
+        env_effects = self._get_environmental_effects(location_type, time_of_day)
 
         # Calcular chance de fuga
-        escape_chance = self._calculate_escape_chance(
-            difficulty, location_type)
+        escape_chance = self._calculate_escape_chance(difficulty, location_type)
 
         return {
             "type": self._determine_encounter_type(enemies),
@@ -147,13 +134,9 @@ class EncounterGenerator:
             "escape_chance": escape_chance,
         }
 
-    def _calculate_difficulty(
-            self,
-            player_level: int,
-            time_of_day: str) -> int:
+    def _calculate_difficulty(self, player_level: int, time_of_day: str) -> int:
         """Calcula a dificuldade do encontro."""
-        base_difficulty = random.randint(
-            max(1, player_level - 2), player_level + 2)
+        base_difficulty = random.randint(max(1, player_level - 2), player_level + 2)
 
         # Modificadores de dificuldade
         if time_of_day == "night":
@@ -251,10 +234,7 @@ class EncounterGenerator:
 
         return effects
 
-    def _calculate_escape_chance(
-            self,
-            difficulty: int,
-            location_type: str) -> float:
+    def _calculate_escape_chance(self, difficulty: int, location_type: str) -> float:
         """Calcula a chance de fuga do encontro."""
         base_chance = 0.5  # 50% base
 
@@ -272,13 +252,12 @@ class EncounterGenerator:
         return min(0.9, max(0.1, base_chance * difficulty_mod + location_mod))
 
     def _generate_description(
-            self,
-            enemies: List[EncounterEnemy],
-            location_type: str,
-            time_of_day: str) -> str:
+        self, enemies: List[EncounterEnemy], location_type: str, time_of_day: str
+    ) -> str:
         """Gera uma descrição narrativa do encontro."""
-        time_desc = ("Sob a luz do dia" if time_of_day ==
-                     "day" else "Na escuridão da noite")
+        time_desc = (
+            "Sob a luz do dia" if time_of_day == "day" else "Na escuridão da noite"
+        )
 
         enemy_desc = []
         for enemy in enemies:
@@ -301,8 +280,7 @@ class EncounterGenerator:
             "preparado(s) para o combate!"
         )
 
-    def _generate_loot(self, difficulty: int,
-                       num_enemies: int) -> List[Dict[str, Any]]:
+    def _generate_loot(self, difficulty: int, num_enemies: int) -> List[Dict[str, Any]]:
         """Gera itens de loot baseados na dificuldade."""
         items = []
         num_items = random.randint(1, max(2, num_enemies))
@@ -349,8 +327,7 @@ class EncounterGenerator:
         ]
         return random.choice(rare_items)
 
-    def _generate_reputation_rewards(
-            self, difficulty: int) -> Optional[Dict[str, int]]:
+    def _generate_reputation_rewards(self, difficulty: int) -> Optional[Dict[str, int]]:
         """Gera recompensas de reputação com facções."""
         if random.random() < 0.3:  # 30% chance de afetar reputação
             factions = ["Vila", "Guilda", "Mercadores"]
