@@ -102,7 +102,7 @@ class MoveActionHandler(ActionHandler):
             if dir_key.lower() == normalized_direction:
                 next_location_id = loc_id
                 break
-            elif (
+            if (
                 normalized_direction is None
                 and loc_id in game_state.world_map["locations"]
                 and game_state.world_map["locations"][loc_id]["name"].lower()
@@ -543,7 +543,7 @@ class UseItemActionHandler(ActionHandler):
                 # Check if the item exists in the database
                 item_data = item_generator.get_item_by_name(actual_item_name)
                 break
-            elif (
+            if (
                 isinstance(inv_item, dict)
                 and inv_item.get("name", "").lower() == item_name_query.lower()
             ):
