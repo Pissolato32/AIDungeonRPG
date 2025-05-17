@@ -1,5 +1,6 @@
-from typing import Dict, Any, List, Union  # Added List, Union
 import logging
+from typing import Any, Dict, List, Union  # Added List, Union
+
 from core.models import Character
 
 logger = logging.getLogger(__name__)
@@ -152,9 +153,9 @@ class CharacterManager:
             intelligence_for_inv_calc,
             description_val,
         )
-        initial_inventory_list: List[Union[str, Dict[str, Any]]] = [
-            item for item in generated_inventory_items
-        ]
+        initial_inventory_list: List[Union[str, Dict[str, Any]]] = list(
+            generated_inventory_items
+        )
 
         return Character(
             name=name_val,
