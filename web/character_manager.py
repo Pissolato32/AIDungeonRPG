@@ -152,9 +152,7 @@ class CharacterManager:
             intelligence_for_inv_calc,
             description_val,
         )
-        initial_inventory_list: List[Union[str, Dict[str, Any]]] = [
-            item for item in generated_inventory_items
-        ]
+        initial_inventory_list: List[Union[str, Dict[str, Any]]] = list(generated_inventory_items)
 
         return Character(
             name=name_val,
