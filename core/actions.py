@@ -24,9 +24,7 @@ class ActionHandler:
     VALID_ACTIONS = {"move", "look", "talk", "search", "attack"}
 
     @staticmethod
-    def handle(
-        details: str, character: "Character", game_state: Any
-    ) -> Dict[str, Any]:
+    def handle(details: str, character: "Character", game_state: Any) -> Dict[str, Any]:
         """Handle an action with default behavior."""
         logger.info(f"Handling action with details: {details}")
 
@@ -246,86 +244,103 @@ class TalkActionHandler(ActionHandler):
         self, details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
         # If the player specified an NPC to talk to
-        if details and details.strip():
-            # Check if the NPC is present in the location
-            npc_name = details.strip()
+        if details and details.strip():  # User input for NPC name
+            npc_query_name = details.strip()
+            npc_query_name_lower = npc_query_name.lower()
+
             if game_state.npcs_present and any(
-                npc.lower() == npc_name.lower() for npc in game_state.npcs_present
+                npc.lower() == npc_query_name_lower for npc in game_state.npcs_present
             ):
-                # Find the exact name of the NPC (preserving case)
-                npc_name = next(
-                    npc
-                    for npc in game_state.npcs_present
-                    if npc.lower() == npc_name.lower()
-                )
+                actual_npc_name: Optional[str] = None
+                try:
+                    # Find the exact name of the NPC (preserving case)
+                    actual_npc_name = next(
+                        npc
+                        for npc in game_state.npcs_present
+                        if npc.lower() == npc_query_name_lower
+                    )
+                except StopIteration:
+                    logger.error(
+                        f"Talk target '{npc_query_name_lower}' inconsistency: found by 'any' but not by 'next'."
+                    )
+                    # actual_npc_name remains None, will fall through to default AI response
 
-                # Check if this NPC is already known
-                if (
-                    hasattr(game_state, "known_npcs")
-                    and npc_name in game_state.known_npcs
-                ):
-                    # Retrieve information about the already known NPC
-                    npc_details = game_state.known_npcs[npc_name]
+                if actual_npc_name:
+                    # Check if this NPC is already known
+                    if (
+                        hasattr(game_state, "known_npcs")
+                        and actual_npc_name in game_state.known_npcs
+                    ):
+                        # Retrieve information about the already known NPC
+                        npc_details = game_state.known_npcs[actual_npc_name]
 
-                    # Update the interaction count
-                    npc_details["interactions"] = npc_details.get("interactions", 0) + 1
+                        # Update the interaction count
+                        npc_details["interactions"] = (
+                            npc_details.get("interactions", 0) + 1
+                        )
 
-                    # Use the details to enrich the AI response
-                    result = self.ai_response("talk", details, character, game_state)
+                        # Use the details to enrich the AI response
+                        result = self.ai_response(
+                            "talk", actual_npc_name, character, game_state
+                        )
 
-                    # Add NPC information to the response based on the familiarity level
-                    if "message" in result:
-                        if npc_details["interactions"] <= 2:
-                            result["message"] += (
-                                f"\n\nYou recognize {npc_name}, a {npc_details['race']} {npc_details['profession']}."
-                            )
-                        else:
-                            # More details for NPCs the player has interacted with multiple times
-                            result["message"] += (
-                                f"\n\n{npc_name} smiles at a familiar face. As an experienced {npc_details['profession']}, {npc_name} has many stories to tell."
-                            )
+                        # Add NPC information to the response based on the familiarity level
+                        if "message" in result:
+                            if npc_details["interactions"] <= 2:
+                                result[
+                                    "message"
+                                ] += f"\n\nYou recognize {actual_npc_name}, a {npc_details['race']} {npc_details['profession']}."
+                            else:
+                                # More details for NPCs the player has interacted with multiple times
+                                result[
+                                    "message"
+                                ] += f"\n\n{actual_npc_name} smiles at a familiar face. As an experienced {npc_details['profession']}, {actual_npc_name} has many stories to tell."
 
-                            # Add a hint about quests if the NPC has any
-                            if (
-                                npc_details.get("quests") and random.random() < 0.7
-                            ):  # 70% chance
-                                result["message"] += (
-                                    f" {npc_name} mentions needing help with '{random.choice(npc_details['quests'])}'."
-                                )
+                                # Add a hint about quests if the NPC has any
+                                if (
+                                    npc_details.get("quests") and random.random() < 0.7
+                                ):  # 70% chance
+                                    result[
+                                        "message"
+                                    ] += f" {actual_npc_name} mentions needing help with '{random.choice(npc_details['quests'])}'."
 
-                    # Update the NPC record
-                    game_state.known_npcs[npc_name] = npc_details
+                        # Update the NPC record
+                        game_state.known_npcs[actual_npc_name] = npc_details
 
-                    return result
-                # First interaction with this NPC
-                npc_details = self.get_npc_details(npc_name, character, game_state)
-
-                # Use the details to enrich the AI response
-                result = self.ai_response("talk", details, character, game_state)
-
-                # Add NPC information to the response
-                if "message" in result:
-                    result["message"] += (
-                        f"\n\nYou notice that {npc_name} is a {npc_details['race']} {npc_details['profession']}."
+                        return result
+                    # First interaction with this NPC
+                    npc_details = self.get_npc_details(
+                        actual_npc_name, character, game_state
                     )
 
-                    # Add a hint about the NPC's knowledge or quests
-                    if npc_details.get("knowledge"):
-                        result["message"] += (
-                            f" It seems that {npc_name} knows about {', '.join(npc_details['knowledge'][:2])}."
-                        )
+                    # Use the details to enrich the AI response
+                    result = self.ai_response(
+                        "talk", actual_npc_name, character, game_state
+                    )
 
-                    if npc_details.get("quests"):
-                        result["message"] += (
-                            f" {npc_name} mentions something about '{npc_details['quests'][0]}'."
-                        )
+                    # Add NPC information to the response
+                    if "message" in result:
+                        result[
+                            "message"
+                        ] += f"\n\nYou notice that {actual_npc_name} is a {npc_details['race']} {npc_details['profession']}."
 
-                # Record the NPC as known
-                if hasattr(game_state, "known_npcs"):
-                    npc_details["interactions"] = 1
-                    game_state.known_npcs[npc_name] = npc_details
+                        # Add a hint about the NPC's knowledge or quests
+                        if npc_details.get("knowledge"):
+                            result[
+                                "message"
+                            ] += f" It seems that {actual_npc_name} knows about {', '.join(npc_details['knowledge'][:2])}."
 
-                return result
+                        if npc_details.get("quests"):
+                            result[
+                                "message"
+                            ] += f" {actual_npc_name} mentions something about '{npc_details['quests'][0]}'."
+
+                    # Record the NPC as known
+                    if hasattr(game_state, "known_npcs"):
+                        npc_details["interactions"] = 1
+                        game_state.known_npcs[actual_npc_name] = npc_details
+
+                    return result
 
         # Default behavior if no specific NPC is mentioned
         return self.ai_response("talk", details, character, game_state)
@@ -421,44 +436,56 @@ class AttackActionHandler(ActionHandler):
     ) -> Dict[str, Any]:
         # Check if the player is trying to attack a specific NPC
         if details and details.strip():
-            target = details.strip().lower() if isinstance(details, str) else ""
+            target_npc_lower = (
+                details.strip().lower() if isinstance(details, str) else ""
+            )
 
             # Check if the target is an NPC present
             if game_state.npcs_present and any(
-                npc.lower() == target for npc in game_state.npcs_present
+                npc.lower() == target_npc_lower for npc in game_state.npcs_present
             ):
-                # Find the exact name of the NPC (preserving case)
-                npc_name = next(
-                    npc for npc in game_state.npcs_present if npc.lower() == target
-                )
+                npc_to_attack: Optional[str] = None
+                try:
+                    # Find the exact name of the NPC (preserving case)
+                    npc_to_attack = next(
+                        npc
+                        for npc in game_state.npcs_present
+                        if npc.lower() == target_npc_lower
+                    )
+                except StopIteration:
+                    logger.error(
+                        f"Attack target '{target_npc_lower}' inconsistency: found by 'any' but not by 'next'."
+                    )
+                    # npc_to_attack remains None, will fall through to random enemy generation
 
-                # Create an enemy based on the NPC
-                enemy = Enemy(
-                    name=npc_name,
-                    level=random.randint(character.level, character.level + 2),
-                    max_health=random.randint(
-                        20, 50
-                    ),  # Use max_health from CombatStats
-                    health=random.randint(20, 50),  # Use health from CombatStats
-                    attack_damage_min=random.randint(3, 8),
-                    attack_damage_max=random.randint(9, 15),
-                    defense=random.randint(3, 10),
-                    description=f"A hostile {npc_name} that you decided to attack.",
-                )
+                if npc_to_attack:
+                    # Create an enemy based on the NPC
+                    enemy = Enemy(
+                        name=npc_to_attack,
+                        level=random.randint(character.level, character.level + 2),
+                        max_health=random.randint(
+                            20, 50
+                        ),  # Use max_health from CombatStats
+                        health=random.randint(20, 50),  # Use health from CombatStats
+                        attack_damage_min=random.randint(3, 8),
+                        attack_damage_max=random.randint(9, 15),
+                        defense=random.randint(3, 10),
+                        description=f"A hostile {npc_to_attack} that you decided to attack.",
+                    )
 
-                # Start the combat
-                if not hasattr(game_state, "combat") or not game_state.combat:
-                    game_state.combat = {
-                        "enemy": enemy,
-                        "round": 1,
-                        "log": [f"You initiated combat with {npc_name}!"],
-                    }
+                    # Start the combat
+                    if not hasattr(game_state, "combat") or not game_state.combat:
+                        game_state.combat = {
+                            "enemy": enemy,
+                            "round": 1,
+                            "log": [f"You initiated combat with {npc_to_attack}!"],
+                        }
 
-                    return {
-                        "success": True,
-                        "message": f"You attacked {npc_name} and started a combat! Get ready to fight!",
-                        "combat": True,
-                    }
+                        return {
+                            "success": True,
+                            "message": f"You attacked {npc_to_attack} and started a combat! Get ready to fight!",
+                            "combat": True,
+                        }
 
             # If the target is not an NPC present, try to start combat with a random enemy
             enemy_types = [
