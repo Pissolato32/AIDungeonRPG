@@ -2,6 +2,8 @@ import logging
 import os
 import random
 from typing import Dict, Any, Optional, Union
+from core.enemy import Enemy  # Import Enemy class
+from utils.quest_generator import generate_quest  # Direct import for generate_quest
 from core.models import Character
 from .world_generator import WorldGenerator
 
@@ -26,6 +28,15 @@ class ActionHandler:
         logger.info(f"Handling action with details: {details}")
 
         # Default response for unhandled actions
+        return {
+            "success": False,
+            "message": f"The action '{details if details else 'unknown'}' is not recognized or not implemented.",
+        }
+
+    def ai_response(
+        self, action: str, details: str, character: "Character", game_state: Any
+    ) -> Dict[str, Any]:
+        """Fallback AI response if a specific handler doesn't fully process."""
         return {
             "success": False,
             "message": f"The action '{details}' is not recognized or not implemented.",
@@ -54,15 +65,6 @@ class ActionHandler:
 class MoveActionHandler(ActionHandler):
     """Handler for the 'move' action."""
 
-    def ai_response(
-        self, action: str, details: str, character: "Character", game_state: Any
-    ) -> Dict[str, Any]:
-        # Placeholder method for fallback AI response
-        return {
-            "success": False,
-            "message": f"AI couldn't handle the move to '{details}'.",
-        }
-
     def handle(
         self, details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
@@ -70,7 +72,7 @@ class MoveActionHandler(ActionHandler):
         data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
         world_generator = WorldGenerator(data_dir)
 
-        destination = details.strip().lower()
+        destination = details.strip().lower() if isinstance(details, str) else ""
         current_location_id = game_state.location_id
         directions = ["north", "south", "east", "west"]
 
@@ -185,19 +187,13 @@ class MoveActionHandler(ActionHandler):
 class LookActionHandler(ActionHandler):
     """Handler for the 'look' action."""
 
-    def ai_response(
-        self, action: str, details: str, character: "Character", game_state: Any
-    ) -> Dict[str, Any]:
-        # Implement the ai_response method here
-        return {"success": True, "message": "AI response"}
-
     def handle(
         self, details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
         """Handle the 'look' action, either observing an NPC or the environment."""
 
         # Normaliza e valida o texto fornecido
-        target = details.strip().lower() if details else ""
+        target = details.strip().lower() if isinstance(details, str) else ""
 
         # Se o jogador tentar olhar para algo específico
         if target and hasattr(game_state, "npcs_present") and game_state.npcs_present:
@@ -240,14 +236,8 @@ class LookActionHandler(ActionHandler):
 class TalkActionHandler(ActionHandler):
     """Handler for 'talk' action."""
 
-    def ai_response(
-        self, action: str, details: str, character: "Character", game_state: Any
-    ) -> Dict[str, Any]:
-        # Implement the ai_response method here
-        return {"success": True, "message": "AI response"}
-
     def handle(
-        self, details: str, character: Character, game_state: Any
+        self, details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
         # If the player specified an NPC to talk to
         if details and details.strip():
@@ -335,6 +325,26 @@ class TalkActionHandler(ActionHandler):
         # Default behavior if no specific NPC is mentioned
         return self.ai_response("talk", details, character, game_state)
 
+    def get_npc_details(
+        self, npc_name: str, character: "Character", game_state: Any
+    ) -> Dict[str, Any]:
+        """
+        Placeholder para obter os detalhes de um NPC.
+        Essa função deve ser implementada de acordo com seu sistema de NPCs.
+        """
+        # Example: fetch from game_state.known_npcs or generate dynamically
+        return game_state.known_npcs.get(
+            npc_name,
+            {
+                "race": "Unknown Race",
+                "profession": "Unknown Profession",
+                "personality": "Mysterious",
+                "level": character.level,  # Or some other logic
+                "knowledge": [],
+                "quests": [],
+            },
+        )
+
 
 class SearchActionHandler(ActionHandler):
     """Handler for 'search' action."""
@@ -343,7 +353,8 @@ class SearchActionHandler(ActionHandler):
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
         # Check if the player is looking for quests
-        if "quest" in details.lower():
+        details_lower = details.lower() if isinstance(details, str) else ""
+        if "quest" in details_lower:
             # Check if there are NPCs present who can offer quests
             if not hasattr(game_state, "npcs_present") or not game_state.npcs_present:
                 return {
@@ -357,9 +368,6 @@ class SearchActionHandler(ActionHandler):
 
             # Randomly choose an NPC to offer a quest
             quest_giver = random.choice(game_state.npcs_present)
-
-            # Generate a random quest using the quest_generator
-            from utils import generate_quest
 
             new_quest = generate_quest(
                 location=game_state.current_location,
@@ -408,7 +416,7 @@ class AttackActionHandler(ActionHandler):
     ) -> Dict[str, Any]:
         # Check if the player is trying to attack a specific NPC
         if details and details.strip():
-            target = details.strip().lower()
+            target = details.strip().lower() if isinstance(details, str) else ""
 
             # Check if the target is an NPC present
             if game_state.npcs_present and any(
@@ -423,8 +431,10 @@ class AttackActionHandler(ActionHandler):
                 enemy = Enemy(
                     name=npc_name,
                     level=random.randint(character.level, character.level + 2),
-                    max_hp=random.randint(20, 50),
-                    current_hp=random.randint(20, 50),
+                    max_health=random.randint(
+                        20, 50
+                    ),  # Use max_health from CombatStats
+                    health=random.randint(20, 50),  # Use health from CombatStats
                     attack_damage=(random.randint(3, 8), random.randint(9, 15)),
                     defense=random.randint(3, 10),
                     description=f"A hostile {npc_name} that you decided to attack.",
@@ -459,8 +469,8 @@ class AttackActionHandler(ActionHandler):
             enemy = Enemy(
                 name=enemy_name,
                 level=random.randint(character.level, character.level + 2),
-                max_hp=random.randint(20, 50),
-                current_hp=random.randint(20, 50),
+                max_health=random.randint(20, 50),
+                health=random.randint(20, 50),
                 attack_damage=(random.randint(3, 8), random.randint(9, 15)),
                 defense=random.randint(3, 10),
                 description=f"A hostile {enemy_name} that appeared suddenly.",
@@ -491,7 +501,7 @@ class UseItemActionHandler(ActionHandler):
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
         # Import the item generator
-        from item_generator import ItemGenerator
+        from utils.item_generator import ItemGenerator
 
         # Initialize the item generator
         item_generator = ItemGenerator(
@@ -509,7 +519,7 @@ class UseItemActionHandler(ActionHandler):
             }
 
         # Normalize the item name for comparison
-        item_name = details.strip()
+        item_name_query = details.strip() if isinstance(details, str) else ""
 
         # Check if the item is in the inventory
         item_found = False
@@ -519,30 +529,32 @@ class UseItemActionHandler(ActionHandler):
         # Look for the exact item or partial match
         for i, inv_item in enumerate(character.inventory):
             if isinstance(inv_item, str) and (
-                inv_item.lower() == item_name.lower()
-                or inv_item.lower() in item_name.lower()
+                inv_item.lower() == item_name_query.lower()
+                or (item_name_query and inv_item.lower() in item_name_query.lower())
             ):
                 item_found = True
                 item_index = i
-                item_name = inv_item  # Use the exact item name from the inventory
+                actual_item_name = (
+                    inv_item  # Use the exact item name from the inventory
+                )
 
                 # Check if the item exists in the database
-                item_data = item_generator.get_item_by_name(item_name)
+                item_data = item_generator.get_item_by_name(actual_item_name)
                 break
             elif (
                 isinstance(inv_item, dict)
-                and inv_item.get("name", "").lower() == item_name.lower()
+                and inv_item.get("name", "").lower() == item_name_query.lower()
             ):
                 item_found = True
                 item_index = i
-                item_name = inv_item.get("name")
+                actual_item_name = inv_item.get("name")
                 item_data = inv_item
                 break
 
         if not item_found:
             return {
                 "success": False,
-                "message": f"You don't have '{item_name}' in your inventory.",
+                "message": f"You don't have '{item_name_query}' in your inventory.",
             }
 
         # If the item was found in the database, use its attributes
@@ -561,7 +573,7 @@ class UseItemActionHandler(ActionHandler):
                 old_item = character.equipment.get("weapon")
 
                 # Equip the new item
-                character.equipment["weapon"] = item_name
+                character.equipment["weapon"] = actual_item_name
 
                 # If there was a previously equipped item, put it back in the inventory
                 if old_item:
@@ -578,7 +590,7 @@ class UseItemActionHandler(ActionHandler):
 
                 return {
                     "success": True,
-                    "message": f"You equipped {item_name}. {damage_info} {item_description} {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
+                    "message": f"You equipped {actual_item_name}. {damage_info} {item_description} {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
                 }
 
             elif item_type == "armor":
@@ -599,7 +611,7 @@ class UseItemActionHandler(ActionHandler):
                 old_item = character.equipment.get(slot)
 
                 # Equip the new item
-                character.equipment[slot] = item_name
+                character.equipment[slot] = actual_item_name
 
                 # If there was a previously equipped item, put it back in the inventory
                 if old_item:
@@ -615,7 +627,7 @@ class UseItemActionHandler(ActionHandler):
 
                 return {
                     "success": True,
-                    "message": f"You equipped {item_name}. {defense_info} {item_description} {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
+                    "message": f"You equipped {actual_item_name}. {defense_info} {item_description} {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
                 }
 
             elif item_type == "consumable":
@@ -626,9 +638,9 @@ class UseItemActionHandler(ActionHandler):
 
                 if effect_type == "health":
                     # Restore HP
-                    old_hp = character.current_hp
-                    character.current_hp = min(
-                        character.current_hp + effect_value, character.max_hp
+                    old_hp = character.health
+                    character.health = min(
+                        character.health + effect_value, character.max_hp
                     )
 
                     # Remove the item from the inventory
@@ -636,10 +648,12 @@ class UseItemActionHandler(ActionHandler):
 
                     return {
                         "success": True,
-                        "message": f"You used {item_name} and restored {character.current_hp - old_hp} health points. {item_description}",
+                        "message": f"You used {actual_item_name} and restored {character.health - old_hp} health points. {item_description}",
                     }
 
-                elif effect_type in ["stamina", "hunger", "thirst"]:
+                elif (
+                    effect_type == "stamina"
+                ):  # Hunger and thirst are handled by survival_stats
                     # Restore other attributes
                     attr_name = f"current_{effect_type}"
                     max_attr_name = f"max_{effect_type}"
@@ -647,20 +661,36 @@ class UseItemActionHandler(ActionHandler):
                     if hasattr(character, attr_name) and hasattr(
                         character, max_attr_name
                     ):
-                        old_value = getattr(character, attr_name)
-                        max_value = getattr(character, max_attr_name)
-                        setattr(
-                            character,
-                            attr_name,
-                            min(old_value + effect_value, max_value),
-                        )
+                        # For stamina, assuming it's in attributes like hp
+                        if effect_type == "stamina":
+                            old_value = character.attributes.get(attr_name, 0)
+                            max_value = character.attributes.get(max_attr_name, 0)
+                            character.attributes[attr_name] = min(
+                                old_value + effect_value, max_value
+                            )
 
                     # Remove the item from the inventory
                     character.inventory.pop(item_index)
 
                     return {
                         "success": True,
-                        "message": f"You used {item_name} and feel refreshed. {item_description}",
+                        "message": f"You used {actual_item_name} and feel refreshed. {item_description}",
+                    }
+                elif effect_type in ["hunger", "thirst"]:
+                    stat_key = f"current_{effect_type}"
+                    max_stat_key = f"max_{effect_type}"
+                    old_value = character.survival_stats.get(stat_key, 0)
+                    max_value = character.survival_stats.get(
+                        max_stat_key, 100
+                    )  # Default max if not set
+                    character.survival_stats[stat_key] = min(
+                        old_value + effect_value, max_value
+                    )
+
+                    character.inventory.pop(item_index)
+                    return {
+                        "success": True,
+                        "message": f"You used {actual_item_name} and feel less {effect_type}. {item_description}",
                     }
 
                 else:
@@ -670,7 +700,7 @@ class UseItemActionHandler(ActionHandler):
 
                     return {
                         "success": True,
-                        "message": f"You used {item_name}. {item_description}",
+                        "message": f"You used {actual_item_name}. {item_description}",
                     }
 
             elif item_type == "quest":
@@ -681,34 +711,37 @@ class UseItemActionHandler(ActionHandler):
                 ):
                     return {
                         "success": True,
-                        "message": f"You examine {item_name}. {item_description}\n\nContent: {item_data['content']}",
+                        "message": f"You examine {actual_item_name}. {item_description}\n\nContent: {item_data['content']}",
                     }
                 else:
                     return {
                         "success": True,
-                        "message": f"You examine {item_name}. {item_description}",
+                        "message": f"You examine {actual_item_name}. {item_description}",
                     }
 
         # Logic for items without specific data
+        item_name_lower = actual_item_name.lower() if actual_item_name else ""
 
         # Health potions
-        if any(p in item_name.lower() for p in ["potion", "life", "health"]):
+        if any(p in item_name_lower for p in ["potion", "life", "health"]):
             heal_amount = 20  # Adjust based on potion type
-            max_hp = getattr(character, "max_hp", 20)
-            old_hp = getattr(character, "current_hp", 0)
-            character.current_hp = min(old_hp + heal_amount, max_hp)
+            max_hp = character.max_hp
+            old_hp = character.health
+            character.health = min(old_hp + heal_amount, max_hp)
 
             # Remove the item from the inventory
             character.inventory.pop(item_index)
 
             return {
                 "success": True,
-                "message": f"You used {item_name} and restored {character.current_hp - old_hp} health points. Current HP: {character.current_hp}/{max_hp}.",
+                "message": f"You used {actual_item_name} and restored {character.health - old_hp} health points. Current HP: {character.health}/{max_hp}.",
             }
 
         # Equipment (weapons, armor, etc.)
-        elif any(
-            eq in item_name.lower()
+        elif isinstance(
+            actual_item_name, str
+        ) and any(  # Ensure actual_item_name is str
+            eq in actual_item_name.lower()
             for eq in [
                 "sword",
                 "shield",
@@ -720,21 +753,27 @@ class UseItemActionHandler(ActionHandler):
         ):
             # Determine the equipment type
             equip_type = "weapon"  # Default
-            if any(
-                w in item_name.lower()
+            if any(  # Ensure actual_item_name is str
+                w in actual_item_name.lower()
                 for w in [
                     "sword",
                     "axe",
                     "dagger",
                     "bow",
                 ]
-            ):
+            ) and isinstance(actual_item_name, str):
                 equip_type = "weapon"
-            elif any(a in item_name.lower() for a in ["shield"]):
+            elif isinstance(actual_item_name, str) and any(
+                a in actual_item_name.lower() for a in ["shield"]
+            ):
                 equip_type = "shield"
-            elif any(a in item_name.lower() for a in ["armor", "breastplate"]):
+            elif isinstance(actual_item_name, str) and any(
+                a in actual_item_name.lower() for a in ["armor", "breastplate"]
+            ):
                 equip_type = "armor"
-            elif any(h in item_name.lower() for h in ["helmet", "hat"]):
+            elif isinstance(actual_item_name, str) and any(
+                h in actual_item_name.lower() for h in ["helmet", "hat"]
+            ):
                 equip_type = "helmet"
 
             # Initialize equipment if it doesn't exist
@@ -745,7 +784,7 @@ class UseItemActionHandler(ActionHandler):
             old_item = character.equipment.get(equip_type)
 
             # Equip the new item
-            character.equipment[equip_type] = item_name
+            character.equipment[equip_type] = actual_item_name
 
             # If there was a previously equipped item, put it back in the inventory
             if old_item:
@@ -756,12 +795,14 @@ class UseItemActionHandler(ActionHandler):
 
             return {
                 "success": True,
-                "message": f"You equipped {item_name}. {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
+                "message": f"You equipped {actual_item_name}. {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
             }
 
         # Consumable items (food, drink)
-        elif any(
-            f in item_name.lower()
+        elif isinstance(
+            actual_item_name, str
+        ) and any(  # Ensure actual_item_name is str
+            f in actual_item_name.lower()
             for f in [
                 "food",
                 "bread",
@@ -772,20 +813,24 @@ class UseItemActionHandler(ActionHandler):
             ]
         ):
             # Restore hunger or thirst
-            if hasattr(character, "current_hunger") and hasattr(
-                character, "max_hunger"
+            if (
+                "current_hunger" in character.survival_stats
+                and "max_hunger" in character.survival_stats
             ):
                 hunger_restore = 20
-                character.current_hunger = min(
-                    character.current_hunger + hunger_restore, character.max_hunger
+                character.survival_stats["current_hunger"] = min(
+                    character.survival_stats["current_hunger"] + hunger_restore,
+                    character.survival_stats["max_hunger"],
                 )
 
-            if hasattr(character, "current_thirst") and hasattr(
-                character, "max_thirst"
+            if (
+                "current_thirst" in character.survival_stats
+                and "max_thirst" in character.survival_stats
             ):
                 thirst_restore = 20
-                character.current_thirst = min(
-                    character.current_thirst + thirst_restore, character.max_thirst
+                character.survival_stats["current_thirst"] = min(
+                    character.survival_stats["current_thirst"] + thirst_restore,
+                    character.survival_stats["max_thirst"],
                 )
 
             # Remove the item from the inventory
@@ -793,15 +838,16 @@ class UseItemActionHandler(ActionHandler):
 
             return {
                 "success": True,
-                "message": f"You consumed {item_name} and feel refreshed.",
+                "message": f"You consumed {actual_item_name} and feel refreshed.",
             }
 
         # Throwable items
-        elif "throw" in details.lower():
+        details_lower = details.lower() if isinstance(details, str) else ""
+        if "throw" in details_lower:
             # Extract the target of the throw
             target = None
-            if "at" in details.lower():
-                target_part = details.lower().split("at ", 1)[1]
+            if "at" in details_lower:
+                target_part = details_lower.split("at ", 1)[1]
                 target = target_part.strip()
 
             # Remove the item from the inventory
@@ -809,7 +855,7 @@ class UseItemActionHandler(ActionHandler):
 
             return {
                 "success": True,
-                "message": f"You threw {item_name}{f' at {target}' if target else ''}.",
+                "message": f"You threw {actual_item_name}{f' at {target}' if target else ''}.",
             }
 
         # For other item types, use the AI response
@@ -846,6 +892,7 @@ class CustomActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
+        details_lower = details.lower() if isinstance(details, str) else ""
         # Check if the player is trying to manage the inventory
         inventory_keywords = [
             "get",
@@ -854,7 +901,7 @@ class CustomActionHandler(ActionHandler):
             "inventory",
             "pick up",
         ]
-        if any(keyword in details.lower() for keyword in inventory_keywords):
+        if any(keyword in details_lower for keyword in inventory_keywords):
             # Look for mentioned items
             items_to_add = []
 
@@ -894,7 +941,7 @@ class CustomActionHandler(ActionHandler):
             ]
 
             for item in common_items:
-                if item in details.lower():
+                if item in details_lower:
                     items_to_add.append(item.capitalize())
 
             # If no specific items were found, but the player seems to want to pick something up
@@ -902,7 +949,7 @@ class CustomActionHandler(ActionHandler):
                 verb in details.lower() for verb in ["get", "collect", "take"]
             ):
                 # Check if there are items in the environment (mentioned in the scene description)
-                scene_items = []
+                scene_items: List[str] = []
                 if hasattr(game_state, "scene_description"):
                     scene_text = game_state.scene_description.lower()
                     for item in common_items:
@@ -933,15 +980,15 @@ class CustomActionHandler(ActionHandler):
             "kill",
             "battle",
         ]
-        if any(keyword in details.lower() for keyword in combat_keywords):
+        if any(keyword in details_lower for keyword in combat_keywords):
             # Extract possible target from the text
-            words = details.lower().split()
+            words = details_lower.split()
             target = None
 
             # Look for NPCs mentioned in the command
             if game_state.npcs_present:
                 for npc in game_state.npcs_present:
-                    if npc.lower() in details.lower():
+                    if npc.lower() in details_lower:
                         target = npc
                         break
 
@@ -951,8 +998,8 @@ class CustomActionHandler(ActionHandler):
                 enemy = Enemy(
                     name=target,
                     level=random.randint(character.level, character.level + 2),
-                    max_hp=random.randint(20, 50),
-                    current_hp=random.randint(20, 50),
+                    max_health=random.randint(20, 50),
+                    health=random.randint(20, 50),
                     attack_damage=(random.randint(3, 8), random.randint(9, 15)),
                     defense=random.randint(3, 10),
                     description=f"A hostile {target} that you decided to attack.",
@@ -987,8 +1034,8 @@ class CustomActionHandler(ActionHandler):
                 enemy = Enemy(
                     name=enemy_name,
                     level=random.randint(character.level, character.level + 2),
-                    max_hp=random.randint(20, 50),
-                    current_hp=random.randint(20, 50),
+                    max_health=random.randint(20, 50),
+                    health=random.randint(20, 50),
                     attack_damage=(random.randint(3, 8), random.randint(9, 15)),
                     defense=random.randint(3, 10),
                     description=f"A hostile {enemy_name} that appeared suddenly.",
@@ -1009,10 +1056,11 @@ class CustomActionHandler(ActionHandler):
                     }
 
         # Check if the player is trying to see the map or their location
+        details_lower = details.lower() if isinstance(details, str) else ""
         if (
-            "map" in details.lower()
-            or "where am i" in details.lower()
-            or "location" in details.lower()
+            "map" in details_lower
+            or "where am i" in details_lower
+            or "location" in details_lower
         ):
             # Check if the player has an item to map with
             has_map_item = False
