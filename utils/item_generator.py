@@ -656,7 +656,9 @@ class ItemGenerator:
             ),
         )
 
-    def _generate_document_content(self, doc_type: str, quest_name: str = None) -> str:
+    def _generate_document_content(
+        self, doc_type: str, quest_name: Optional[str] = None
+    ) -> str:
         try:
             context = f" relacionado à tarefa '{quest_name}'" if quest_name else ""
             specific_doc_type = (
