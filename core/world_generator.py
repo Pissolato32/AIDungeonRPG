@@ -133,7 +133,7 @@ class WorldGenerator:
             logger.error(f"Error saving world map: {e}")
             return False
 
-    def generate_location_name(self, location_type: str = None) -> str:
+    def generate_location_name(self, location_type: Optional[str] = None) -> str:
         """
         Generate a random location name.
 

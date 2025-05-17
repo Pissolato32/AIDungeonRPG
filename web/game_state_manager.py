@@ -7,7 +7,7 @@ This module provides functionality for managing game state.
 import logging
 from typing import Optional
 
-from core.game_engine import GameState  # Adjusted import path
+from core.game_state_model import GameState  # Direct import
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class GameStateManager:
 
         # Set initial location with unique name and coordinates
         game_state.current_location = "Abrigo Subterrâneo"
-        game_state.location_id = "bunker_main"
+        game_state.location_id = "bunker_main"  # Set the initial location ID
         game_state.coordinates = {"x": 0, "y": 0, "z": 0}
         game_state.scene_description = "Você está na sala principal de um abrigo subterrâneo improvisado. As paredes de concreto são úmidas e a única luz vem de algumas lâmpadas de emergência piscando. Há um portão de metal reforçado ao norte que leva à superfície, uma enfermaria improvisada a leste e um depósito de suprimentos a oeste."
 
@@ -98,6 +98,7 @@ class GameStateManager:
                 "description": game_state.scene_description,
                 "npcs_seen": game_state.npcs_present.copy(),
                 "events_seen": game_state.events.copy(),
+                "search_results": [],  # Initialize search_results
             }
         }
 

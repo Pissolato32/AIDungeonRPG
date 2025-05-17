@@ -2,8 +2,8 @@
 Models for game entities.
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional
+from dataclasses import dataclass, field  # type: ignore
+from typing import Dict, Any, List, Optional, Union  # Added Union
 from core.combat_stats import CombatStats
 
 
@@ -14,10 +14,11 @@ class Character:
     name: str
     character_class: str
     race: str
+    description: str = ""
     level: int = 1
     experience: int = 0
     attributes: Dict[str, int] = field(default_factory=dict)
-    inventory: List[Dict[str, Any]] = field(default_factory=list)
+    inventory: List[Union[str, Dict[str, Any]]] = field(default_factory=list)
     equipment: Dict[str, Any] = field(default_factory=dict)
     skills: List[str] = field(default_factory=list)
     survival_stats: Dict[str, int] = field(default_factory=dict)
@@ -92,6 +93,7 @@ class Character:
             "name": self.name,
             "character_class": self.character_class,
             "race": self.race,
+            "description": self.description,
             "level": self.level,
             "experience": self.experience,
             "attributes": self.attributes,

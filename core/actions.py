@@ -1,7 +1,7 @@
 import logging
 import os
 import random
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List  # Added List
 from core.enemy import Enemy  # Import Enemy class
 from utils.quest_generator import generate_quest  # Direct import for generate_quest
 from core.models import Character
@@ -170,6 +170,7 @@ class MoveActionHandler(ActionHandler):
                         "description": game_state.scene_description,
                         "npcs_seen": game_state.npcs_present.copy(),
                         "events_seen": game_state.events.copy(),
+                        "search_results": [],  # Initialize search_results
                     }
 
                 return {
@@ -372,7 +373,6 @@ class SearchActionHandler(ActionHandler):
             new_quest = generate_quest(
                 location=game_state.current_location,
                 difficulty=character.level,
-                lang=getattr(game_state, "language", "pt-br"),
             )
 
             # Add NPC information to the quest
@@ -435,7 +435,8 @@ class AttackActionHandler(ActionHandler):
                         20, 50
                     ),  # Use max_health from CombatStats
                     health=random.randint(20, 50),  # Use health from CombatStats
-                    attack_damage=(random.randint(3, 8), random.randint(9, 15)),
+                    attack_damage_min=random.randint(3, 8),
+                    attack_damage_max=random.randint(9, 15),
                     defense=random.randint(3, 10),
                     description=f"A hostile {npc_name} that you decided to attack.",
                 )
@@ -471,7 +472,8 @@ class AttackActionHandler(ActionHandler):
                 level=random.randint(character.level, character.level + 2),
                 max_health=random.randint(20, 50),
                 health=random.randint(20, 50),
-                attack_damage=(random.randint(3, 8), random.randint(9, 15)),
+                attack_damage_min=random.randint(3, 8),
+                attack_damage_max=random.randint(9, 15),
                 defense=random.randint(3, 10),
                 description=f"A hostile {enemy_name} that appeared suddenly.",
             )
@@ -1000,7 +1002,8 @@ class CustomActionHandler(ActionHandler):
                     level=random.randint(character.level, character.level + 2),
                     max_health=random.randint(20, 50),
                     health=random.randint(20, 50),
-                    attack_damage=(random.randint(3, 8), random.randint(9, 15)),
+                    attack_damage_min=random.randint(3, 8),
+                    attack_damage_max=random.randint(9, 15),
                     defense=random.randint(3, 10),
                     description=f"A hostile {target} that you decided to attack.",
                 )
@@ -1036,7 +1039,8 @@ class CustomActionHandler(ActionHandler):
                     level=random.randint(character.level, character.level + 2),
                     max_health=random.randint(20, 50),
                     health=random.randint(20, 50),
-                    attack_damage=(random.randint(3, 8), random.randint(9, 15)),
+                    attack_damage_min=random.randint(3, 8),
+                    attack_damage_max=random.randint(9, 15),
                     defense=random.randint(3, 10),
                     description=f"A hostile {enemy_name} that appeared suddenly.",
                 )

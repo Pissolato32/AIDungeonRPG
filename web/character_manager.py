@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List, Union  # Added List, Union
 import logging
 from core.models import Character
 
@@ -77,49 +77,98 @@ class CharacterManager:
             generate_initial_inventory,
         )
 
-        full_data = cls.get_character_attributes(character_data)
+        # This dictionary will hold all attributes parsed from the form and defaults.
+        # Some will be passed directly to Character init, others will go into Character.attributes.
+        parsed_attributes_from_form = cls.get_character_attributes(character_data)
 
-        name = full_data.pop("name", "Unknown")
-        # Default class more fitting for zombie apocalypse
-        character_class = full_data.get("character_class", "Survivor")
-        race = full_data.get("race", "Human")
-        description = character_data.get("description", "")
-        level = full_data.get("level", 1)
-        constitution = full_data.get("constitution", 10)
-        strength = full_data.get("strength", 10)
-        dexterity = full_data.get("dexterity", 10)
-        intelligence = full_data.get(
-            "intelligence", 10
-        )  # Ensure intelligence is fetched
+        # Extract values for direct Character __init__ parameters
+        name_val = parsed_attributes_from_form.pop("name", "Unknown")
+        character_class_val = parsed_attributes_from_form.pop(
+            "character_class", "Survivor"
+        )
+        race_val = parsed_attributes_from_form.pop("race", "Human")
+        level_val = parsed_attributes_from_form.pop("level", 1)
+        experience_val = parsed_attributes_from_form.pop("experience", 0)
 
-        # Cálculo do HP
-        # Using the D&D 5e calculation method for consistency, or adjust as needed
-        max_hp = cls.calculate_max_hp_dnd5e(character_class, constitution, level)
-        full_data["max_hp"] = max_hp
-        full_data["current_hp"] = max_hp
+        # Description comes directly from character_data, not processed by get_character_attributes
+        description_val = character_data.get("description", "")
 
-        # Cálculo da Stamina (anteriormente Resistência)
+        # Inventory from form is popped but we'll generate a new one for a new character.
+        # Popping it ensures it's not in the final 'attributes' dict for Character.
+        parsed_attributes_from_form.pop("inventory", [])
+
+        # The remaining items in parsed_attributes_from_form are candidates for Character.attributes
+        # This includes: strength, dexterity, constitution, intelligence, wisdom, charisma,
+        # current_hp, max_hp, current_stamina, max_stamina, gold.
+        # We will update hp, stamina, and gold in this dictionary.
+        final_character_attributes_dict: Dict[str, int] = parsed_attributes_from_form  # type: ignore
+
+        # Calculate and update HP in the attributes dictionary
+        constitution_for_hp_calc = final_character_attributes_dict.get(
+            "constitution", 10
+        )
+        max_hp_val = cls.calculate_max_hp_dnd5e(
+            character_class_val, constitution_for_hp_calc, level_val
+        )
+        final_character_attributes_dict["max_hp"] = max_hp_val
+        final_character_attributes_dict["current_hp"] = max_hp_val
+
+        # Calculate and update Stamina in the attributes dictionary
+        dexterity_for_stamina_calc = final_character_attributes_dict.get(
+            "dexterity", 10
+        )
+        constitution_for_stamina_calc = final_character_attributes_dict.get(
+            "constitution", 10
+        )
         stamina_base = 10  # Valor base inicial de Stamina
-        # Example: Stamina could be based on constitution and dexterity
-        dex_mod_stamina = (full_data.get("dexterity", 10) - 10) // 2
-        con_mod_stamina = (constitution - 10) // 2
+        dex_mod_stamina = (dexterity_for_stamina_calc - 10) // 2
+        con_mod_stamina = (constitution_for_stamina_calc - 10) // 2
         max_stamina_val = (
-            stamina_base + (dex_mod_stamina * level) + (con_mod_stamina * level)
+            stamina_base + (dex_mod_stamina * level_val) + (con_mod_stamina * level_val)
         )
         max_stamina_val = max(1, max_stamina_val)  # Ensure stamina is at least 1
+        final_character_attributes_dict["max_stamina"] = max_stamina_val
+        final_character_attributes_dict["current_stamina"] = max_stamina_val
 
-        full_data["max_stamina"] = max_stamina_val
-        full_data["current_stamina"] = max_stamina_val
-
-        full_data["description"] = description
-        full_data["gold"] = calculate_initial_gold(character_class, race)
-        full_data["inventory"] = generate_initial_inventory(
-            character_class, race, strength, dexterity, intelligence, description
+        # Calculate and update Gold in the attributes dictionary
+        final_character_attributes_dict["gold"] = calculate_initial_gold(
+            character_class_val, race_val
         )
-        # Attributes like strength, dexterity, etc., are already in full_data
-        # from get_character_attributes, no need to re-assign unless they were modified above.
+
+        # Generate initial inventory (this is a direct Character field)
+        # Use stats from the final_character_attributes_dict for generation if needed
+        strength_for_inv_calc = final_character_attributes_dict.get("strength", 10)
+        dexterity_for_inv_calc = final_character_attributes_dict.get("dexterity", 10)
+        intelligence_for_inv_calc = final_character_attributes_dict.get(
+            "intelligence", 10
+        )
+        # Assuming generate_initial_inventory returns List[str] or a list of items
+        # compatible with Union[str, Dict[str, Any]]
+        generated_inventory_items = generate_initial_inventory(
+            character_class_val,
+            race_val,
+            strength_for_inv_calc,
+            dexterity_for_inv_calc,
+            intelligence_for_inv_calc,
+            description_val,
+        )
+        initial_inventory_list: List[Union[str, Dict[str, Any]]] = [
+            item for item in generated_inventory_items
+        ]
+
         return Character(
-            name=name, character_class=character_class, race=race, attributes=full_data
+            name=name_val,
+            character_class=character_class_val,
+            race=race_val,
+            level=level_val,
+            experience=experience_val,
+            description=description_val,
+            inventory=initial_inventory_list,
+            attributes=final_character_attributes_dict,
+            equipment={},  # Default for new character
+            skills=[],  # Default for new character
+            survival_stats={},  # Default for new character
+            status_effects=[],  # Default for new character
         )
 
     @classmethod

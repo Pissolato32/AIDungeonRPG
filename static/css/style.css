@@ -19,7 +19,8 @@ body {
     min-height: 0;
 }
 
-.game-scene, .character-panel {
+.game-scene,
+.character-panel {
     height: calc(100vh - 56px);
     overflow-y: auto;
     display: flex;
@@ -127,17 +128,24 @@ body {
 
 /* Cores customizadas para barras de status no Stats */
 #hpBar {
-    background-color: #dc3545 !important; /* vermelho para saúde */
+    background-color: #dc3545 !important;
+    /* vermelho para saúde */
 }
+
 #staminaBar {
-    background-color: #198754 !important; /* verde para energia */
+    background-color: #198754 !important;
+    /* verde para energia */
 }
+
 #hungerBar {
-    background-color: #ffc107 !important; /* amarelo para fome */
+    background-color: #ffc107 !important;
+    /* amarelo para fome */
     color: #222;
 }
+
 #thirstBar {
-    background-color: #0dcaf0 !important; /* azul para sede */
+    background-color: #0dcaf0 !important;
+    /* azul para sede */
     color: #222;
 }
 
@@ -152,40 +160,30 @@ body {
     .game-content {
         flex-direction: column;
     }
-    
-    .game-scene, .character-panel {
+
+    .game-scene,
+    .character-panel {
         height: auto;
         max-height: none;
     }
-    
+
     .game-scene {
         height: 60vh;
     }
-    
+
     .character-panel {
         height: 40vh;
     }
-    
+
     .game-output {
         height: calc(60vh - 156px);
     }
-    
+
     .combat-interface {
         height: calc(60vh - 156px);
     }
-    
+
     .inventory-list {
         max-height: 25vh;
     }
 }
-
-/* Inventory HTML Structure */
-<label for="inventory" class="form-label">Inventory</label>
-<div class="alert alert-info">
-    <i class="bi bi-info-circle-fill me-2"></i>
-    Initial inventory is generated based on your character's class, race, attributes, and description.
-</div>
-<ul class="list-group" id="inventory-list">
-    <li class="list-group-item bg-dark text-light border-secondary">Loading inventory...</li>
-</ul>
-<input type="hidden" id="inventory" name="inventory" value="{{ ','.join(character.inventory) if character and character.inventory else '' }}">

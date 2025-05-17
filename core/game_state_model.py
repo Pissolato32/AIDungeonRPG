@@ -3,7 +3,14 @@ Module for game state data models.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional, TypedDict
+from typing import (
+    Dict,
+    List,
+    Any,
+    Optional,
+    TypedDict,
+    Set,
+)  # Added Set for visited_locations previous type
 
 # Import NPC here if it's a clean dependency (i.e., npc.py doesn't import GameState)
 # If core.npc also imports GameState or related models, this might need further refactoring.
@@ -34,6 +41,24 @@ class LocationData(TypedDict, total=False):
     welcome: Optional[str]
 
 
+class SearchResultEntry(TypedDict):
+    """Type definition for a single search result entry."""
+
+    query: str
+    result: str
+
+
+class VisitedLocationDetail(TypedDict):
+    """Type definition for detailed information about a visited location."""
+
+    name: str
+    last_visited: str
+    description: str
+    npcs_seen: List[str]
+    events_seen: List[str]
+    search_results: List[SearchResultEntry]
+
+
 @dataclass
 class GameState:
     """Represents the current state of the game."""
@@ -53,6 +78,11 @@ class GameState:
     npcs_by_location: Dict[str, List[str]] = field(default_factory=dict)
     npc_relationships: Dict[str, int] = field(default_factory=dict)
 
+    location_id: str = ""
+    events: List[str] = field(default_factory=list)
+    world_map: Dict[str, LocationData] = field(default_factory=dict)
+    visited_locations: Dict[str, VisitedLocationDetail] = field(default_factory=dict)
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert game state to a dictionary."""
         return {
@@ -66,6 +96,10 @@ class GameState:
             "discovered_locations": self.discovered_locations,
             "npcs_by_location": self.npcs_by_location,
             "npc_relationships": self.npc_relationships,
+            "location_id": self.location_id,
+            "events": self.events,
+            "world_map": self.world_map,
+            "visited_locations": self.visited_locations,
         }
 
     @classmethod
@@ -82,6 +116,10 @@ class GameState:
             discovered_locations=data.get("discovered_locations", {}),
             npcs_by_location=data.get("npcs_by_location", {}),
             npc_relationships=data.get("npc_relationships", {}),
+            location_id=data.get("location_id", ""),
+            events=data.get("events", []),
+            world_map=data.get("world_map", {}),
+            visited_locations=data.get("visited_locations", {}),
         )
 
     def add_message(self, message: str) -> None:
