@@ -77,7 +77,7 @@ class GameApp:
         self.app.config["SESSION_TYPE"] = os.environ.get("SESSION_TYPE", "filesystem")
         Session(self.app)
 
-    def _register_app_specific_routes(self):
+    def register_app_specific_routes(self):
         """Register any application-specific routes not handled by blueprints."""
         # Este método pode ser usado para rotas que não estão no blueprint principal.
         # Por enquanto, está vazio, pois as rotas principais estão em routes.py
@@ -85,7 +85,7 @@ class GameApp:
 
     def run(self):
         """Run the Flask application."""
-        config = self._get_app_config()
+        config = self.get_app_config()
         GameLogger.log_game_action(
             "startup",
             f"Starting server on {
@@ -414,7 +414,7 @@ class GameApp:
             level,
         )
 
-    def _get_app_config(self) -> Dict[str, Any]:
+    def get_app_config(self) -> Dict[str, Any]:
         return Config.get_app_config()
 
 
@@ -432,7 +432,7 @@ application = _game_app_instance.app
 application.register_blueprint(routes_bp)
 
 # 5. Register any app-specific routes (if any)
-_game_app_instance._register_app_specific_routes()  # Renamed for clarity
+_game_app_instance.register_app_specific_routes()  # Renamed for clarity
 
 # --- Run the Application ---
 if __name__ == "__main__":

@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # interna
 
     # Ou, se você quiser controlar host/port/debug diretamente aqui:
-    config = _game_app_instance._get_app_config()
+    config = _game_app_instance.get_app_config()
     application.run(
         host=config.get("host", "0.0.0.0"),
         port=config.get("port", 5000),
