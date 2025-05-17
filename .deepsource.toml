@@ -1,8 +1,12 @@
 version = 1
 
+exclude_patterns = ["data/**, .vscode/**, .pytest_cache/**, flask_session/**, "]
+
 [[analyzers]]
 name = "python"
-enabled = true
 
   [analyzers.meta]
   runtime_version = "3.x.x"
+
+[[transformers]]
+name = "black"
