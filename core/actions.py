@@ -105,7 +105,7 @@ class MoveActionHandler(ActionHandler):
             if dir_key.lower() == normalized_direction:
                 next_location_id = loc_id
                 break
-            elif (
+            if (
                 normalized_direction is None
                 and loc_id in game_state.world_map["locations"]
                 and game_state.world_map["locations"][loc_id]["name"].lower()
@@ -292,9 +292,7 @@ class TalkActionHandler(ActionHandler):
                     # familiarity level
                     if "message" in result:
                         if npc_details["interactions"] <= 2:
-                            result[
-                                "message"
-                            ] += f"\n\nYou recognize {npc_name}, a {
+                            result["message"] += f"\n\nYou recognize {npc_name}, a {
                                 npc_details['race']} {
                                 npc_details['profession']}."
                         else:
@@ -327,22 +325,18 @@ class TalkActionHandler(ActionHandler):
 
                 # Add NPC information to the response
                 if "message" in result:
-                    result[
-                        "message"
-                    ] += f"\n\nYou notice that {npc_name} is a {
+                    result["message"] += f"\n\nYou notice that {npc_name} is a {
                         npc_details['race']} {
                         npc_details['profession']}."
 
                     # Add a hint about the NPC's knowledge or quests
                     if npc_details.get("knowledge"):
-                        result[
-                            "message"
-                        ] += f" It seems that {npc_name} knows about {', '.join(npc_details['knowledge'][:2])}."
+                        result["message"] += (
+                            f" It seems that {npc_name} knows about {', '.join(npc_details['knowledge'][:2])}."
+                        )
 
                     if npc_details.get("quests"):
-                        result[
-                            "message"
-                        ] += f" {npc_name} mentions something about '{
+                        result["message"] += f" {npc_name} mentions something about '{
                             npc_details['quests'][0]}'."
 
                 # Record the NPC as known
@@ -577,7 +571,7 @@ class UseItemActionHandler(ActionHandler):
                 # Check if the item exists in the database
                 item_data = item_generator.get_item_by_name(actual_item_name)
                 break
-            elif (
+            if (
                 isinstance(inv_item, dict)
                 and inv_item.get("name", "").lower() == item_name_query.lower()
             ):
