@@ -6,7 +6,6 @@ from dataclasses import dataclass, field  # type: ignore
 from typing import Any, Dict, List, Optional, Union  # Added Union
 
 
-
 @dataclass
 class Character:
     """Represents a player character in the game."""

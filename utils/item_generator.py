@@ -626,7 +626,7 @@ class ItemGenerator:
             A descrição deve ter 1-2 frases e incluir:
             - Aparência visual (desgaste, improvisação, marcas de uso).
             - Alguma pista sobre sua utilidade, perigo ou origem no mundo pós-apocalíptico.
-            
+
             Responda apenas com a descrição, sem explicações adicionais.
             Exemplo para '{name}': Este {item_subtype} {rarity} parece ter visto dias melhores, mas ainda pode ser útil.
             """
