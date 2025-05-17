@@ -1,5 +1,6 @@
-from typing import Dict, Any, List, Union  # Added List, Union
 import logging
+from typing import Any, Dict, List, Union  # Added List, Union
+
 from core.models import Character
 
 logger = logging.getLogger(__name__)

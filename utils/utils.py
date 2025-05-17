@@ -5,12 +5,13 @@ This module re-exports all utility functions from the utils package
 to maintain backward compatibility with existing code.
 """
 
-# Re-export all functions from the utils package
-from utils.dice import roll_dice, calculate_attribute_modifier, calculate_damage
-from utils.data_io import save_data, load_data  # Corrected names
-from utils.datetime_utils import (
+from utils.data_io import load_data, save_data  # Corrected names
+from utils.datetime_utils import (  # Corrected import, was missing from __all__ too
     format_datetime,
-)  # Corrected import, was missing from __all__ too
+)
+
+# Re-export all functions from the utils package
+from utils.dice import calculate_attribute_modifier, calculate_damage, roll_dice
 from utils.quest_generator import generate_quest
 
 # Export all functions for backward compatibility
