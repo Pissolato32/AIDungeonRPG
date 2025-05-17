@@ -305,9 +305,7 @@ class ItemGenerator:
             if modified_stats["damage_min"] > modified_stats["damage_max"]:
                 modified_stats["damage_max"] = modified_stats[
                     "damage_min"
-                ] + random.randint(
-                    1, 3
-                )  # Ensure max is slightly higher
+                ] + random.randint(1, 3)  # Ensure max is slightly higher
         return modified_stats
 
     def _generate_item_name(

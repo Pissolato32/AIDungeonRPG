@@ -24,9 +24,7 @@ class ActionHandler:
     VALID_ACTIONS = {"move", "look", "talk", "search", "attack"}
 
     @staticmethod
-    def handle(
-        details: str, character: "Character", game_state: Any
-    ) -> Dict[str, Any]:
+    def handle(details: str, character: "Character", game_state: Any) -> Dict[str, Any]:
         """Handle an action with default behavior."""
         logger.info(f"Handling action with details: {details}")
 

@@ -375,9 +375,7 @@ class CombatSystem:
         )
 
     @staticmethod
-    def _generate_attack_message(
-        attacker: str, damage: int, critical: bool
-    ) -> str:
+    def _generate_attack_message(attacker: str, damage: int, critical: bool) -> str:
         """Gera mensagem descritiva de ataque."""
         if critical:
             return f"{attacker} acerta um golpe crítico " f"causando {damage} de dano!"
