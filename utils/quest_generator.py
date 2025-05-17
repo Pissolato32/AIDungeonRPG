@@ -4,9 +4,9 @@ Quest generator module.
 This module provides functions for generating random quests.
 """
 
-import random
 import logging
-from typing import Dict, Any, List
+import random
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 

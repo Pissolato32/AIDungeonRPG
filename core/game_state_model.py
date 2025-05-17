@@ -3,7 +3,7 @@ Module for game state data models.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional, TypedDict
+from typing import Any, Dict, List, Optional, TypedDict
 
 # Import NPC here if it's a clean dependency (i.e., npc.py doesn't import GameState)
 # If core.npc also imports GameState or related models, this might need further refactoring.

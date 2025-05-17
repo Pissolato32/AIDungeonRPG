@@ -1,9 +1,10 @@
 """NPC module for managing non-player characters in the game world."""
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Literal, TypedDict, Any, Optional, cast
-from .models import NPCBase
 import random
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Literal, Optional, TypedDict, cast
+
+from .models import NPCBase
 
 # Type definitions
 DispositionType = Literal["hostile", "neutral", "friendly"]
@@ -112,7 +113,9 @@ class NPC(NPCBase):
             (
                 "hostile"
                 if self.relationship_level < -30
-                else "friendly" if self.relationship_level > 30 else "neutral"
+                else "friendly"
+                if self.relationship_level > 30
+                else "neutral"
             ),
         )
 

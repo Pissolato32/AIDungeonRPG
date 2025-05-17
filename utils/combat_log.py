@@ -4,9 +4,9 @@ Módulo de registro de combate.
 Gerencia o histórico de combates e fornece estatísticas de batalha.
 """
 
-from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -225,6 +225,4 @@ class CombatLog:
             highlights,
             key=lambda x: (x["type"] == "kill", x["type"] == "critical", x["round"]),
             reverse=True,
-        )[
-            :5
-        ]  # Retorna os 5 momentos mais interessantes
+        )[:5]  # Retorna os 5 momentos mais interessantes

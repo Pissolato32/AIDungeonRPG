@@ -4,9 +4,10 @@ Session management module.
 This module provides functionality for managing user sessions.
 """
 
-import os
 import logging
-from typing import Dict, Any, Optional
+import os
+from typing import Any, Dict, Optional
+
 from flask import session
 
 logger = logging.getLogger(__name__)

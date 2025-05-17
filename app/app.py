@@ -1,37 +1,37 @@
 # filepath: c:\Users\rodri\Desktop\REPLIT RPG\app\app.py
-from flask import (
-    Flask,
-    render_template,
-    redirect,
-    session,
-    request,
-    jsonify,
-    url_for,
-    flash,
-)
-from flask_session import Session
-from typing import Dict, Any, List, Optional, Tuple
+import logging
 import os
 import sys
-import logging
 import traceback
+from typing import Any, Dict, List, Optional, Tuple
+
+from flask import (
+    Flask,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+
+from flask_session import Session
 
 # Add the project root directory to the Python path
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, root_dir)
 
-from core.models import Character
+from ai.groq_client import GroqClient
+from core.error_handler import ErrorHandler
 from core.game_engine import GameEngine
 from core.game_state_model import GameState  # Import GameState from its new location
-from ai.groq_client import GroqClient
-from web.config import Config
-from web.session_manager import SessionManager
-from web.logger import GameLogger
-from core.error_handler import (
-    ErrorHandler,
-)
-from web.game_state_manager import GameStateManager
+from core.models import Character
 from web.character_manager import CharacterManager
+from web.config import Config
+from web.game_state_manager import GameStateManager
+from web.logger import GameLogger
+from web.session_manager import SessionManager
 
 # Não importe 'routes_bp' aqui ainda para evitar importação circular
 

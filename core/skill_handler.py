@@ -2,7 +2,8 @@
 Skill action handler for using skills in combat and other scenarios.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from .actions import ActionHandler
 from .models import Character
 from .skills import SkillManager

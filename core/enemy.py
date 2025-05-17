@@ -4,6 +4,7 @@ Enemy module for the RPG game.
 
 from dataclasses import dataclass, field
 from typing import List, Tuple
+
 from core.combat_stats import CombatStats
 
 

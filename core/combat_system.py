@@ -5,7 +5,8 @@ Este módulo gerencia as mecânicas de combate entre personagens e inimigos.
 """
 
 import random
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
 from core.models import Character
 from utils.combat_log import CombatLog
 from utils.dice import roll_dice

@@ -5,8 +5,8 @@ the AI service is temporarily unavailable or experiencing issues.
 """
 
 import logging
-from typing import Dict, List, TypedDict, Literal, Optional
 from datetime import datetime
+from typing import Dict, List, Literal, Optional, TypedDict
 
 logger = logging.getLogger(__name__)
 

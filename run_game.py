@@ -3,9 +3,9 @@
 Script de inicialização para o jogo RPG.
 """
 
+import logging
 import os
 import sys
-import logging
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -19,7 +19,7 @@ sys.path.insert(0, root_dir)
 
 # Importa a instância principal da aplicação de app.app
 # Esta instância já tem tudo configurado (rotas, blueprints, etc.)
-from app.app import application, _game_app_instance
+from app.app import _game_app_instance, application
 
 if __name__ == "__main__":
     logger.info("Iniciando aplicação RPG")
