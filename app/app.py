@@ -350,9 +350,7 @@ class GameApp:
         return CharacterManager.create_character_from_form(character_data)
 
     @staticmethod
-    def _get_character_attributes(
-        character_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _get_character_attributes(character_data: Dict[str, Any]) -> Dict[str, Any]:
         return CharacterManager.get_character_attributes(character_data)
 
     def _load_game_state(self, user_id: str) -> Optional[GameState]:
