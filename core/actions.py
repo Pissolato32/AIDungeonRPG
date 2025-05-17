@@ -157,30 +157,29 @@ class MoveActionHandler(ActionHandler):
                     "npcs": game_state.npcs_present,
                     "events": game_state.events,
                 }
-            else:
-                # First visit
-                game_state.scene_description = next_location["description"]
-                game_state.npcs_present = next_location["npcs"]
-                game_state.events = next_location["events"]
+            # First visit
+            game_state.scene_description = next_location["description"]
+            game_state.npcs_present = next_location["npcs"]
+            game_state.events = next_location["events"]
 
-                if hasattr(game_state, "visited_locations"):
-                    game_state.visited_locations[next_location_id] = {
-                        "name": game_state.current_location,
-                        "last_visited": "first_time",
-                        "description": game_state.scene_description,
-                        "npcs_seen": game_state.npcs_present.copy(),
-                        "events_seen": game_state.events.copy(),
-                        "search_results": [],  # Initialize search_results
-                    }
-
-                return {
-                    "success": True,
-                    "message": f"You arrive at {next_location['name']}. {next_location['description']}",
-                    "new_location": next_location["name"],
-                    "description": next_location["description"],
-                    "npcs": game_state.npcs_present,
-                    "events": game_state.events,
+            if hasattr(game_state, "visited_locations"):
+                game_state.visited_locations[next_location_id] = {
+                    "name": game_state.current_location,
+                    "last_visited": "first_time",
+                    "description": game_state.scene_description,
+                    "npcs_seen": game_state.npcs_present.copy(),
+                    "events_seen": game_state.events.copy(),
+                    "search_results": [],  # Initialize search_results
                 }
+
+            return {
+                "success": True,
+                "message": f"You arrive at {next_location['name']}. {next_location['description']}",
+                "new_location": next_location["name"],
+                "description": next_location["description"],
+                "npcs": game_state.npcs_present,
+                "events": game_state.events,
+            }
 
         return self.ai_response("move", details, character, game_state)
 
@@ -292,36 +291,35 @@ class TalkActionHandler(ActionHandler):
                     game_state.known_npcs[npc_name] = npc_details
 
                     return result
-                else:
-                    # First interaction with this NPC
-                    npc_details = self.get_npc_details(npc_name, character, game_state)
+                # First interaction with this NPC
+                npc_details = self.get_npc_details(npc_name, character, game_state)
 
-                    # Use the details to enrich the AI response
-                    result = self.ai_response("talk", details, character, game_state)
+                # Use the details to enrich the AI response
+                result = self.ai_response("talk", details, character, game_state)
 
-                    # Add NPC information to the response
-                    if "message" in result:
+                # Add NPC information to the response
+                if "message" in result:
+                    result[
+                        "message"
+                    ] += f"\n\nYou notice that {npc_name} is a {npc_details['race']} {npc_details['profession']}."
+
+                    # Add a hint about the NPC's knowledge or quests
+                    if npc_details.get("knowledge"):
                         result[
                             "message"
-                        ] += f"\n\nYou notice that {npc_name} is a {npc_details['race']} {npc_details['profession']}."
+                        ] += f" It seems that {npc_name} knows about {', '.join(npc_details['knowledge'][:2])}."
 
-                        # Add a hint about the NPC's knowledge or quests
-                        if npc_details.get("knowledge"):
-                            result[
-                                "message"
-                            ] += f" It seems that {npc_name} knows about {', '.join(npc_details['knowledge'][:2])}."
+                    if npc_details.get("quests"):
+                        result[
+                            "message"
+                        ] += f" {npc_name} mentions something about '{npc_details['quests'][0]}'."
 
-                        if npc_details.get("quests"):
-                            result[
-                                "message"
-                            ] += f" {npc_name} mentions something about '{npc_details['quests'][0]}'."
+                # Record the NPC as known
+                if hasattr(game_state, "known_npcs"):
+                    npc_details["interactions"] = 1
+                    game_state.known_npcs[npc_name] = npc_details
 
-                    # Record the NPC as known
-                    if hasattr(game_state, "known_npcs"):
-                        npc_details["interactions"] = 1
-                        game_state.known_npcs[npc_name] = npc_details
-
-                    return result
+                return result
 
         # Default behavior if no specific NPC is mentioned
         return self.ai_response("talk", details, character, game_state)
@@ -595,7 +593,7 @@ class UseItemActionHandler(ActionHandler):
                     "message": f"You equipped {actual_item_name}. {damage_info} {item_description} {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
                 }
 
-            elif item_type == "armor":
+            if item_type == "armor":
                 # Equip armor
                 if not hasattr(character, "equipment") or character.equipment is None:
                     character.equipment = {}
@@ -632,7 +630,7 @@ class UseItemActionHandler(ActionHandler):
                     "message": f"You equipped {actual_item_name}. {defense_info} {item_description} {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
                 }
 
-            elif item_type == "consumable":
+            if item_type == "consumable":
                 # Use consumable item
                 effect = item_data.get("effect", {})
                 effect_type = effect.get("type", "")
@@ -653,7 +651,7 @@ class UseItemActionHandler(ActionHandler):
                         "message": f"You used {actual_item_name} and restored {character.health - old_hp} health points. {item_description}",
                     }
 
-                elif (
+                if (
                     effect_type == "stamina"
                 ):  # Hunger and thirst are handled by survival_stats
                     # Restore other attributes
@@ -678,7 +676,7 @@ class UseItemActionHandler(ActionHandler):
                         "success": True,
                         "message": f"You used {actual_item_name} and feel refreshed. {item_description}",
                     }
-                elif effect_type in ["hunger", "thirst"]:
+                if effect_type in ["hunger", "thirst"]:
                     stat_key = f"current_{effect_type}"
                     max_stat_key = f"max_{effect_type}"
                     old_value = character.survival_stats.get(stat_key, 0)
@@ -694,16 +692,14 @@ class UseItemActionHandler(ActionHandler):
                         "success": True,
                         "message": f"You used {actual_item_name} and feel less {effect_type}. {item_description}",
                     }
+                # Other effects
+                # Remove the item from the inventory
+                character.inventory.pop(item_index)
 
-                else:
-                    # Other effects
-                    # Remove the item from the inventory
-                    character.inventory.pop(item_index)
-
-                    return {
-                        "success": True,
-                        "message": f"You used {actual_item_name}. {item_description}",
-                    }
+                return {
+                    "success": True,
+                    "message": f"You used {actual_item_name}. {item_description}",
+                }
 
             elif item_type == "quest":
                 # Use quest item
@@ -715,11 +711,10 @@ class UseItemActionHandler(ActionHandler):
                         "success": True,
                         "message": f"You examine {actual_item_name}. {item_description}\n\nContent: {item_data['content']}",
                     }
-                else:
-                    return {
-                        "success": True,
-                        "message": f"You examine {actual_item_name}. {item_description}",
-                    }
+                return {
+                    "success": True,
+                    "message": f"You examine {actual_item_name}. {item_description}",
+                }
 
         # Logic for items without specific data
         item_name_lower = actual_item_name.lower() if actual_item_name else ""
@@ -740,7 +735,7 @@ class UseItemActionHandler(ActionHandler):
             }
 
         # Equipment (weapons, armor, etc.)
-        elif isinstance(
+        if isinstance(
             actual_item_name, str
         ) and any(  # Ensure actual_item_name is str
             eq in actual_item_name.lower()
@@ -801,7 +796,7 @@ class UseItemActionHandler(ActionHandler):
             }
 
         # Consumable items (food, drink)
-        elif isinstance(
+        if isinstance(
             actual_item_name, str
         ) and any(  # Ensure actual_item_name is str
             f in actual_item_name.lower()
@@ -1099,11 +1094,10 @@ class CustomActionHandler(ActionHandler):
                         "message": f"You consult your map. You are in {game_state.current_location}, at the coordinates ({coords.get('x', 0)}, {coords.get('y', 0)}). "
                         + f"Nearby locations you know: {', '.join(known_locations) if known_locations else 'none besides this one'}.",
                     }
-                else:
-                    return {
-                        "success": True,
-                        "message": f"You consult your map. You are in {game_state.current_location}.",
-                    }
+                return {
+                    "success": True,
+                    "message": f"You consult your map. You are in {game_state.current_location}.",
+                }
             else:
                 # Player doesn't have a map
                 return {
