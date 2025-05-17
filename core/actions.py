@@ -23,8 +23,9 @@ class ActionHandler:
 
     VALID_ACTIONS = {"move", "look", "talk", "search", "attack"}
 
+    @staticmethod
     def handle(
-        self, details: str, character: "Character", game_state: Any
+        details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
         """Handle an action with default behavior."""
         logger.info(f"Handling action with details: {details}")
@@ -35,8 +36,9 @@ class ActionHandler:
             "message": f"The action '{details if details else 'unknown'}' is not recognized or not implemented.",
         }
 
+    @staticmethod
     def ai_response(
-        self, action: str, details: str, character: "Character", game_state: Any
+        action: str, details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
         """Fallback AI response if a specific handler doesn't fully process."""
         return {
@@ -44,7 +46,8 @@ class ActionHandler:
             "message": f"The action '{details}' is not recognized or not implemented.",
         }
 
-    def log_action(self, action: str, character: "Character") -> None:
+    @staticmethod
+    def log_action(action: str, character: "Character") -> None:
         """Log the action performed by the character."""
         logger.info(f"{character.name} performed action: {action}")
 
@@ -220,8 +223,9 @@ class LookActionHandler(ActionHandler):
         # Caso contrário, executa a resposta padrão do cenário
         return self.ai_response("look", details, character, game_state)
 
+    @staticmethod
     def get_npc_details(
-        self, npc_name: str, character: "Character", game_state: Any
+        npc_name: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
         """
         Placeholder para obter os detalhes de um NPC.
@@ -326,8 +330,9 @@ class TalkActionHandler(ActionHandler):
         # Default behavior if no specific NPC is mentioned
         return self.ai_response("talk", details, character, game_state)
 
+    @staticmethod
     def get_npc_details(
-        self, npc_name: str, character: "Character", game_state: Any
+        npc_name: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
         """
         Placeholder para obter os detalhes de um NPC.
