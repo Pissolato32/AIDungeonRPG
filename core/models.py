@@ -55,6 +55,16 @@ class Character:
     def max_thirst(self) -> int:
         return max(self.survival_stats.get("max_thirst", 1), 1)  # nunca menor que 1
 
+    @property
+    def agility(self) -> int:
+        """Gets the agility attribute from the attributes dictionary."""
+        return self.attributes.get("agility", 0)
+
+    @property
+    def strength(self) -> int:
+        """Gets the strength attribute from the attributes dictionary."""
+        return self.attributes.get("strength", 0)
+
     # Você pode adicionar mais properties conforme a necessidade, ex:
     # @property
     # def mana(self) -> int:

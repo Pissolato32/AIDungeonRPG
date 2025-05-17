@@ -5,12 +5,18 @@ This module provides functions for dice rolling and combat-related calculations.
 """
 import random
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import (
+    Dict,
+    Any,
+    Optional,
+    Tuple,
+    Union,
+)  # Added Union for potential future use, Any is the key fix
 
 logger = logging.getLogger(__name__)
 
 
-def roll_dice(num_dice: int, sides: int, modifier: int = 0) -> Dict[str, any]:
+def roll_dice(num_dice: int, sides: int, modifier: int = 0) -> Dict[str, Any]:
     """
     Roll dice in NdS+M format (N dice with S sides plus modifier M).
 

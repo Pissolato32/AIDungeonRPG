@@ -12,6 +12,7 @@ from datetime import datetime
 @dataclass
 class CombatAction:
     """Representa uma ação durante o combate."""
+
     actor: str
     target: str
     action_type: str
@@ -24,6 +25,7 @@ class CombatAction:
 @dataclass
 class CombatRound:
     """Representa uma rodada de combate."""
+
     round_number: int
     actions: List[CombatAction] = field(default_factory=list)
     status_effects: Dict[str, List[str]] = field(default_factory=dict)
@@ -42,7 +44,7 @@ class CombatLog:
             "total_healing": 0,
             "critical_hits": 0,
             "dodges": 0,
-            "kills": 0
+            "kills": 0,
         }
 
     def start_new_round(self) -> None:
@@ -57,7 +59,7 @@ class CombatLog:
         action_type: str,
         damage: Optional[int] = None,
         healing: Optional[int] = None,
-        effects: Optional[List[str]] = None
+        effects: Optional[List[str]] = None,
     ) -> None:
         """
         Adiciona uma ação ao registro da rodada atual.
@@ -79,17 +81,13 @@ class CombatLog:
             action_type=action_type,
             damage=damage,
             healing=healing,
-            effects=effects or []
+            effects=effects or [],
         )
 
         self.rounds[-1].actions.append(action)
         self._update_stats(action)
 
-    def add_status_effect(
-        self,
-        target: str,
-        effect: str
-    ) -> None:
+    def add_status_effect(self, target: str, effect: str) -> None:
         """Adiciona um efeito de status a um alvo."""
         if not self.rounds:
             self.start_new_round()
@@ -112,11 +110,11 @@ class CombatLog:
                         "type": action.action_type,
                         "damage": action.damage,
                         "healing": action.healing,
-                        "effects": action.effects
+                        "effects": action.effects,
                     }
                     for action in round_data.actions
                 ],
-                "status_effects": round_data.status_effects
+                "status_effects": round_data.status_effects,
             }
         return {}
 
@@ -131,7 +129,7 @@ class CombatLog:
             "damage_taken": 0,
             "healing_done": 0,
             "critical_hits": 0,
-            "actions_taken": 0
+            "actions_taken": 0,
         }
 
         for round_data in self.rounds:
@@ -153,74 +151,80 @@ class CombatLog:
         """Atualiza as estatísticas gerais do combate."""
         if action.damage:
             self.combat_stats["total_damage_dealt"] += action.damage
-            
+
         if action.healing:
             self.combat_stats["total_healing"] += action.healing
-            
+
         if "crítico" in action.effects:
             self.combat_stats["critical_hits"] += 1
-            
+
         if "esquiva" in action.effects:
             self.combat_stats["dodges"] += 1
-            
+
         if "morte" in action.effects:
             self.combat_stats["kills"] += 1
 
     def get_highlight_moments(self) -> List[Dict[str, Any]]:
         """Retorna os momentos mais destacados do combate."""
         highlights = []
-        
+
         for round_data in self.rounds:
             for action in round_data.actions:
                 # Golpes críticos
                 if "crítico" in action.effects:
-                    highlights.append({
-                        "type": "critical",
-                        "round": round_data.round_number,
-                        "description": (
-                            f"{action.actor} causou um golpe crítico em "
-                            f"{action.target} causando {action.damage} de dano!"
-                        )
-                    })
-                
+                    highlights.append(
+                        {
+                            "type": "critical",
+                            "round": round_data.round_number,
+                            "description": (
+                                f"{action.actor} causou um golpe crítico em "
+                                f"{action.target} causando {action.damage} de dano!"
+                            ),
+                        }
+                    )
+
                 # Grandes curas
                 if action.healing and action.healing > 20:
-                    highlights.append({
-                        "type": "healing",
-                        "round": round_data.round_number,
-                        "description": (
-                            f"{action.actor} curou {action.target} por "
-                            f"{action.healing} pontos de vida!"
-                        )
-                    })
-                
+                    highlights.append(
+                        {
+                            "type": "healing",
+                            "round": round_data.round_number,
+                            "description": (
+                                f"{action.actor} curou {action.target} por "
+                                f"{action.healing} pontos de vida!"
+                            ),
+                        }
+                    )
+
                 # Esquivas impressionantes
                 if "esquiva" in action.effects:
-                    highlights.append({
-                        "type": "dodge",
-                        "round": round_data.round_number,
-                        "description": (
-                            f"{action.target} esquivou-se habilmente do "
-                            f"ataque de {action.actor}!"
-                        )
-                    })
-                
+                    highlights.append(
+                        {
+                            "type": "dodge",
+                            "round": round_data.round_number,
+                            "description": (
+                                f"{action.target} esquivou-se habilmente do "
+                                f"ataque de {action.actor}!"
+                            ),
+                        }
+                    )
+
                 # Abates
                 if "morte" in action.effects:
-                    highlights.append({
-                        "type": "kill",
-                        "round": round_data.round_number,
-                        "description": (
-                            f"{action.actor} derrotou {action.target}!"
-                        )
-                    })
-        
+                    highlights.append(
+                        {
+                            "type": "kill",
+                            "round": round_data.round_number,
+                            "description": (
+                                f"{action.actor} derrotou {action.target}!"
+                            ),
+                        }
+                    )
+
         return sorted(
             highlights,
-            key=lambda x: (
-                x["type"] == "kill",
-                x["type"] == "critical",
-                x["round"]
-            ),
-            reverse=True
-        )[:5]  # Retorna os 5 momentos mais interessantes
+            key=lambda x: (x["type"] == "kill", x["type"] == "critical", x["round"]),
+            reverse=True,
+        )[
+            :5
+        ]  # Retorna os 5 momentos mais interessantes

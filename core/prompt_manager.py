@@ -75,10 +75,7 @@ class PromptManager:
 
     @staticmethod
     def get_action_prompt(
-        action: str,
-        details: str,
-        character: Character,
-        game_state: GameState
+        action: str, details: str, character: Character, game_state: GameState
     ) -> str:
         """Generate a prompt for player actions.
 
@@ -99,20 +96,14 @@ class PromptManager:
             base_prompt += PromptManager._get_talk_prompt()
 
             if npc_details:
-                base_prompt += PromptManager._format_npc_details(
-                    npc_name,
-                    npc_details
-                )
+                base_prompt += PromptManager._format_npc_details(npc_name, npc_details)
 
             base_prompt += PromptManager._get_talk_conclusion(details)
 
         return base_prompt
 
     @staticmethod
-    def _get_base_prompt(
-        character: Character,
-        game_state: GameState
-    ) -> str:
+    def _get_base_prompt(character: Character, game_state: GameState) -> str:
         """Generate the base prompt with game state and character info.
 
         Args:
@@ -156,10 +147,7 @@ class PromptManager:
         )
 
     @staticmethod
-    def _format_npc_details(
-        npc_name: str,
-        details: NPCDetails
-    ) -> str:
+    def _format_npc_details(npc_name: str, details: NPCDetails) -> str:
         """Format NPC details for prompt inclusion.
 
         Args:
@@ -177,7 +165,7 @@ class PromptManager:
             f"- Personalidade: {details.get('personality', 'variada')}",
             f"- Conhecimento: {knowledge}",
             f"- Estado atual: {details.get('current_state', 'normal')}",
-            f"- Interações: {details.get('interactions', 0)}"
+            f"- Interações: {details.get('interactions', 0)}",
         ]
 
         quests = details.get("quests", [])
@@ -204,11 +192,7 @@ class PromptManager:
         )
 
     @staticmethod
-    def get_combat_prompt(
-        character: Character,
-        enemy: CombatEnemy,
-        action: str
-    ) -> str:
+    def get_combat_prompt(character: Character, enemy: CombatEnemy, action: str) -> str:
         """Generate a prompt for combat.
 
         Args:

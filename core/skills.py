@@ -3,7 +3,7 @@ Skill system module for the RPG game.
 
 This module provides the core skill system functionality including:
 - Skill data models
-- Skill usage and cooldown management  
+- Skill usage and cooldown management
 - Skill progression and unlocking
 - Class skill trees
 """
@@ -14,17 +14,21 @@ from .models import Character
 
 SkillType = Literal["active", "passive", "combat", "crafting", "survival"]
 ResourceType = Literal["stamina", "mana", "focus", "rage"]
-StatType = Literal["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
+StatType = Literal[
+    "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"
+]
+
 
 class SkillEffect(TypedDict):
     """
     Type definition for skill effects that can be applied during skill use.
     """
+
     type: Literal["damage", "heal", "buff", "debuff", "resource", "status"]
     target: Literal["self", "enemy", "ally", "area"]
     amount: int
-    duration: Optional[int] # Number of turns for temporary effects
-    stat_modifier: Dict[StatType, int] # Stat modifications for buffs/debuffs
+    duration: Optional[int]  # Number of turns for temporary effects
+    stat_modifier: Dict[StatType, int]  # Stat modifications for buffs/debuffs
 
 
 @dataclass
@@ -32,21 +36,24 @@ class Skill:
     """
     Represents a skill that can be learned and used by characters.
     """
-    id: str # Unique identifier
+
+    id: str  # Unique identifier
     name: str
     description: str
     skill_type: SkillType
     level_requirement: int = 1
-    resource_cost: Optional[Dict[ResourceType, int]] = None # E.g. {"stamina": 10}
-    cooldown: int = 0 # Turns until skill can be used again
+    resource_cost: Optional[Dict[ResourceType, int]] = None  # E.g. {"stamina": 10}
+    cooldown: int = 0  # Turns until skill can be used again
     effects: List[SkillEffect] = field(default_factory=list)
-    prerequisites: List[str] = field(default_factory=list) # Skill IDs required before learning
-    
+    prerequisites: List[str] = field(
+        default_factory=list
+    )  # Skill IDs required before learning
+
     def can_use(self, character: Character) -> bool:
         """Check if character has required resources/conditions to use skill."""
         if not self.resource_cost:
             return True
-            
+
         for resource, cost in self.resource_cost.items():
             current = character.survival_stats.get(resource.lower(), 0)
             if current < cost:
@@ -57,7 +64,7 @@ class Skill:
         """Apply resource costs when skill is used."""
         if not self.resource_cost:
             return
-            
+
         for resource, cost in self.resource_cost.items():
             current = character.survival_stats.get(resource.lower(), 0)
             character.survival_stats[resource.lower()] = max(0, current - cost)
@@ -67,6 +74,7 @@ class SkillManager:
     """
     Manages skill learning, usage and progression.
     """
+
     def __init__(self) -> None:
         self.class_skill_trees: Dict[str, List[str]] = {
             "Warrior": ["bash", "cleave", "taunt", "second_wind", "shield_wall"],
@@ -75,7 +83,7 @@ class SkillManager:
             "Cleric": ["heal", "smite", "bless", "turn_undead", "divine_shield"],
             "Ranger": ["aimed_shot", "track", "animal_companion", "snare", "volley"],
         }
-        self.available_skills: Dict[str, Skill] = {} 
+        self.available_skills: Dict[str, Skill] = {}
         self._initialize_skills()
 
     def _initialize_skills(self) -> None:
@@ -88,21 +96,24 @@ class SkillManager:
             skill_type="combat",
             resource_cost={"stamina": 15},
             cooldown=3,
-            effects=[{
-                "type": "damage",
-                "target": "enemy",
-                "amount": 10,
-                "duration": None,
-                "stat_modifier": {}
-            }, {
-                "type": "status",
-                "target": "enemy",
-                "amount": 0,
-                "duration": 1,
-                "stat_modifier": {"dexterity": -2}
-            }]
+            effects=[
+                {
+                    "type": "damage",
+                    "target": "enemy",
+                    "amount": 10,
+                    "duration": None,
+                    "stat_modifier": {},
+                },
+                {
+                    "type": "status",
+                    "target": "enemy",
+                    "amount": 0,
+                    "duration": 1,
+                    "stat_modifier": {"dexterity": -2},
+                },
+            ],
         )
-        
+
         # Mage skills
         self.available_skills["fireball"] = Skill(
             id="fireball",
@@ -111,21 +122,21 @@ class SkillManager:
             skill_type="combat",
             resource_cost={"mana": 20},
             cooldown=2,
-            effects=[{
-                "type": "damage",
-                "target": "enemy",
-                "amount": 15,
-                "duration": None,
-                "stat_modifier": {}
-            }]
+            effects=[
+                {
+                    "type": "damage",
+                    "target": "enemy",
+                    "amount": 15,
+                    "duration": None,
+                    "stat_modifier": {},
+                }
+            ],
         )
 
         # Add more skills here...
 
     def get_available_skills(
-        self, 
-        character: Character,
-        skill_type: Optional[SkillType] = None
+        self, character: Character, skill_type: Optional[SkillType] = None
     ) -> List[Skill]:
         """Get all skills available to a character based on class and level."""
         class_skills = self.class_skill_trees.get(character.character_class, [])
@@ -143,29 +154,20 @@ class SkillManager:
         return available
 
     def use_skill(
-        self,
-        character: Character,
-        skill_id: str,
-        target: Any
+        self, character: Character, skill_id: str, target: Any
     ) -> Dict[str, Any]:
         """Use a skill and apply its effects."""
         if skill_id not in character.skills:
-            return {
-                "success": False,
-                "message": "You haven't learned this skill yet"
-            }
+            return {"success": False, "message": "You haven't learned this skill yet"}
 
         skill = self.available_skills.get(skill_id)
         if not skill:
-            return {
-                "success": False,
-                "message": "Invalid skill"
-            }
+            return {"success": False, "message": "Invalid skill"}
 
         if not skill.can_use(character):
             return {
                 "success": False,
-                "message": f"Not enough resources to use {skill.name}"
+                "message": f"Not enough resources to use {skill.name}",
             }
 
         # Apply resource costs
@@ -178,30 +180,16 @@ class SkillManager:
             # This is where we'd integrate with combat/status systems
             results.append(f"{effect['type']} effect applied to {effect['target']}")
 
-        return {
-            "success": True,
-            "message": f"Used {skill.name}",
-            "effects": results
-        }
+        return {"success": True, "message": f"Used {skill.name}", "effects": results}
 
-    def learn_skill(
-        self,
-        character: Character,
-        skill_id: str
-    ) -> Dict[str, Any]:
+    def learn_skill(self, character: Character, skill_id: str) -> Dict[str, Any]:
         """Attempt to learn a new skill."""
         if skill_id in character.skills:
-            return {
-                "success": False,
-                "message": "You already know this skill"
-            }
+            return {"success": False, "message": "You already know this skill"}
 
         skill = self.available_skills.get(skill_id)
         if not skill:
-            return {
-                "success": False,
-                "message": "Invalid skill"
-            }
+            return {"success": False, "message": "Invalid skill"}
 
         # Check prerequisites
         for prereq in skill.prerequisites:
@@ -209,17 +197,14 @@ class SkillManager:
                 prereq_name = self.available_skills[prereq].name
                 return {
                     "success": False,
-                    "message": f"You need to learn {prereq_name} first"
+                    "message": f"You need to learn {prereq_name} first",
                 }
 
         if character.level < skill.level_requirement:
             return {
                 "success": False,
-                "message": f"Requires level {skill.level_requirement}"
+                "message": f"Requires level {skill.level_requirement}",
             }
 
         character.skills.append(skill_id)
-        return {
-            "success": True,
-            "message": f"Learned {skill.name}"
-        }
+        return {"success": True, "message": f"Learned {skill.name}"}
