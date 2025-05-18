@@ -1,12 +1,13 @@
 import logging
 import os
 import random
-from typing import Any, Dict, List, Optional, Union  # Added List
+from typing import Any, Dict, List, Optional  # Added List
 
 from core.enemy import Enemy  # Import Enemy class
 from core.models import Character
 from utils.quest_generator import generate_quest  # Direct import for generate_quest
 
+from .skills import SkillManager  # For SkillActionHandler
 from .world_generator import WorldGenerator
 
 logger = logging.getLogger(__name__)
@@ -1147,6 +1148,65 @@ class UnknownActionHandler(ActionHandler):
         return self.ai_response("unknown", details, character, game_state)
 
 
+class SkillActionHandler(ActionHandler):
+    """Handler for 'skill' action."""
+
+    def __init__(self) -> None:
+        """Initialize the skill handler."""
+        self.skill_manager = SkillManager()
+
+    def handle(
+        self, details: str, character: Character, game_state: Any
+    ) -> Dict[str, Any]:
+        """
+        Handle skill usage. Details should contain the skill ID to use.
+        """
+        if not details:
+            available_skills = self.skill_manager.get_available_skills(character)
+            skill_names = [skill.name for skill in available_skills]
+            return {
+                "success": True,
+                "message": f"Available skills: {', '.join(skill_names)}",
+            }
+
+        # Extract skill ID
+        skill_id = details.lower().replace(" ", "_")
+
+        # Get target - for now we assume enemy in combat
+        target = None
+        if hasattr(game_state, "combat") and game_state.combat:
+            target = game_state.combat.get("enemy")
+
+        # Use the skill
+        result = self.skill_manager.use_skill(character, skill_id, target)
+
+        # If successful and in combat, apply combat effects
+        if result["success"] and target:
+            self._apply_combat_effects(result, game_state)
+
+            # Add effects to combat log
+            if "combat" in game_state.__dict__ and "log" in game_state.combat:
+                for effect in result.get("effects", []):
+                    game_state.combat["log"].append(effect)
+
+        return result
+
+    @staticmethod
+    def _apply_combat_effects(result: Dict[str, Any], game_state: Any) -> None:
+        """Apply skill effects in combat."""
+        if not game_state.combat or not game_state.combat.get("enemy"):
+            return
+
+        combat = game_state.combat
+        enemy = combat["enemy"]
+
+        # For now we just apply damage
+        # This should be expanded to handle different effect types
+        for effect in result.get("effects", []):
+            if "damage" in effect:
+                enemy.current_hp = max(0, enemy.current_hp - effect["damage"])
+
+
 # Action handler factory
 def get_action_handler(action: str) -> ActionHandler:
     """
@@ -1168,16 +1228,7 @@ def get_action_handler(action: str) -> ActionHandler:
         "flee": FleeActionHandler(),
         "rest": RestActionHandler(),
         "custom": CustomActionHandler(),  # Add support for freeform actions
-        # 'skill': SkillActionHandler(), # Removed to break circular import with skill_handler.py
+        "skill": SkillActionHandler(),  # Now locally defined
     }
-
-    # TODO: Implement a more robust handler registration mechanism if handlers
-    # can come from different modules (e.g., for 'skill').
-    # For now, the 'skill' action might need to be handled specially by the
-    # GameEngine or SkillActionHandler could be moved into this file if preferred.
-    if action == "skill":
-        from .skill_handler import SkillActionHandler  # Local import to handle 'skill'
-
-        return SkillActionHandler()
 
     return action_handlers.get(action, UnknownActionHandler())

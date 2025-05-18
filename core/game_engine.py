@@ -393,7 +393,7 @@ class GameEngine:
 
     @staticmethod
     def _generate_location_resources(
-        location_type: str
+        location_type: str,
     ) -> Optional[Dict[str, int]]:  # Changed to Dict
         """Generate available resources for the location."""
         resources = {

@@ -104,8 +104,12 @@ class WorldGenerator:
             try:
                 with open(self.world_file, "r", encoding="utf-8") as f:
                     return json.load(f)
-            except Exception as e:
-                logger.error(f"Error loading world map: {e}")
+            except FileNotFoundError:
+                logger.info(
+                    "World map file not found. A new one will be created if needed."
+                )
+            except (IOError, json.JSONDecodeError) as e:
+                logger.error("Error loading world map: %s", e)
 
         # Return empty world if file doesn't exist or has errors
         return {
@@ -129,8 +133,8 @@ class WorldGenerator:
             with open(self.world_file, "w", encoding="utf-8") as f:
                 json.dump(world_data, f, indent=2, ensure_ascii=False)
             return True
-        except Exception as e:
-            logger.error(f"Error saving world map: {e}")
+        except IOError as e:
+            logger.error("Error saving world map: %s", e)
             return False
 
     def generate_location_name(self, location_type: Optional[str] = None) -> str:
@@ -253,8 +257,10 @@ class WorldGenerator:
         A descrição deve ter 2-3 parágrafos e incluir:
         - Aparência visual (destruição, abandono, sinais de luta, pichações de sobreviventes).
         - Atmosfera e sensações (cheiro de podridão, silêncio opressor, sons distantes de zumbis ou tiros).
-        - Pistas sobre o que aconteceu ali (sinais de evacuação apressada, barricadas falhas, restos de suprimentos).
-        - Alguma característica única que torne o local memorável (um grafite específico, um veículo abandonado de forma peculiar, um perigo óbvio ou uma oportunidade).
+        - Pistas sobre o que aconteceu ali (sinais de evacuação apressada, barricadas falhas,
+          restos de suprimentos).
+        - Alguma característica única que torne o local memorável (um grafite específico,
+          um veículo abandonado de forma peculiar, um perigo óbvio ou uma oportunidade).
 
         Mantenha a descrição imersiva e focada no tema de sobrevivência e perigo.
         """
@@ -263,11 +269,16 @@ class WorldGenerator:
             response = self.ai_client.generate_response(prompt)
             if isinstance(response, str) and response.strip():
                 return response.strip()
-        except Exception as e:
-            logger.error(f"Error generating location description: {e}")
+        except ConnectionError as e:  # Exemplo de exceção mais específica para rede
+            logger.error("Connection error generating location description: %s", e)
+        except Exception as e:  # Fallback para outras exceções da AI
+            logger.error("Error generating location description: %s", e)
 
         # Fallback description if AI fails
-        return f"Um(a) {location_type} chamado(a) {location_name}. O ar é pesado e o silêncio é perturbador. Há sinais de destruição por toda parte."
+        return (
+            f"Um(a) {location_type} chamado(a) {location_name}. O ar é pesado e o silêncio "
+            "é perturbador. Há sinais de destruição por toda parte."
+        )
 
     def generate_npcs(self, location_name: str, location_type: str) -> List[str]:
         """
@@ -331,15 +342,20 @@ class WorldGenerator:
         # Try to generate a unique NPC using AI - ADAPTED PROMPT
         try:
             prompt = f"""
-            Gere o nome e uma breve descrição (1 frase) de um personagem NPC único e interessante que poderia ser encontrado em '{location_name}', um(a) {location_type} durante um apocalipse zumbi.
-            O personagem deve ter alguma característica ou história implícita que o torne memorável.
+            Gere o nome e uma breve descrição (1 frase) de um personagem NPC único e
+            interessante que poderia ser encontrado em '{location_name}', um(a) {location_type}
+            durante um apocalipse zumbi.
+            O personagem deve ter alguma característica ou história implícita que o
+            torne memorável.
             Responda apenas com o nome e a descrição.
-            Exemplo: "Corvo, um ex-militar que perdeu seu esquadrão e agora só confia em seu rifle." ou "Lily, uma garotinha que carrega um ursinho de pelúcia manchado de sangue e não fala."
+            Exemplo: "Corvo, um ex-militar que perdeu seu esquadrão e agora só confia em
+            seu rifle." ou "Lily, uma garotinha que carrega um ursinho de pelúcia manchado
+            de sangue e não fala."
             """
 
             response = self.ai_client.generate_response(prompt)
             if isinstance(response, str) and response.strip():
-                unique_npc = response.strip().split("\n")[0]  # Get first line only
+                unique_npc = response.strip().split("\n", maxsplit=1)[0]
                 if unique_npc not in npcs:  # Avoid duplicates if AI gives a base one
                     npcs.append(unique_npc)
         except Exception as e:
@@ -398,18 +414,21 @@ class WorldGenerator:
         # Try to generate a unique event using AI - ADAPTED PROMPT
         try:
             prompt = f"""
-            Gere uma breve descrição de um evento ou situação interessante e tensa acontecendo em '{location_name}', um(a) {location_type} durante um apocalipse zumbi.
+            Gere uma breve descrição de um evento ou situação interessante e tensa
+            acontecendo em '{location_name}', um(a) {location_type} durante um apocalipse zumbi.
             O evento deve aumentar a sensação de perigo ou desolação.
             Responda com apenas uma frase descritiva, sem explicações adicionais.
             """
 
             response = self.ai_client.generate_response(prompt)
             if isinstance(response, str) and response.strip():
-                unique_event = response.strip().split("\n")[0]  # Get first line only
+                unique_event = response.strip().split("\n", maxsplit=1)[0]
                 if unique_event not in events:
                     events.append(unique_event)
-        except Exception as e:
-            logger.error(f"Error generating unique event: {e}")
+        except ConnectionError as e:
+            logger.error("Connection error generating unique event: %s", e)
+        except Exception as e:  # Fallback para outras exceções da AI
+            logger.error("Error generating unique event: %s", e)
 
         return events
 
@@ -561,8 +580,7 @@ class WorldGenerator:
 
         return location_data
 
-    @staticmethod
-    def _get_opposite_direction(direction: str) -> str:
+    def _get_opposite_direction(self, direction: str) -> str:
         """Get the opposite of a direction."""
         opposites = {
             "north": "south",
@@ -574,9 +592,8 @@ class WorldGenerator:
         }
         return opposites.get(direction, "unknown")
 
-    @staticmethod
     def get_available_directions(
-        location_id: str, world_data: Dict[str, Any]
+        self, location_id: str, world_data: Dict[str, Any]
     ) -> Dict[str, str]:
         """
         Get available directions from a location.
@@ -591,9 +608,8 @@ class WorldGenerator:
         location = world_data["locations"].get(location_id, {})
         return location.get("connections", {})
 
-    @staticmethod
     def get_location_by_coordinates(
-        coords: Dict[str, int], world_data: Dict[str, Any]
+        self, coords: Dict[str, int], world_data: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """
         Find a location by its coordinates.
