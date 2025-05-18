@@ -5,12 +5,12 @@ This module provides functions for generating random quests.
 """
 
 import logging
+import os
 import random
 from typing import Any, Dict, List, Optional
 
 # Para gerar recompensas de itens reais
 from utils.item_generator import ItemGenerator
-import os
 
 logger = logging.getLogger(__name__)
 
