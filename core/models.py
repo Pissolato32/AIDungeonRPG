@@ -1,7 +1,7 @@
 # filepath: c:\Users\rodri\Desktop\REPLIT RPG\core\models.py
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Literal
+from typing import Any, Dict, List, Literal, Optional
 
 
 @dataclass

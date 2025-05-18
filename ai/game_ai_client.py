@@ -5,7 +5,7 @@ This module handles AI model interactions for generating game content
 and responses."""
 
 import logging
-from typing import Any, Dict, List, Optional, TypedDict, cast, Protocol
+from typing import Any, Dict, List, Optional, Protocol, TypedDict, cast
 
 from core.game_state_model import GameState
 
@@ -95,10 +95,12 @@ class GameAIClient:
         # Tenta obter dados da localização atual de discovered_locations
         # Se não encontrar, usa os valores de game_state diretamente
         loc_data = game_state.discovered_locations.get(
-            game_state.location_id, {}  # type: ignore
+            game_state.location_id,
+            {},  # type: ignore
         )  # Usa location_id
         current_scene_description = loc_data.get(
-            "description", game_state.scene_description  # type: ignore
+            "description",
+            game_state.scene_description,  # type: ignore
         )
         npcs_in_current_loc = loc_data.get("npcs", game_state.npcs_present)
         events_in_current_loc = loc_data.get("events", game_state.events)

@@ -5,11 +5,12 @@ This module re-exports the GroqClient class from the ai package
 to maintain backward compatibility with existing code.
 """
 
-import os
 import json
 import logging
+import os
+from typing import Any, Dict, Optional
+
 import requests  # Você precisará instalar esta biblioteca: pip install requests
-from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 

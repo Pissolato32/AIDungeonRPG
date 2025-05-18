@@ -7,16 +7,16 @@ from typing import Any, Dict, List, Optional, Tuple  # Added Tuple
 
 from core.enemy import Enemy  # Import Enemy class
 from core.models import Character
-from utils.dice import (
-    roll_dice,
+from utils.dice import (  # Importar funções de dado
     calculate_attribute_modifier,
     calculate_damage,
-)  # Importar funções de dado
+    roll_dice,
+)
 from utils.quest_generator import generate_quest  # Direct import for generate_quest
 
-from .world_generator import WorldGenerator
-from .skills import SkillManager  # For SkillActionHandler
 from .recipes import CRAFTING_RECIPES  # For CraftActionHandler
+from .skills import SkillManager  # For SkillActionHandler
+from .world_generator import WorldGenerator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -307,17 +307,17 @@ class TalkActionHandler(ActionHandler):
                         )
                         if "message" in result:
                             if npc_details["interactions"] <= 2:
-                                result[
-                                    "message"
-                                ] += f"\n\nVocê reconhece {actual_npc_name}, um(a) {npc_details['race']} {npc_details['profession']}."
+                                result["message"] += (
+                                    f"\n\nVocê reconhece {actual_npc_name}, um(a) {npc_details['race']} {npc_details['profession']}."
+                                )
                             else:
-                                result[
-                                    "message"
-                                ] += f"\n\n{actual_npc_name} sorri para um rosto familiar. Como um(a) experiente {npc_details['profession']}, {actual_npc_name} tem muitas histórias para contar."
+                                result["message"] += (
+                                    f"\n\n{actual_npc_name} sorri para um rosto familiar. Como um(a) experiente {npc_details['profession']}, {actual_npc_name} tem muitas histórias para contar."
+                                )
                                 if npc_details.get("quests") and random.random() < 0.7:
-                                    result[
-                                        "message"
-                                    ] += f" {actual_npc_name} menciona precisar de ajuda com '{random.choice(npc_details['quests'])}'."
+                                    result["message"] += (
+                                        f" {actual_npc_name} menciona precisar de ajuda com '{random.choice(npc_details['quests'])}'."
+                                    )
                         game_state.known_npcs[actual_npc_name] = npc_details
                         return result
 
@@ -328,17 +328,17 @@ class TalkActionHandler(ActionHandler):
                         "talk", actual_npc_name, character, game_state
                     )
                     if "message" in result:
-                        result[
-                            "message"
-                        ] += f"\n\nVocê nota que {actual_npc_name} é um(a) {npc_details['race']} {npc_details['profession']}."
+                        result["message"] += (
+                            f"\n\nVocê nota que {actual_npc_name} é um(a) {npc_details['race']} {npc_details['profession']}."
+                        )
                         if npc_details.get("knowledge"):
-                            result[
-                                "message"
-                            ] += f" Parece que {actual_npc_name} sabe sobre {', '.join(npc_details['knowledge'][:2])}."
+                            result["message"] += (
+                                f" Parece que {actual_npc_name} sabe sobre {', '.join(npc_details['knowledge'][:2])}."
+                            )
                         if npc_details.get("quests"):
-                            result[
-                                "message"
-                            ] += f" {actual_npc_name} menciona algo sobre '{npc_details['quests'][0]}'."
+                            result["message"] += (
+                                f" {actual_npc_name} menciona algo sobre '{npc_details['quests'][0]}'."
+                            )
                     if hasattr(game_state, "known_npcs"):
                         npc_details["interactions"] = 1
                         game_state.known_npcs[actual_npc_name] = npc_details

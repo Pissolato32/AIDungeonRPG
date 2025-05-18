@@ -3,19 +3,16 @@
 Game engine module for handling game state and actions."""
 
 import json
+import logging  # Adicionado logging
 import os
 import random
-import logging  # Adicionado logging
 from typing import Any, Dict, List, Optional, cast
 
 # Assume GameAIClient is in ai.game_ai_client, adjust if necessary
-from ai.game_ai_client import GameAIClient, AIResponse  # Import AIResponse
+from ai.game_ai_client import AIResponse, GameAIClient  # Import AIResponse
 
 # Assume ActionHandler is in core.actions, adjust if necessary
-from core.actions import (
-    ActionHandler,
-    get_action_handler,
-)
+from core.actions import ActionHandler, get_action_handler
 from core.models import Character
 
 from .game_state_model import GameState, LocationCoords, LocationData
@@ -438,15 +435,15 @@ class GameEngine:
                 if direction_from_existing_to_new:
                     if "connections" not in existing_loc_data:
                         existing_loc_data["connections"] = {}
-                    existing_loc_data["connections"][
-                        new_location_id
-                    ] = direction_from_existing_to_new
+                    existing_loc_data["connections"][new_location_id] = (
+                        direction_from_existing_to_new
+                    )
                     direction_from_new_to_existing = self._opposite_direction(
                         direction_from_existing_to_new
                     )
-                    new_location_data["connections"][
-                        existing_id
-                    ] = direction_from_new_to_existing
+                    new_location_data["connections"][existing_id] = (
+                        direction_from_new_to_existing
+                    )
 
     @staticmethod
     def _generate_location_name(location_type: str) -> str:
