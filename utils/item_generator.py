@@ -38,6 +38,11 @@ class ItemGenerator:
             "Arco Improvisado",
             "Besta Reciclada",
         ],
+        "weapon_thrown": [  # Nova categoria para Molotov, etc.
+            "Coquetel Molotov",
+            "Pedra Afiada",
+            "Lata Vazia Barulhenta",  # Para distração
+        ],
         "ammo": [
             "balas de pistola",
             "cartuchos de espingarda",
@@ -77,6 +82,9 @@ class ItemGenerator:
             "Componentes Eletrônicos Queimados",
             "Pólvora Caseira",
             "Madeira Podre Útil",
+            "Garrafa Vazia",  # Adicionado
+            "Gasolina",  # Adicionado
+            "Arame Fino",  # Adicionado
             "Cola Forte",
         ],
         "quest": [
@@ -169,6 +177,38 @@ class ItemGenerator:
             "thirst_restore": 5,
             "weight": 0.4,
         },
+        "Lança de Madeira Afiada": {
+            "damage_min": 2,
+            "damage_max": 6,
+            "durability": 25,
+            "weight": 0.8,
+            "type": "weapon_melee",
+        },
+        "Coquetel Molotov": {
+            "damage_min": 10,
+            "damage_max": 25,
+            "area_effect": "fire",
+            "uses": 1,
+            "weight": 0.5,
+            "type": "weapon_thrown",
+        },  # Dano em área, uso único
+        "Kit de Arrombamento Rústico": {
+            "durability": 5,
+            "effectiveness": 0.3,
+            "weight": 0.3,
+            "type": "tool",
+        },  # Baixa durabilidade, chance de sucesso
+        "Garrafa Vazia": {
+            "weight": 0.2,
+            "stackable": True,
+            "type": "material_crafting",
+        },
+        "Gasolina": {
+            "weight": 0.8,
+            "flammable": True,
+            "type": "material_crafting",
+        },  # Porção pequena
+        "Arame Fino": {"weight": 0.1, "stackable": True, "type": "material_crafting"},
         # Add more base stats for other items as needed
     }
 
@@ -324,8 +364,11 @@ class ItemGenerator:
             elif (
                 item_category == "consumable" and random.random() < 0.4
             ):  # Consumables might have effect prefixes
-                name_parts.insert(0, random.choice(self.PREFIXES["effect_positive"]))
-            elif (
+                name_parts.insert(
+                    0,
+                    random.choice(self.PREFIXES.get("effect_positive", ["Melhorado"])),
+                )
+            elif (  # type: ignore
                 item_category == "weapon" and random.random() < 0.3
             ):  # Weapons might have tactical prefixes
                 name_parts.insert(0, random.choice(self.PREFIXES["tactical"]))
@@ -343,11 +386,16 @@ class ItemGenerator:
         weapon_category: Optional[str] = None,
     ) -> Dict[str, Any]:
         if not rarity:
-            rarity = self._select_rarity()
+            rarity = self._select_rarity()  # type: ignore
         if not weapon_category:
-            weapon_category = random.choice(["weapon_melee", "weapon_ranged"])
+            weapon_category = random.choice(
+                ["weapon_melee", "weapon_ranged", "weapon_thrown"]
+            )
 
-        base_weapon_type = random.choice(self.ITEM_TYPES[weapon_category])
+        base_weapon_type = random.choice(self.ITEM_TYPES.get(weapon_category, self.ITEM_TYPES["weapon_melee"]))  # type: ignore
+        if not base_weapon_type:  # Fallback if category was invalid
+            base_weapon_type = random.choice(self.ITEM_TYPES["weapon_melee"])  # type: ignore
+
         base_stats = self.BASE_ITEM_STATS.get(base_weapon_type, {}).copy()
         if not base_stats:
             base_stats = {
@@ -356,13 +404,13 @@ class ItemGenerator:
                 "durability": 20 + level * 5,
                 "weight": 1.0,
             }
-            if weapon_category == "weapon_ranged":
+            if weapon_category == "weapon_ranged" or weapon_category == "weapon_thrown":
                 base_stats["ammo_type"] = "munição genérica"
                 base_stats["capacity"] = random.randint(3, 10)
 
-        rarity_mod = self.RARITIES[rarity]["modifier"]
+        rarity_mod = self.RARITIES[rarity]["modifier"]  # type: ignore
         modified_stats = self._apply_rarity_modifiers(base_stats, rarity_mod, level)
-        name = self._generate_item_name(base_weapon_type, rarity, "weapon")
+        name = self._generate_item_name(base_weapon_type, rarity, "weapon")  # type: ignore
 
         item_data: Dict[str, Any] = {
             "name": name,
@@ -377,10 +425,10 @@ class ItemGenerator:
             "durability": modified_stats.get("durability", 20),
             "weight": modified_stats.get("weight", 1.0),
             "description": self._generate_item_description(
-                name, base_weapon_type, rarity, "arma"
+                name, base_weapon_type, rarity, "arma"  # type: ignore
             ),
         }
-        if weapon_category == "weapon_ranged":
+        if weapon_category == "weapon_ranged" or weapon_category == "weapon_thrown":
             item_data["ammo_type"] = modified_stats.get(
                 "ammo_type", "munição desconhecida"
             )
@@ -390,6 +438,13 @@ class ItemGenerator:
                 if item_data["capacity"] > 0
                 else 0
             )
+        if weapon_category == "weapon_thrown":
+            item_data["uses"] = modified_stats.get(
+                "uses", 1
+            )  # Thrown items might have uses
+            item_data.pop(
+                "capacity", None
+            )  # Thrown items don't usually have capacity in the same way
 
         item_id = self.generate_item_id(name)
         if "items" not in self.items_db:
@@ -402,9 +457,9 @@ class ItemGenerator:
         self, level: int = 1, rarity: Optional[str] = None
     ) -> Dict[str, Any]:
         if not rarity:
-            rarity = self._select_rarity()
+            rarity = self._select_rarity()  # type: ignore
 
-        protection_type = random.choice(self.ITEM_TYPES["protection"])
+        protection_type = random.choice(self.ITEM_TYPES["protection"])  # type: ignore
         base_stats = self.BASE_ITEM_STATS.get(protection_type, {}).copy()
         if not base_stats:
             base_stats = {
@@ -413,9 +468,9 @@ class ItemGenerator:
                 "weight": 1.5,
             }
 
-        rarity_mod = self.RARITIES[rarity]["modifier"]
+        rarity_mod = self.RARITIES[rarity]["modifier"]  # type: ignore
         modified_stats = self._apply_rarity_modifiers(base_stats, rarity_mod, level)
-        name = self._generate_item_name(protection_type, rarity, "protection")
+        name = self._generate_item_name(protection_type, rarity, "protection")  # type: ignore
 
         item_data: Dict[str, Any] = {
             "name": name,
@@ -427,7 +482,7 @@ class ItemGenerator:
             "durability": modified_stats.get("durability"),
             "weight": modified_stats.get("weight", 1.0),
             "description": self._generate_item_description(
-                name, protection_type, rarity, "proteção"
+                name, protection_type, rarity, "proteção"  # type: ignore
             ),
         }
         item_id = self.generate_item_id(name)
@@ -444,13 +499,13 @@ class ItemGenerator:
         consumable_category: Optional[str] = None,
     ) -> Dict[str, Any]:
         if not rarity:
-            rarity = self._select_rarity()
+            rarity = self._select_rarity()  # type: ignore
         if not consumable_category:
             consumable_category = random.choice(
                 ["consumable_medical", "consumable_food"]
             )
-
-        base_consumable_type = random.choice(self.ITEM_TYPES[consumable_category])
+        # type: ignore
+        base_consumable_type = random.choice(self.ITEM_TYPES[consumable_category])  # type: ignore
         base_stats = self.BASE_ITEM_STATS.get(base_consumable_type, {}).copy()
 
         if not base_stats:
@@ -463,9 +518,9 @@ class ItemGenerator:
                     "weight": 0.3,
                 }
 
-        rarity_mod = self.RARITIES[rarity]["modifier"]
+        rarity_mod = self.RARITIES[rarity]["modifier"]  # type: ignore
         modified_stats = self._apply_rarity_modifiers(base_stats, rarity_mod, level)
-        name = self._generate_item_name(base_consumable_type, rarity, "consumable")
+        name = self._generate_item_name(base_consumable_type, rarity, "consumable")  # type: ignore
 
         item_data: Dict[str, Any] = {
             "name": name,
@@ -477,7 +532,7 @@ class ItemGenerator:
             "quantity": 1,
             "weight": modified_stats.get("weight", 0.2),
             "description": self._generate_item_description(
-                name, base_consumable_type, rarity, "consumível"
+                name, base_consumable_type, rarity, "consumível"  # type: ignore
             ),
         }
 
@@ -507,7 +562,7 @@ class ItemGenerator:
             item_data["description"] += " Parece arriscado consumir isto."
 
         if (
-            rarity in ["rare", "epic", "legendary"]
+            rarity in ["rare", "epic", "legendary"]  # type: ignore
             and consumable_category == "consumable_medical"
         ):
             item_data["effects"].append({"type": "cure_infection_low", "value": 1})
@@ -525,7 +580,7 @@ class ItemGenerator:
     def generate_quest_item(
         self, quest_name: Optional[str] = None, level: int = 1
     ) -> Dict[str, Any]:
-        base_item_type = random.choice(self.ITEM_TYPES["quest"])
+        base_item_type = random.choice(self.ITEM_TYPES["quest"])  # type: ignore
 
         # Use the base_item_type directly for the name, or append quest_name if
         # provided
@@ -545,7 +600,7 @@ class ItemGenerator:
             "level_req": level,
             "weight": 0.1,
             "description": self._generate_item_description(
-                name, base_item_type, rarity, "item de missão"
+                name, base_item_type, rarity, "item de missão"  # type: ignore
             ),
         }
 
@@ -563,6 +618,72 @@ class ItemGenerator:
         if "items" not in self.items_db:
             self.items_db["items"] = {}
         self.items_db["items"][item_id] = item_data
+        self.save_items_database()
+        return item_data
+
+    def generate_tool(
+        self, level: int = 1, rarity: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Generates a tool item."""
+        if not rarity:
+            rarity = self._select_rarity()  # type: ignore
+
+        base_tool_type = random.choice(self.ITEM_TYPES.get("tool", ["Ferramenta Quebrada"]))  # type: ignore
+        base_stats = self.BASE_ITEM_STATS.get(base_tool_type, {}).copy()
+
+        if not base_stats:  # Fallback if no specific base stats for this tool
+            base_stats = {
+                "durability": 10 + level * 2,
+                "effectiveness": 0.1 * level,  # Generic effectiveness
+                "weight": 0.5 + random.uniform(0.1, 0.5) * level,
+            }
+
+        rarity_mod = self.RARITIES[rarity]["modifier"]  # type: ignore
+        modified_stats = self._apply_rarity_modifiers(base_stats, rarity_mod, level)
+        name = self._generate_item_name(base_tool_type, rarity, "tool")  # type: ignore
+
+        item_data: Dict[str, Any] = {
+            "name": name,
+            "type": "tool",
+            "subtype": base_tool_type,
+            "rarity": rarity,
+            "level_req": level,
+            "durability": modified_stats.get("durability", 10),
+            "effectiveness": modified_stats.get("effectiveness", 0.1),
+            "weight": modified_stats.get("weight", 0.5),
+            "description": self._generate_item_description(name, base_tool_type, rarity, "ferramenta"),  # type: ignore
+        }
+        item_id = self.generate_item_id(name)
+        self.items_db.setdefault("items", {})[item_id] = item_data
+        self.save_items_database()
+        return item_data
+
+    def generate_material_crafting(
+        self, level: int = 1, rarity: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Generates a crafting material."""
+        if not rarity:
+            rarity = self._select_rarity()  # type: ignore
+
+        base_material_type = random.choice(self.ITEM_TYPES.get("material_crafting", ["Sucata Variada"]))  # type: ignore
+        base_stats = self.BASE_ITEM_STATS.get(base_material_type, {}).copy()
+
+        if not base_stats:  # Fallback for materials
+            base_stats = {"weight": random.uniform(0.1, 1.0), "stackable": True}
+
+        # Rarity might influence quantity found or purity, but less so direct stats for simple materials
+        name = self._generate_item_name(base_material_type, rarity, "material_crafting")  # type: ignore
+
+        item_data: Dict[str, Any] = {
+            "name": name,
+            "type": "material_crafting",
+            "subtype": base_material_type,
+            "rarity": rarity,
+            "weight": base_stats.get("weight", 0.1),
+            "description": self._generate_item_description(name, base_material_type, rarity, "material de criação"),  # type: ignore
+        }
+        item_id = self.generate_item_id(name)
+        self.items_db.setdefault("items", {})[item_id] = item_data
         self.save_items_database()
         return item_data
 
@@ -584,38 +705,22 @@ class ItemGenerator:
         if chosen_category_type == "protection":
             return self.generate_protection(level)
         if chosen_category_type == "consumable":
-            return self.generate_consumable(level)
-        # TODO: Implement generate_tool and generate_material_crafting
-        # For now, fallback to consumable if tool or material is chosen
-        # This ensures the function always returns an item.
-        # Replace with actual generation once those methods are implemented.
+            return self.generate_consumable(level)  # type: ignore
         if chosen_category_type == "tool":
-            # Placeholder: return self.generate_tool(level)
-            logger.warning(
-                "generate_tool not yet implemented, falling back to consumable."
-            )
-            return self.generate_consumable(
-                level, consumable_category="consumable_food"
-            )  # Example fallback
+            return self.generate_tool(level)
         if chosen_category_type == "material_crafting":
-            # Placeholder: return self.generate_material(level)
-            logger.warning(
-                "generate_material_crafting not yet implemented, falling back to consumable."
-            )
-            return self.generate_consumable(
-                level, consumable_category="consumable_medical"
-            )  # Example fallback
+            return self.generate_material_crafting(level)
 
         # Should not be reached if weights sum to 1 and all categories are
         # handled
         logger.error(
             f"Unhandled item category in generate_random_item: {chosen_category_type}"
         )
-        return self.generate_consumable(level)  # Final fallback
+        return self.generate_consumable(level)  # type: ignore # Final fallback
 
-    def _select_rarity(self) -> str:
+    def _select_rarity(self) -> str:  # type: ignore
         rarities = list(self.RARITIES.keys())
-        chances = [self.RARITIES[r]["chance"] for r in rarities]
+        chances = [self.RARITIES[r]["chance"] for r in rarities]  # type: ignore
         return random.choices(rarities, weights=chances, k=1)[0]
 
     def _generate_item_description(
@@ -637,7 +742,8 @@ class ItemGenerator:
             Responda apenas com a descrição, sem explicações adicionais.
             Exemplo para '{name}': Este {item_subtype} {rarity} parece ter visto dias melhores, mas ainda pode ser útil.
             """
-            response = self.ai_client.generate_response(prompt)
+            prompt_dict = {"role": "user", "content": prompt}
+            response = self.ai_client.generate_response(prompt_dict)
             if isinstance(response, str) and response.strip():
                 return response.strip()
         except Exception as e:
@@ -694,7 +800,8 @@ class ItemGenerator:
             else:
                 prompt = f"Descreva brevemente o estado ou uma pista sobre o item '{specific_doc_type}'{context} em um apocalipse zumbi. O item é crucial para uma tarefa."
 
-            response = self.ai_client.generate_response(prompt)
+            prompt_dict = {"role": "user", "content": prompt}
+            response = self.ai_client.generate_response(prompt_dict)
             if isinstance(response, str) and response.strip():
                 return response.strip()
         except Exception as e:

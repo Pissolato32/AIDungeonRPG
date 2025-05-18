@@ -1,0 +1,47 @@
+{
+  "id": "5ccdb63b-6ef4-464e-9a46-139a65b33e40",
+  "owner_session_id": "1e55e11e199a428f7ace895cd411c463",
+  "name": "Jao",
+  "strength": 11,
+  "dexterity": 8,
+  "constitution": 8,
+  "intelligence": 11,
+  "wisdom": 8,
+  "charisma": 8,
+  "description": "",
+  "level": 1,
+  "experience": 0,
+  "gold": 22,
+  "inventory": [
+    "Garrafa de \u00c1gua (metade)",
+    "Mochila Pequena e Gasta",
+    "Faca de Cozinha Enferrujada",
+    "Bandagem Suja",
+    "Isqueiro (pouco g\u00e1s)",
+    "Lata de Comida Amassada"
+  ],
+  "equipment": {},
+  "skills": [],
+  "max_hp": 7,
+  "current_hp": 7,
+  "max_stamina": 8,
+  "current_stamina": 8,
+  "attributes": {
+    "strength": 11,
+    "dexterity": 8,
+    "constitution": 8,
+    "intelligence": 11,
+    "wisdom": 8,
+    "charisma": 8,
+    "current_hp": 7,
+    "max_hp": 7,
+    "current_stamina": 8,
+    "max_stamina": 8
+  },
+  "survival_stats": {
+    "current_hunger": 70,
+    "max_hunger": 100,
+    "current_thirst": 55,
+    "max_thirst": 100
+  }
+}

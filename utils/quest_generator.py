@@ -6,7 +6,11 @@ This module provides functions for generating random quests.
 
 import logging
 import random
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+
+# Para gerar recompensas de itens reais
+from utils.item_generator import ItemGenerator
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +71,22 @@ QUEST_LOCATIONS_CONTEXT = {  # For adding context to quest descriptions
     "abrigo subterrâneo": "dentro do nosso próprio abrigo",
     # Placeholder
     "posto avançado de sobreviventes": "no posto avançado aliado de {nome_posto_avancado}",
+}
+QUEST_REWARD_CATEGORIES_BY_TYPE = {
+    "scavenge": ["consumable_food", "consumable_medical", "material_crafting"],
+    "clear_area": ["weapon", "ammo", "protection"],
+    "rescue": [
+        "consumable_medical",
+        "tool",
+        "misc",
+    ],  # Misc pode ser um item de valor sentimental
+    "repair_fortify": ["material_crafting", "tool"],
+    "investigate_signal": [
+        "ammo",
+        "tool",
+        "quest",
+    ],  # Quest pode ser um item que leva a outra pista
+    "deliver_message": ["consumable_food", "misc"],  # Recompensa por um favor
 }
 
 
@@ -167,61 +187,71 @@ def _generate_quest_rewards(difficulty: int, quest_type: str) -> List[str]:
     Returns:
         List of reward items (as strings for now, could be item objects later)
     """
-    rewards = []
+    # Inicializa o ItemGenerator. O path para 'data' precisa ser relativo ao local de execução
+    # ou absoluto. Assumindo que 'data' está no mesmo nível que 'core' e 'utils'.
+    # Se utils/quest_generator.py está em utils/, e data/ está em core/, o path precisa ser ajustado.
+    # Para simplificar, vamos assumir que o ItemGenerator pode encontrar seu 'data_dir'
+    # se chamado a partir de um script no diretório raiz do projeto.
+    # Se este script for chamado de dentro de 'core', o path para 'data' seria '../core/data'
+    # ou um path absoluto.
+    # Para este exemplo, vamos construir um path relativo a partir da localização deste arquivo.
+    base_dir = os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))
+    )  # REPLIT RPG/
+    data_dir_for_items = os.path.join(base_dir, "core", "data")
+    item_gen = ItemGenerator(data_dir=data_dir_for_items)
+
+    reward_items_generated: List[Dict[str, Any]] = []
     num_rewards = 1 + difficulty // 2
 
-    # Base rewards pool
-    possible_rewards = {
-        "low_tier": [
-            "Comida Enlatada",
-            "Bandagens Sujas (x2)",
-            "Algumas Balas de Pistola",
-            "Pequena Sucata de Metal",
-        ],
-        "mid_tier": [
-            "Kit de Primeiros Socorros Simples",
-            "Garrafa de Água Purificada",
-            "Alguns Cartuchos de Espingarda",
-            "Fita Adesiva",
-        ],
-        "high_tier": [
-            "Faca de Combate decente",  # Placeholder for actual item generation
-            "Um curso de Antibióticos",
-            "Peças Eletrônicas Valiosas",
-            "Caixa de Balas de Rifle",
-        ],
-    }
-
-    # Tailor rewards based on quest type
-    if quest_type == "scavenge":
-        # Scavenge quests might give more of what was scavenged or related
-        # tools
-        if (
-            "munição" in quest_type
-        ):  # Simple check, ideally use target_name from _generate_quest_details
-            possible_rewards["low_tier"].append("Mais Balas de Pistola")
-        else:
-            possible_rewards["low_tier"].append("Comida Enlatada Extra")
-    elif quest_type == "clear_area":
-        possible_rewards["mid_tier"].append("Cano Reforçado")
+    # Determina categorias de itens apropriadas para o tipo de missão
+    reward_categories = QUEST_REWARD_CATEGORIES_BY_TYPE.get(
+        quest_type, ["consumable_food", "material_crafting"]
+    )
 
     for _ in range(num_rewards):
-        if difficulty <= 1:
-            rewards.append(random.choice(possible_rewards["low_tier"]))
-        elif difficulty <= 3:
-            rewards.append(
-                random.choice(
-                    possible_rewards["low_tier"] + possible_rewards["mid_tier"]
-                )
-            )
-        else:
-            rewards.append(
-                random.choice(
-                    possible_rewards["mid_tier"] + possible_rewards["high_tier"]
-                )
-            )
+        # Seleciona uma categoria de recompensa aleatória apropriada para o tipo de missão
+        chosen_category = random.choice(reward_categories)
+        item: Optional[Dict[str, Any]] = None
 
-    return list(set(rewards))  # Ensure unique rewards if multiple are chosen
+        # Tenta gerar um item da categoria escolhida
+        # O ItemGenerator já lida com raridade internamente com base em suas chances
+        # A dificuldade da missão pode influenciar o 'level' do item gerado
+        item_level_for_generation = max(1, difficulty)
+
+        if chosen_category == "weapon":
+            item = item_gen.generate_weapon(level=item_level_for_generation)
+        elif chosen_category == "protection":
+            item = item_gen.generate_protection(level=item_level_for_generation)
+        elif chosen_category.startswith("consumable_"):
+            item = item_gen.generate_consumable(
+                level=item_level_for_generation, consumable_category=chosen_category
+            )
+        elif chosen_category == "tool":
+            item = item_gen.generate_tool(level=item_level_for_generation)
+        elif chosen_category == "material_crafting":
+            item = item_gen.generate_material_crafting(level=item_level_for_generation)
+        elif chosen_category == "ammo":
+            # Gerar um tipo de munição específico ou um item "pacote de munição"
+            item = item_gen.generate_consumable(
+                level=item_level_for_generation, consumable_category="ammo"
+            )  # Supondo que 'ammo' é um tipo de consumível
+        elif (
+            chosen_category == "misc" or chosen_category == "quest"
+        ):  # Itens de quest como recompensa podem ser pistas
+            item = item_gen.generate_random_item(
+                level=item_level_for_generation
+            )  # Mais genérico para misc
+
+        if item and item.get("name"):
+            reward_items_generated.append(item)
+
+    # Retorna uma lista de nomes de itens por enquanto, mas idealmente seriam os objetos de item
+    return [
+        item.get("name", "Item Desconhecido")
+        for item in reward_items_generated
+        if item.get("name")
+    ]
 
 
 def _get_default_quest(location: str) -> Dict[str, Any]:

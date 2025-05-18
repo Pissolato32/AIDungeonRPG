@@ -6,104 +6,67 @@ import random
 from typing import List
 
 
-def calculate_initial_gold(character_class: str, race: str) -> int:
+def calculate_initial_gold() -> int:  # Removido race
     """
-    Calculate initial gold based on class and race, matching frontend logic.
+    Calculate initial "currency" for a survivor.
     """
-    class_gold = {
-        "Warrior": lambda: sum(random.randint(1, 4) for _ in range(5)) * 10,
-        "Mage": lambda: sum(random.randint(1, 4) for _ in range(4)) * 10,
-        "Rogue": lambda: sum(random.randint(1, 4) for _ in range(4)) * 10,
-        "Cleric": lambda: sum(random.randint(1, 4) for _ in range(5)) * 10,
-        "Ranger": lambda: sum(random.randint(1, 4) for _ in range(5)) * 10,
-        "Barbarian": lambda: sum(random.randint(1, 4) for _ in range(3)) * 10,
-    }
-    base = class_gold.get(character_class, lambda: 100)()
-    race_mod = {
-        "Human": 1.0,
-        "Elf": 1.1,
-        "Dwarf": 1.2,
-        "Halfling": 0.9,
-        "Orc": 0.8,
-    }.get(race, 1.0)
-    return int(base * race_mod)
+    # Sobreviventes começam com poucos recursos "monetários"
+    base_currency = random.randint(5, 30)
+    return int(base_currency)
 
 
 def generate_initial_inventory(
-    character_class: str,
-    race: str,
+    # race: str, # Removido
     strength: int,
     dexterity: int,
     intelligence: int,
     description: str = "",
 ) -> List[str]:
     """
-    Generate initial inventory based on class, race, attributes, and description (matches frontend logic).
+    Generate initial inventory for a survivor based on attributes and description.
+    No longer depends on class or race.
     """
-    inventory = []
-    # Class items
-    if character_class == "Warrior":
-        inventory += ["Basic Sword", "Wooden Shield", "Leather Armor"]
-    elif character_class == "Mage":
-        inventory += ["Apprentice Staff", "Basic Grimoire", "Mage Robe"]
-    elif character_class == "Rogue":
-        inventory += ["Dagger", "Thieves Tools", "Dark Cloak"]
-    elif character_class == "Cleric":
-        inventory += ["Mace", "Holy Symbol", "Light Armor"]
-    elif character_class == "Ranger":
-        inventory += ["Short Bow", "Quiver with 20 Arrows", "Leather Armor"]
-    # Race items
-    if race == "Human":
-        inventory += ["Kit de Viagem", "Cantil"]
-    elif race == "Elf":
-        inventory += ["Pão Élfico", "Capa Élfica"]
-    elif race == "Dwarf":
-        inventory += ["Cerveja Anã", "Picareta"]
-    elif race == "Halfling":
-        inventory += ["Cozido em Pote", "Cachimbo"]
-    elif race == "Orc":
-        inventory += ["Amuleto Tribal", "Dente de Troféu"]
-    # Attribute-based items
+    inventory = [  # Itens básicos para qualquer sobrevivente
+        "Faca de Cozinha Enferrujada",  # Já presente no CharacterManager, mas pode ser reforçado aqui
+        "Bandagem Suja",
+        "Lata de Comida Amassada",
+        "Garrafa de Água (metade)",
+        "Mochila Pequena e Gasta",
+    ]
+
+    # Item padrão que antes poderia ser baseado na raça "Humano"
+    inventory.append("Isqueiro (pouco gás)")
+
+    # Itens baseados em atributos
     if strength >= 14:
-        inventory.append("Machado de Batalha")
+        inventory.append("Pé de Cabra Pequeno")
     if dexterity >= 14:
-        inventory.append("Kit de Armadilhas")
+        inventory.append(
+            "Kit de Arrombamento Improvisado"
+        )  # Ou "Grampos de Cabelo (para fechaduras)"
     if intelligence >= 14:
-        inventory.append("Pergaminho Mágico")
-    # Basic potions
-    inventory += ["Poção de Vida Pequena", "Poção de Stamina Pequena"]
-    # Description-based items (keywords)
+        inventory.append("Manual de Primeiros Socorros Danificado")
+
+    # Itens baseados na descrição (palavras-chave para apocalipse zumbi)
     if description:
         keywords = {
-            "guerreiro": "Espada Afiada",
-            "nobre": "Anel da Família",
-            "fazendeiro": "Enxada Robusta",
-            "caçador": "Faca de Caça",
-            "montanha": "Corda de Escalada",
-            "floresta": "Bússola",
-            "mágico": "Varinha da Sorte",
-            "curandeiro": "Ervas Medicinais",
-            "artesão": "Ferramentas de Artesão",
-            "mercenário": "Medalha de Veterano",
-            "fogo": "Pederneira",
-            "água": "Frasco de Água Benta",
-            "comerciante": "Balança de Comerciante",
-            "sobrevivente": "Kit de Sobrevivência",
-            "antigo": "Relíquia de Família",
-            "academia": "Livro de Conhecimento",
-            "templo": "Amuleto Religioso",
-            "instrumento": "Flauta de Madeira",
-            "música": "Ocarina",
-            "arco": "Arco Longo",
-            "machado": "Machado de Lenhador",
-            "facas": "Conjunto de Facas",
-            "oculto": "Amuleto Misterioso",
-            "guerra": "Insígnia Militar",
+            "médico": "Seringa Esterilizada (1)",  # Ou "Analgésicos (dose extra)"
+            "engenheiro": "Rolo de Fita Adesiva Resistente",  # Ou "Multiferramenta Enferrujada"
+            "policial": "Cassetete Policial Gasto",
+            "militar": "Faca de Combate Desgastada",  # Ou "Cantil Militar"
+            "cozinheiro": "Cutelo Afiado",
+            "mecânico": "Chave Inglesa Ajustável",
+            "professor": "Livro sobre Plantas Comestíveis (anotado)",
+            "atleta": "Barra de Proteína (última)",
+            "solitário": "Diário Vazio e Caneta Falhando",
+            "cauteloso": "Pequeno Espelho Quebrado (para olhar esquinas)",
+            "religioso": "Terço Desgastado",  # Ou "Bíblia Pequena"
+            "artista": "Caderno de Desenho e Carvão",
         }
         lower_desc = description.lower()
         for k, v in keywords.items():
             if k in lower_desc and v not in inventory:
                 inventory.append(v)
-                if len(inventory) > 10:
+                if len(inventory) > 8:  # Limitar um pouco o inventário inicial
                     break
-    return inventory
+    return list(set(inventory))  # Garante itens únicos e remove duplicatas se houver

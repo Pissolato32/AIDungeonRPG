@@ -15,6 +15,7 @@ from flask import (
     session,
     url_for,
 )
+import uuid  # Import uuid at the top level
 
 from ai.groq_client import GroqClient
 from app.routes import bp as routes_bp
@@ -103,91 +104,105 @@ class GameApp:
 
     def character(self):
         """Handle character creation and editing."""
-        user_id = SessionManager.ensure_session_initialized()
+        owner_session_id = SessionManager.ensure_session_initialized()
+        # Assumes GameEngine is updated for multi-character support
+        # e.g., game_engine.get_characters_by_owner(owner_session_id) -> List[Character]
+        # e.g., game_engine.save_character(character_object_with_id_and_owner_id)
+        # e.g., game_engine.load_character(character_id)
+
+        existing_characters_list = self.game_engine.get_characters_by_owner(
+            owner_session_id
+        )  # Assumed method
 
         try:
             if request.method == "POST":
+                if len(existing_characters_list) >= 3:
+                    flash("Você atingiu o limite de 3 personagens.", "warning")
+                    return redirect(url_for("routes.character"))
+
                 character_data = request.form.to_dict()
+                # CharacterManager should assign a unique ID (e.g., character.id = str(uuid.uuid4()))
+                # and set character.owner_session_id = owner_session_id
                 character = self._create_character_from_form(character_data)
 
-                # Safely check and set user_id.
-                # Use getattr for reading the attribute to be explicit for type checkers
-                # that 'user_id' might not be a statically known attribute.
-                # The assignment character.user_id = user_id is a dynamic
-                # attribute assignment.
-                current_char_user_id = getattr(character, "user_id", None)
-                if not current_char_user_id or current_char_user_id != user_id:
-                    # Use setattr to explicitly set the attribute, satisfying
-                    # type checkers
-                    setattr(character, "user_id", user_id)
+                # Ensure owner_session_id is set on the character object by CharacterManager or here
+                if (
+                    not hasattr(character, "owner_session_id")
+                    or not character.owner_session_id
+                ):
+                    character.owner_session_id = owner_session_id
+                if not hasattr(character, "id") or not character.id:
+                    # Assign a unique ID if not already set by CharacterManager
+                    character.id = str(uuid.uuid4())
 
-                self.game_engine.save_character(user_id, character)
+                self.game_engine.save_character(
+                    character
+                )  # Assumed method: saves the character object
 
+                # Create and save initial game state for the new character
                 game_state = self._create_initial_game_state()
-                self.game_engine.save_game_state(user_id, game_state)
+                self.game_engine.save_game_state(
+                    character.id, game_state
+                )  # Save game state by character.id
 
                 GameLogger.log_game_action(
                     "character_created",
-                    f"Name: {
-                        character.name}, Class: {
-                        character.character_class}",
-                    user_id,
+                    f"Name: {character.name}, ID: {character.id}",
+                    owner_session_id,
                 )
                 flash(
                     f"Personagem '{
                         character.name}' criado com sucesso!",
                     "success",
                 )
+                # Automatically select the new character
+                session["active_character_id"] = character.id
                 return redirect(url_for("routes.game"))
-            character_data = self.game_engine.load_character(user_id)
-            character = Character.from_dict(character_data) if character_data else None
-            # Para a seção "Personagens Existentes" no template.
-            # Por enquanto, passaremos uma lista vazia.
-            # A lógica para carregar múltiplos personagens precisaria ser implementada
-            # no GameEngine e aqui, se essa funcionalidade for desejada.
-            existing_characters_list = []
-            # Se 'character' existe e você quer mostrá-lo na lista de "existentes" (para o user_id atual):
-            # if character:
-            #     char_obj_for_list = Character.from_dict({**character.to_dict(), "user_id": user_id})
-            #     existing_characters_list = [char_obj_for_list]
+
+            # GET request
             return render_template(
                 "character.html",
-                character=character,
+                # 'character' (singular) is no longer needed for form population
                 existing_characters=existing_characters_list,
             )
 
         except ValueError as e:
             logger.error(f"ValueError in character route: {e}")
             flash(f"Entrada inválida: {str(e)}", "error")
-            # Ensure existing_characters is passed even in error cases
             return render_template(
-                "character.html", character=None, error=str(e), existing_characters=[]
+                "character.html",
+                error=str(e),
+                existing_characters=existing_characters_list,
             )
         except Exception as e:
             logger.error(f"Unexpected error in character route: {e}")
             logger.error(traceback.format_exc())
             flash(
-                f"Erro inesperado ao processar dados do personagem: {
-                    str(e)}",
+                f"Erro inesperado: {str(e)}",
                 "error",
             )
-            # Ensure existing_characters is passed even in error cases
             return render_template(
-                "character.html", character=None, error=str(e), existing_characters=[]
+                "character.html",
+                error=str(e),
+                existing_characters=existing_characters_list,
             )
 
     def game(self):
         """Handle the main game view."""
-        user_id = session.get("user_id")
-        if not user_id:
+        active_character_id = session.get("active_character_id")
+        owner_session_id = session.get(
+            "user_id"
+        )  # For logging or other session-wide checks
+
+        if not active_character_id:
             flash(
-                "Sessão não encontrada, por favor crie ou selecione um personagem.",
+                "Nenhum personagem selecionado. Por favor, crie ou selecione um personagem.",
                 "warning",
             )
             return redirect(url_for("routes.character"))
 
-        character_data = self.game_engine.load_character(user_id)
-        character = Character.from_dict(character_data) if character_data else None
+        # Assumes game_engine.load_character(character_id)
+        character = self.game_engine.load_character(active_character_id)
 
         if not character:
             flash(
@@ -196,23 +211,28 @@ class GameApp:
             )
             return redirect(url_for("routes.character"))
 
-        game_state = self._load_game_state(user_id)
+        # Verify character ownership if necessary, though selection should handle this
+        if character.owner_session_id != owner_session_id:
+            flash("Erro de permissão ao carregar personagem.", "error")
+            session.pop("active_character_id", None)  # Clear invalid selection
+            return redirect(url_for("routes.character"))
+
+        game_state = self._load_game_state(active_character_id)
         if not game_state:
             logger.warning(
-                f"Game state not found for user {user_id}. Creating a new one."
+                f"Game state not found for character {active_character_id}. Creating a new one."
             )
             game_state = self._create_initial_game_state()
-            self.game_engine.save_game_state(user_id, game_state)
+            self.game_engine.save_game_state(active_character_id, game_state)
 
         return render_template("game.html", character=character, game_state=game_state)
 
     def process_action(self):
         """Process a game action from the API."""
-        user_id = session.get("user_id")
-        if not user_id:
+        active_character_id = session.get("active_character_id")
+        owner_session_id = session.get("user_id")
+        if not active_character_id or not owner_session_id:
             return self._error_response("no_active_session")
-
-        action_name_for_log: str = "unknown_action"  # Ensure type for all paths
         try:
             data = request.json
             if not data:
@@ -222,28 +242,37 @@ class GameApp:
 
             action_input = data.get("action")
             # Garante que 'action' seja uma string para o GameEngine
-            action_for_engine = (
+            action_name_for_log = (
                 action_input if isinstance(action_input, str) else "unknown"
             )
-            action_name_for_log = action_for_engine
             details = data.get("details", "")
 
             GameLogger.log_game_action(
-                action_name_for_log, details, user_id or "unknown_user_process_action"
+                action_name_for_log,
+                details,
+                owner_session_id or "unknown_user_process_action",
             )
-
-            character, game_state = self._load_character_and_state()
+            character, game_state = self._load_character_and_state(active_character_id)
 
             if not character:  # character pode ser None
                 return self._error_response("no_character_found")
             if not game_state:
                 logger.error(
-                    f"Game state missing for user {user_id} in process_action. This should not happen."
+                    f"Game state missing for owner {owner_session_id} (char: {active_character_id}) in process_action. This should not happen."
                 )
                 game_state = self._create_initial_game_state()
 
+            # Verify character ownership
+            if character.owner_session_id != owner_session_id:
+                GameLogger.log_game_action(
+                    action_name_for_log, "Ownership mismatch", owner_session_id, "error"
+                )
+                return self._error_response(
+                    "permission_denied", "Character ownership mismatch."
+                )
+
             result = self.game_engine.process_action(
-                action=action_for_engine,  # Usa a action garantida como string
+                action=action_name_for_log,
                 details=details,
                 character=character,
                 game_state=game_state,
@@ -251,14 +280,26 @@ class GameApp:
                 ai_client=self.groq_client,  # Passa groq_client para o parâmetro correto
             )
 
-            self._save_character_and_state(character, game_state)
+            # Adicionar ação do jogador e resposta da IA ao histórico de mensagens do GameState
+            if game_state:  # Ensure game_state is not None
+                player_action_log = (
+                    f"You: {action_name_for_log}"  # Use consistent action variable
+                )
+                if details:
+                    player_action_log += f": {details}"
+                game_state.add_message(player_action_log)
+                if result.get("message"):
+                    ai_response_log = f"Game Master: {result['message']}"
+                    game_state.add_message(ai_response_log)
+
+            self._save_character_and_state(active_character_id, character, game_state)
 
             return jsonify(result)
         except ValueError as e:
             GameLogger.log_game_action(
                 action_name_for_log,  # Already guaranteed to be a string
                 f"ValueError: {str(e)}",
-                user_id or "unknown_user_value_error",
+                owner_session_id or "unknown_user_value_error",
                 "error",
             )
             return self._error_response("invalid_input", str(e))
@@ -266,7 +307,7 @@ class GameApp:
             GameLogger.log_game_action(
                 action_name_for_log,  # Already guaranteed to be a string
                 f"Unexpected error: {str(e)}",
-                user_id or "unknown_user_exception",
+                owner_session_id or "unknown_user_exception",
                 "error",
             )
             logger.error(traceback.format_exc())
@@ -274,25 +315,31 @@ class GameApp:
 
     def reset_game(self):
         """Reset the game state but keeps character basic info for re-creation."""
-        user_id = session.get("user_id")
-        if not user_id:
+        active_character_id = session.get("active_character_id")
+        owner_session_id = session.get("user_id")
+
+        if not active_character_id or not owner_session_id:
             return self._error_response("no_active_session")
 
         try:
             try:
-                self.game_engine.delete_game_state(user_id)
+                self.game_engine.delete_game_state(
+                    active_character_id
+                )  # Assumed method
                 GameLogger.log_game_action(
-                    "reset_game_state", "Game state deleted.", user_id
+                    "reset_game_state",
+                    f"Game state deleted for char {active_character_id}.",
+                    owner_session_id,
                 )
             except Exception as e:
                 GameLogger.log_game_action(
                     "reset_game_state",
                     f"Error deleting game state: {str(e)}",
-                    user_id,
+                    owner_session_id,
                     "error",
                 )
                 logger.error(
-                    f"Failed to delete game state for {user_id} during reset: {e}"
+                    f"Failed to delete game state for char {active_character_id} during reset: {e}"
                 )
 
             flash(
@@ -307,37 +354,67 @@ class GameApp:
             GameLogger.log_game_action(
                 "reset_game",
                 f"Unexpected error: {e}",
-                user_id,  # user_id is checked at the beginning of the function
+                owner_session_id,
                 "error",
             )
             logger.error(traceback.format_exc())
             return self._error_response("reset_error", str(e))
 
-    @staticmethod
-    def select_character(user_id: str):
-        """Handle character selection (placeholder)."""
-        # Implementar lógica para carregar o personagem com user_id
-        # e definir na sessão, depois redirecionar para o jogo.
-        logger.info(f"Attempting to select character with user_id: {user_id}")
-        # Exemplo: session["user_id"] = user_id
-        # self.game_engine.load_character(user_id) etc.
-        flash(
-            f"Seleção de personagem para {user_id} ainda não implementada.", "warning"
-        )
-        return redirect(
-            url_for("routes.character")
-        )  # Redireciona de volta para a criação/edição
+    # Removed @staticmethod as this method uses self
+    def select_character(self, character_id: str):
+        """Handle character selection."""
+        # Ensure this method has a body. If it's not fully implemented yet,
+        # you can use 'pass' as a placeholder.
+        # The existing logic seems correct, so this diff just ensures proper indentation
+        # if it was somehow lost or if the error was due to a preceding line.
+        owner_session_id = session.get("user_id")
+        if not owner_session_id:
+            flash("Sessão inválida.", "error")
+            return redirect(url_for("routes.index"))
 
-    @staticmethod
-    def delete_character(user_id: str):
-        """Handle character deletion (placeholder)."""
-        # Implementar lógica para deletar o personagem com user_id.
-        logger.info(f"Attempting to delete character with user_id: {user_id}")
-        # Exemplo: self.game_engine.delete_character(user_id)
-        # self.game_engine.delete_game_state(user_id)
-        flash(
-            f"Exclusão de personagem para {user_id} ainda não implementada.", "warning"
-        )
+        character = self.game_engine.load_character(character_id)  # Assumed method
+
+        if character and character.owner_session_id == owner_session_id:
+            session["active_character_id"] = character.id
+            flash(f"Personagem '{character.name}' selecionado.", "success")
+            return redirect(url_for("routes.game"))
+        else:
+            flash("Personagem não encontrado ou não pertence a você.", "error")
+            return redirect(url_for("routes.character"))
+
+    # Removed @staticmethod as this method uses self
+    def delete_character(self, character_id: str):
+        """Handle character deletion."""
+        owner_session_id = session.get("user_id")
+        if not owner_session_id:
+            flash("Sessão inválida.", "error")
+            return redirect(url_for("routes.index"))
+
+        character_to_delete = self.game_engine.load_character(
+            character_id
+        )  # Assumed method
+
+        if (
+            character_to_delete
+            and character_to_delete.owner_session_id == owner_session_id
+        ):
+            try:
+                self.game_engine.delete_character(character_id)  # Assumed method
+                self.game_engine.delete_game_state(character_id)  # Assumed method
+                flash(
+                    f"Personagem '{character_to_delete.name}' excluído com sucesso.",
+                    "success",
+                )
+                if session.get("active_character_id") == character_id:
+                    session.pop(
+                        "active_character_id", None
+                    )  # Clear active if it was deleted
+            except Exception as e:
+                logger.error(f"Error deleting character {character_id}: {e}")
+                flash("Erro ao excluir personagem.", "error")
+        else:
+            flash("Personagem não encontrado ou não pertence a você.", "error")
+
         return redirect(url_for("routes.character"))
 
     # Helper methods
@@ -347,52 +424,64 @@ class GameApp:
 
     @staticmethod
     def _create_character_from_form(character_data: Dict[str, Any]) -> Character:
+        # This manager should now also handle setting a unique character.id
+        # and potentially character.owner_session_id if passed in character_data or as an arg.
         return CharacterManager.create_character_from_form(character_data)
 
-    @staticmethod
-    def _get_character_attributes(character_data: Dict[str, Any]) -> Dict[str, Any]:
-        return CharacterManager.get_character_attributes(character_data)
-
-    def _load_game_state(self, user_id: str) -> Optional[GameState]:
-        gs = GameStateManager.load_game_state(self.game_engine, user_id)
+    def _load_game_state(self, character_id: str) -> Optional[GameState]:
+        # GameStateManager.load_game_state needs to accept character_id
+        gs = GameStateManager.load_game_state(
+            self.game_engine, character_id
+        )  # Assumes GameStateManager is updated
         if not gs:
             logger.info(
-                f"No game state found for user {user_id}, will create new if needed."
+                f"No game state found for character {character_id}, will create new if needed."
             )
         return gs
 
     def _load_character_and_state(
-        self,
+        self, active_character_id: Optional[str]
     ) -> Tuple[Optional[Character], Optional[GameState]]:
-        user_id = session.get("user_id")
-        if not user_id:
+        if not active_character_id:
             return None, None
 
-        character_data = self.game_engine.load_character(user_id)
-        character = Character.from_dict(character_data) if character_data else None
-        game_state = self._load_game_state(user_id)
+        character = self.game_engine.load_character(
+            active_character_id
+        )  # Assumed method
+        game_state = self._load_game_state(active_character_id)
 
         if character and not game_state:
             logger.warning(
-                f"Character {
-                    character.name if character else 'Unknown'} found but no game state for user {user_id}. Creating new game state."
+                f"Character {character.name} found but no game state for char_id {active_character_id}. Creating new game state."
             )
             game_state = self._create_initial_game_state()
-            self.game_engine.save_game_state(user_id, game_state)
+            self.game_engine.save_game_state(active_character_id, game_state)
 
         return character, game_state
 
     def _save_character_and_state(
-        self, character: Character, game_state: GameState
+        self, active_character_id: str, character: Character, game_state: GameState
     ) -> None:
-        user_id = session.get("user_id")
-        if not user_id:
+        owner_session_id = session.get("user_id")
+        if not owner_session_id or not active_character_id:
             logger.error(
                 "Attempted to save character/state without user_id in session."
             )
             return
-        self.game_engine.save_character(user_id, character)
-        self.game_engine.save_game_state(user_id, game_state)
+        # Ensure the character being saved matches the active one and owner
+        if (
+            character.id != active_character_id
+            or character.owner_session_id != owner_session_id
+        ):
+            logger.error(
+                f"Mismatch in saving character data. Active: {active_character_id}, Char ID: {character.id}, Owner: {owner_session_id}"
+            )
+            return
+
+        self.game_engine.save_character(character)  # Assumed method
+        self.game_engine.save_game_state(
+            active_character_id, game_state
+        )  # Assumed method
 
     @staticmethod
     def _error_response(error_key: str, error_details: str = "") -> Any:
@@ -430,6 +519,9 @@ _game_app_instance = GameApp()
 
 # 2. Get the Flask app from the GameApp instance
 application = _game_app_instance.app
+
+# Attach the GameApp instance to the Flask app for access in routes via current_app
+application.game_app_instance = _game_app_instance  # type: ignore
 
 # 3. NOW import the blueprint from app.routes
 # This import needs _game_app_instance to be defined.

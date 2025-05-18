@@ -101,7 +101,7 @@ class CombatSystem:
         initiatives = []
 
         # Iniciativa do personagem
-        char_init = roll_dice(1, 20)["total"] + character.agility
+        char_init = roll_dice(1, 20)["total"] + character.attributes.get("agility", 0)
         initiatives.append(("character", char_init))
 
         # Iniciativa dos inimigos
@@ -194,26 +194,40 @@ class CombatSystem:
     ) -> Dict[str, Any]:
         """Processa um ataque básico."""
         # Calcular chance de acerto
-        # hit_roll_result = roll_dice(1, 20) # This variable was defined but
-        # not used for the hit check below.
-        accuracy = attacker.agility if is_character else attacker.get("agility", 0)
-        defense = defender.agility if not is_character else defender.get("agility", 0)
+        if is_character:  # attacker é Character, defender é Dict
+            attacker_accuracy = attacker.attributes.get("agility", 0)
+            defender_defense = defender.get("agility", 0)
+            attacker_name = attacker.name
+            defender_name = defender.get("name", "Inimigo")
+        else:  # attacker é Dict, defender é Character
+            attacker_accuracy = attacker.get("agility", 0)
+            defender_defense = defender.attributes.get("agility", 0)
+            attacker_name = attacker.get("name", "Inimigo")
+            defender_name = defender.name
+
+        accuracy = attacker_accuracy
+        defense = defender_defense
 
         if roll_dice(1, 20)["total"] + accuracy <= defense:
             self.combat_log.add_action(
-                actor=attacker.name if is_character else attacker["name"],
-                target=defender["name"] if is_character else defender.name,
+                actor=attacker_name,
+                target=defender_name,
                 action_type="attack",
                 effects=["esquiva"],
             )
             return {
                 "success": False,
-                "message": f"{defender['name']} esquivou-se do ataque!",
+                "message": f"{defender_name} esquivou-se do ataque!",
             }
 
         # Calcular dano
         damage_value = roll_dice(1, 6)["total"]
-        damage_bonus = attacker.strength if is_character else attacker.get("damage", 0)
+        damage_bonus = (
+            attacker.attributes.get("strength", 0)
+            if is_character
+            else attacker.get("damage", attacker.get("strength", 0))
+            # Inimigos podem ter 'damage' ou 'strength'
+        )
 
         # Verificar crítico
         is_critical = roll_dice(1, 20)["total"] == 20
@@ -224,21 +238,27 @@ class CombatSystem:
 
         # Aplicar dano
         if is_character:
-            defender["health"] = defender.get("health", 0) - total_damage
+            defender_current_hp = defender.get("health", 0)
+            defender["health"] = defender_current_hp - total_damage
         else:
-            defender.health -= total_damage
+            defender_current_hp = defender.attributes.get("current_hp", 0)
+            defender.attributes["current_hp"] = defender_current_hp - total_damage
 
         effects = []
         if is_critical:
             effects.append("crítico")
         if (is_character and defender["health"] <= 0) or (
-            not is_character and defender.health <= 0
+            not is_character and defender.attributes.get("current_hp", 0) <= 0
         ):
             effects.append("morte")
+            if is_character:  # Personagem derrotou inimigo
+                defender["health"] = 0  # Garante que não seja negativo
+            else:  # Inimigo derrotou personagem
+                defender.attributes["current_hp"] = 0  # Garante que não seja negativo
 
         self.combat_log.add_action(
-            actor=attacker.name if is_character else attacker["name"],
-            target=defender["name"] if is_character else defender.name,
+            actor=attacker_name,
+            target=defender_name,
             action_type="attack",
             damage=total_damage,
             effects=effects,
@@ -249,9 +269,7 @@ class CombatSystem:
             "damage": total_damage,
             "critical": is_critical,
             "message": self._generate_attack_message(
-                attacker.name if is_character else attacker["name"],
-                total_damage,
-                is_critical,
+                attacker_name, total_damage, is_critical
             ),
         }
 
@@ -325,13 +343,17 @@ class CombatSystem:
         if effect_type == "poison":
             damage = effect.get("damage", 2)
             if is_character:
-                target.health -= damage
+                current_hp = target.attributes.get("current_hp", 0)
+                target.attributes["current_hp"] = max(0, current_hp - damage)
+                target_name = target.name
             else:
-                target["health"] -= damage
+                current_hp = target.get("health", 0)
+                target["health"] = max(0, current_hp - damage)
+                target_name = target.get("name", "Inimigo")
 
             self.combat_log.add_action(
                 actor="Veneno",
-                target=target.name if is_character else target["name"],
+                target=target_name,
                 action_type="status_effect",
                 damage=damage,
                 effects=["poison"],
@@ -342,10 +364,10 @@ class CombatSystem:
         character: Character, enemies: List[Dict[str, Any]]
     ) -> str:
         """Verifica o estado atual do combate."""
-        if character.health <= 0:
+        if character.attributes.get("current_hp", 0) <= 0:
             return "defeat"
 
-        if all(enemy["health"] <= 0 for enemy in enemies):
+        if all(enemy.get("health", 0) <= 0 for enemy in enemies):
             return "victory"
 
         return "ongoing"

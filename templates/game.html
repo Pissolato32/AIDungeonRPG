@@ -121,6 +121,14 @@
                 </div>
                 {% endif %}
 
+                <!-- Container para Elementos Interativos -->
+                <div
+                  id="interactableElementsContainer"
+                  class="interactable-elements mb-3"
+                >
+                  <!-- Elementos serão populados por JavaScript -->
+                </div>
+
                 <div id="messagesContainer" class="messages-container">
                   {% for message in game_state.messages if game_state and
                   game_state.messages %}
@@ -223,17 +231,6 @@
                   class="{% if game_state and game_state.combat and game_state.combat.get('active') %}d-none{% endif %}"
                 >
                   <div class="input-group">
-                    <select
-                      id="actionType"
-                      class="form-select flex-grow-0"
-                      style="width: 120px"
-                    >
-                      <option value="move">Mover</option>
-                      <option value="look">Olhar</option>
-                      <option value="talk">Falar</option>
-                      <option value="search">Procurar</option>
-                      <option value="custom">Outro</option>
-                    </select>
                     <input
                       type="text"
                       id="actionDetails"
@@ -456,40 +453,44 @@
                   <div class="mb-2">
                     <div class="d-flex justify-content-between mb-1">
                       <span>Fome</span>
-                      <span id="hungerDisplay"
-                        >{{ character.current_hunger if character else 0 }} / {{
-                        character.max_hunger if character else 0 }}</span
-                      >
+                      <span id="hungerDisplay">
+                        {{ character.survival_stats.current_hunger if character
+                        and character.survival_stats else 0 }} / {{
+                        character.survival_stats.max_hunger if character and
+                        character.survival_stats else 0 }}
+                      </span>
                     </div>
                     <div class="progress mb-2">
                       <div
                         id="hungerBar"
                         class="progress-bar bg-warning"
                         role="progressbar"
-                        style="width: {{ ((character.current_hunger if character else 0) / (character.max_hunger if character and character.max_hunger > 0 else 1) * 100)|round }}%;"
-                        aria-valuenow="{{ character.current_hunger if character else 0 }}"
+                        style="width: {{ ((character.survival_stats.current_hunger if character and character.survival_stats else 0) / (character.survival_stats.max_hunger if character and character.survival_stats and character.survival_stats.max_hunger > 0 else 1) * 100)|round }}%;"
+                        aria-valuenow="{{ character.survival_stats.current_hunger if character and character.survival_stats else 0 }}"
                         aria-valuemin="0"
-                        aria-valuemax="{{ character.max_hunger if character else 1 }}"
+                        aria-valuemax="{{ character.survival_stats.max_hunger if character and character.survival_stats else 1 }}"
                       ></div>
                     </div>
                   </div>
                   <div class="mb-2">
                     <div class="d-flex justify-content-between mb-1">
                       <span>Sede</span>
-                      <span id="thirstDisplay"
-                        >{{ character.current_thirst if character else 0 }} / {{
-                        character.max_thirst if character else 0 }}</span
-                      >
+                      <span id="thirstDisplay">
+                        {{ character.survival_stats.current_thirst if character
+                        and character.survival_stats else 0 }} / {{
+                        character.survival_stats.max_thirst if character and
+                        character.survival_stats else 0 }}
+                      </span>
                     </div>
                     <div class="progress mb-2">
                       <div
                         id="thirstBar"
                         class="progress-bar bg-info"
                         role="progressbar"
-                        style="width: {{ ((character.current_thirst if character else 0) / (character.max_thirst if character and character.max_thirst > 0 else 1) * 100)|round }}%;"
-                        aria-valuenow="{{ character.current_thirst if character else 0 }}"
+                        style="width: {{ ((character.survival_stats.current_thirst if character and character.survival_stats else 0) / (character.survival_stats.max_thirst if character and character.survival_stats and character.survival_stats.max_thirst > 0 else 1) * 100)|round }}%;"
+                        aria-valuenow="{{ character.survival_stats.current_thirst if character and character.survival_stats else 0 }}"
                         aria-valuemin="0"
-                        aria-valuemax="{{ character.max_thirst if character else 1 }}"
+                        aria-valuemax="{{ character.survival_stats.max_thirst if character and character.survival_stats else 1 }}"
                       ></div>
                     </div>
                   </div>

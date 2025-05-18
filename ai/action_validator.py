@@ -1,3 +1,4 @@
+# filepath: c:\Users\rodri\Desktop\REPLIT RPG\ai\action_validator.py
 """
 Action validator module.
 
@@ -7,7 +8,7 @@ This module provides functions for validating player actions using artificial in
 import logging
 from typing import Any, Dict
 
-from ai.response_processor import (  # Moved import to the top for clarity
+from ai.response_processor import (
     process_ai_response,
 )
 
@@ -30,14 +31,12 @@ def validate_action_with_ai(
         Dictionary with validation result
     """
     if not ai_client:
-        # If there is no artificial intelligence client, assume that the action
-        # is valid
-        return {"valid": True}
+        return {"valid": True, "reason": "Validação de IA não disponível."}  # Traduzido
 
     try:
-        # Create prompt for action validation
         prompt = f"""
         Você é um validador de ações em um jogo RPG. Sua tarefa é verificar se a ação do jogador faz sentido no contexto.
+        RESPONDA SEMPRE EM PORTUGUÊS DO BRASIL (pt-br).
 
         Detalhes:
         - Ação: {action}
@@ -52,16 +51,16 @@ def validate_action_with_ai(
         Responda APENAS com um JSON no seguinte formato:
         {{
             "valid": true,  // ou false
-            "reason": "Explicação breve se não for válida, caso contrário, uma string vazia ou uma confirmação."
+            "reason": "Explicação breve em Português do Brasil se não for válida, caso contrário, uma string vazia ou uma confirmação."
         }}
         Exemplo de resposta válida: {{"valid": true, "reason": "Ação parece razoável."}}
         Exemplo de resposta inválida: {{"valid": false, "reason": "Não é possível voar sem asas."}}
         """
 
-        # Enviar para a inteligência artificial
-        response = ai_client.generate_response(prompt)
+        response = ai_client.generate_response(
+            {"role": "user", "content": prompt}
+        )  # Adicionado role e content
 
-        # Processar resposta com tratamento de erro
         result = process_ai_response(response)
         if not isinstance(result, dict) or "valid" not in result:
             logger.warning(
@@ -69,16 +68,16 @@ def validate_action_with_ai(
                     str(result)[
                         :200]}"
             )
-            # Mantendo o comportamento de fallback para True, mas idealmente
-            # isso seria False ou tratado de forma diferente.
-            return {"valid": True}
+            return {
+                "valid": True,
+                "reason": "Resposta da IA para validação não foi clara.",
+            }  # Traduzido
 
-        # Se a ação for válida, podemos logar ou retornar a razão fornecida pela IA.
-        # Se a ação for inválida, a razão é importante.
-        # Não usaremos flash aqui, o chamador decide como usar a informação.
         return result
 
     except Exception as e:
-        logger.error(f"Error validating action with artificial intelligence: {e}")
-        # In case of error, assume that the action is valid
-        return {"valid": True}
+        logger.error(f"Erro ao validar ação com IA: {e}")  # Traduzido
+        return {
+            "valid": True,
+            "reason": "Erro interno na validação por IA.",
+        }  # Traduzido

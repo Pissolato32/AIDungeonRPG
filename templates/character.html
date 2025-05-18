@@ -1,378 +1,660 @@
 <!DOCTYPE html>
 <html data-bs-theme="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if character %}Editar Personagem{% else %}Criar Personagem{% endif %} - WebChatRPG</title>
-    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% if character %}Editar Personagem{% else %}Criar Personagem{% endif %} -
+      WebChatRPG
+    </title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
     <div class="container py-4">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1>
-                        <i class="bi bi-person-badge me-2"></i>
-                        {% if character %}Editar Personagem{% else %}Criar Personagem{% endif %}
-                    </h1>
-                    <a href="{{ url_for('routes.index') }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-house-door me-1"></i> Início
-                    </a>
-                </div>
-                
-                {% if existing_characters %}
-                <div class="mb-4">
-                    <h3>Personagens Existentes</h3>
-                    <div class="row">
-                        {% for char in existing_characters %}
-                        <div class="col-md-4 mb-3">
-                            <div class="card bg-dark">
-                                <div class="card-body">
-                                    <h5 class="card-title">{{ char.name }}</h5>
-                                    <p class="card-text">{{ char.race }} {{ char.character_class }}</p>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ url_for('routes.select_character', user_id=char.user_id) }}" class="btn btn-primary">Continuar Aventura</a>
-                                        <a href="{{ url_for('routes.delete_character', user_id=char.user_id) }}" class="btn btn-danger" onclick="return confirm('Tem certeza que deseja excluir este personagem?');">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <hr class="my-4">
-                </div>
-                {% endif %}
-                
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
+      <div class="row justify-content-center">
+        <div class="col-md-8">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+              <i class="bi bi-person-plus-fill me-2"></i>
+              <!-- Icon changed -->
+              Gerenciar Personagens
+            </h1>
+            <a
+              href="{{ url_for('routes.index') }}"
+              class="btn btn-outline-secondary"
+            >
+              <i class="bi bi-house-door me-1"></i> Início
+            </a>
+          </div>
 
-                <div class="card bg-dark mb-4">
-                    <div class="card-body">
-                        <form action="{{ url_for('routes.character') }}" method="post">
-                            <div class="mb-4 row">
-                                <div class="col-md-4 mb-3">
-                                    <label for="name" class="form-label">Nome do Personagem</label>
-                                    <input type="text" class="form-control" id="name" name="name" value="{{ character.name if character else '' }}" required>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="race" class="form-label">Raça do Personagem</label>
-                                    <select class="form-select" id="race" name="race" required>
-                                        <option value="">Selecione a Raça</option>
-                                        <option value="Human" {% if character and character.race == 'Human' %}selected{% endif %}>Humano</option>
-                                        <option value="Elf" {% if character and character.race == 'Elf' %}selected{% endif %}>Elfo</option>
-                                        <option value="Dwarf" {% if character and character.race == 'Dwarf' %}selected{% endif %}>Anão</option>
-                                        <option value="Halfling" {% if character and character.race == 'Halfling' %}selected{% endif %}>Halfling</option>
-                                        <option value="Orc" {% if character and character.race == 'Orc' %}selected{% endif %}>Orc</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="class" class="form-label">Classe do Personagem</label>
-                                    <select class="form-select" id="class" name="class" required>
-                                        <option value="">Selecione a Classe</option>
-                                        <option value="Warrior" {% if character and character.character_class == 'Warrior' %}selected{% endif %}>Guerreiro</option>
-                                        <option value="Mage" {% if character and character.character_class == 'Mage' %}selected{% endif %}>Mago</option>
-                                        <option value="Rogue" {% if character and character.character_class == 'Rogue' %}selected{% endif %}>Ladino</option>
-                                        <option value="Cleric" {% if character and character.character_class == 'Cleric' %}selected{% endif %}>Clérigo</option>
-                                        <option value="Ranger" {% if character and character.character_class == 'Ranger' %}selected{% endif %}>Ranger</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="mb-4">
-                                <label for="description" class="form-label">Descrição do Personagem</label>
-                                <textarea class="form-control" id="description" name="description" rows="3" placeholder="Uma breve história ou aparência...">{{ character.description if character else '' }}</textarea>
-                                <small class="text-muted">Opcional, mas ajuda na imersão.</small>
-                            </div>
-                            <h4 class="mb-3"><i class="bi bi-bar-chart-line me-2"></i>Atributos</h4>
-                            <div class="mb-3">
-                                <button type="button" id="rollDiceBtn" class="btn btn-outline-primary mb-3">
-                                    <i class="bi bi-dice-6 me-1"></i> Rolar Dados (<span id="remainingRolls">3</span>)
-                                </button>
-                                <div class="mb-2">
-                                    <small class="text-muted">Total de Pontos: <span id="totalPoints">0</span>/75</small>
-                                </div>
-                            </div>
-                            <div class="row mb-4">
-                                <div class="col-md-4 mb-3">
-                                    <label for="strength" class="form-label">Força</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-shield-fill"></i></span>
-                                        <input type="number" class="form-control attribute-field" id="strength" name="strength" value="{{ character.strength if character else 10 }}" min="8" max="18" step="1">
-                                        <span class="input-group-text modifier" id="strength-mod">+0</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="dexterity" class="form-label">Destreza</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-arrow-up-right"></i></span>
-                                        <input type="number" class="form-control attribute-field" id="dexterity" name="dexterity" value="{{ character.dexterity if character else 10 }}" min="8" max="18" step="1">
-                                        <span class="input-group-text modifier" id="dexterity-mod">+0</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="constitution" class="form-label">Constituição</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-heart"></i></span>
-                                        <input type="number" class="form-control attribute-field" id="constitution" name="constitution" value="{{ character.constitution if character else 10 }}" min="8" max="18" step="1">
-                                        <span class="input-group-text modifier" id="constitution-mod">+0</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="intelligence" class="form-label">Inteligência</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-lightbulb"></i></span>
-                                        <input type="number" class="form-control attribute-field" id="intelligence" name="intelligence" value="{{ character.intelligence if character else 10 }}" min="8" max="18" step="1">
-                                        <span class="input-group-text modifier" id="intelligence-mod">+0</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="wisdom" class="form-label">Sabedoria</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-book"></i></span>
-                                        <input type="number" class="form-control attribute-field" id="wisdom" name="wisdom" value="{{ character.wisdom if character else 10 }}" min="8" max="18" step="1">
-                                        <span class="input-group-text modifier" id="wisdom-mod">+0</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="charisma" class="form-label">Carisma</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-chat"></i></span>
-                                        <input type="number" class="form-control attribute-field" id="charisma" name="charisma" value="{{ character.charisma if character else 10 }}" min="8" max="18" step="1">
-                                        <span class="input-group-text modifier" id="charisma-mod">+0</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <h4 class="mb-3"><i class="bi bi-shield me-2"></i>Saúde e Vigor</h4>
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle-fill me-2"></i>
-                                Calculado automaticamente com base nos atributos e classe.
-                            </div>
-                            <div class="row mb-4">
-                                <div class="col-md-3 mb-3">
-                                    <label for="max_hp" class="form-label">HP Máximo</label>
-                                    <input type="number" class="form-control" id="max_hp" name="max_hp" value="{{ character.max_hp if character else 10 }}" readonly>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <label for="current_hp" class="form-label">HP Atual</label>
-                                    <input type="number" class="form-control" id="current_hp" name="current_hp" value="{{ character.current_hp if character else 10 }}" readonly>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <label for="max_stamina" class="form-label">Vigor Máximo</label>
-                                    <input type="number" class="form-control" id="max_stamina" name="max_stamina" value="{{ character.max_stamina if character else 10 }}" readonly>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <label for="current_stamina" class="form-label">Vigor Atual</label>
-                                    <input type="number" class="form-control" id="current_stamina" name="current_stamina" value="{{ character.current_stamina if character else 10 }}" readonly>
-                                </div>
-                            </div>
-                            <h4 class="mb-3"><i class="bi bi-info-circle me-2"></i>Informações Adicionais</h4>
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle-fill me-2"></i>
-                                Estes são definidos pelo jogo.
-                            </div>
-                            <div class="row mb-4">
-                                <div class="col-md-4 mb-3">
-                                    <label for="level" class="form-label">Nível</label>
-                                    <input type="number" class="form-control" id="level" name="level" value="1" min="1" readonly>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="experience" class="form-label">Experiência</label>
-                                    <input type="number" class="form-control" id="experience" name="experience" value="0" min="0" readonly>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="gold" class="form-label">Ouro</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-coin"></i></span>
-                                        <input type="number" class="form-control" id="gold" name="gold" value="{{ character.gold if character else 50 }}" min="0" readonly>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-4">
-                                <label for="inventory" class="form-label">Inventário</label>
-                                <div class="alert alert-info">
-                                    <i class="bi bi-info-circle-fill me-2"></i>
-                                    Itens iniciais baseados na classe e raça.
-                                </div>
-                                <ul class="list-group" id="inventory-list">
-                                    <li class="list-group-item bg-dark text-light border-secondary">Carregando...</li>
-                                </ul>
-                                <input type="hidden" id="inventory" name="inventory" value="{{ ','.join(character.inventory) if character and character.inventory else '' }}">
-                            </div>
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-primary btn-lg">
-                                    {% if character %}Salvar Alterações{% else %}Criar Personagem{% endif %}
-                                </button>
-                                {% if character %}
-                                <a href="{{ url_for('routes.game') }}" class="btn btn-success">Continuar Jogo</a>
-                                {% endif %}
-                            </div>
-                        </form>
+          {% if existing_characters %}
+          <div class="mb-4 card bg-dark">
+            <h3>Personagens Existentes</h3>
+            <div class="row">
+              {% for char in existing_characters %}
+              <div class="col-md-4 mb-3">
+                <div class="card bg-dark">
+                  <div class="card-body">
+                    <h5 class="card-title">{{ char.name }}</h5>
+                    <!-- Raça removida da exibição -->
+                    <div class="d-flex gap-2">
+                      <a
+                        href="{{ url_for('routes.select_character', character_id=char.id) }}"
+                        class="btn btn-primary"
+                        >Continuar Aventura</a
+                      >
+                      <a
+                        href="{{ url_for('routes.delete_character', character_id=char.id) }}"
+                        class="btn btn-danger"
+                        onclick="return confirm('Tem certeza que deseja excluir este personagem?');"
+                      >
+                        <i class="bi bi-trash"></i>
+                      </a>
                     </div>
+                  </div>
                 </div>
+              </div>
+              {% endfor %}
             </div>
+          </div>
+          {% endif %} {% with messages =
+          get_flashed_messages(with_categories=true) %} {% if messages %} {% for
+          category, message in messages %}
+          <div
+            class="alert alert-{{ category }} alert-dismissible fade show"
+            role="alert"
+          >
+            {{ message }}
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="alert"
+              aria-label="Close"
+            ></button>
+          </div>
+          {% endfor %} {% endif %} {% endwith %} {% if not existing_characters
+          or existing_characters|length < 3 %}
+          <div class="card bg-dark mb-4">
+            <div class="card-body">
+              <h2 class="mb-4">
+                <i class="bi bi-person-plus me-2"></i>Criar Novo Personagem
+              </h2>
+              <form action="{{ url_for('routes.character') }}" method="post">
+                <div class="mb-4 row">
+                  <div class="col-md-12 mb-3">
+                    <!-- Nome ocupa toda a largura agora -->
+                    <label for="name" class="form-label"
+                      >Nome do Personagem</label
+                    >
+                    <!-- value will be empty as 'character' for edit is removed -->
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="name"
+                      name="name"
+                      value=""
+                      required
+                    />
+                  </div>
+                  <!-- Classe Removida -->
+                </div>
+                <div class="mb-4">
+                  <label for="description" class="form-label"
+                    >Descrição do Personagem</label
+                  >
+                  <!-- textarea will be empty -->
+                  <textarea
+                    class="form-control"
+                    id="description"
+                    name="description"
+                    rows="3"
+                    placeholder="Uma breve história ou aparência..."
+                  ></textarea>
+                  <small class="text-muted"
+                    >Opcional, mas ajuda na imersão.</small
+                  >
+                </div>
+                <h4 class="mb-3">
+                  <i class="bi bi-bar-chart-line me-2"></i>Atributos
+                </h4>
+                <div class="alert alert-info">
+                  <i class="bi bi-info-circle-fill me-2"></i>
+                  Distribua 27 pontos entre os atributos. Nenhum atributo pode
+                  ser menor que 8 ou maior que 15.
+                </div>
+                <div class="mb-3">
+                  <!-- Botão de Rolar Dados Removido -->
+                  <div class="mb-2">
+                    <small class="text-muted"
+                      >Pontos Gastos: <span id="pointsSpent">0</span> /
+                      <span id="pointsBudget">27</span></small
+                    >
+                  </div>
+                </div>
+                <div class="row mb-4">
+                  <div class="col-md-4 mb-3">
+                    <label for="strength" class="form-label">Força</label>
+                    <div class="input-group">
+                      <span class="input-group-text"
+                        ><i class="bi bi-shield-fill"></i
+                      ></span>
+                      <!-- value will default to 8 -->
+                      <input
+                        type="number"
+                        class="form-control attribute-field"
+                        id="strength"
+                        name="strength"
+                        value="8"
+                        min="8"
+                        max="15"
+                        step="1"
+                      />
+                      <span class="input-group-text modifier" id="strength-mod"
+                        >+0</span
+                      >
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="dexterity" class="form-label">Destreza</label>
+                    <div class="input-group">
+                      <span class="input-group-text"
+                        ><i class="bi bi-arrows-move"></i
+                      ></span>
+                      <!-- Icon changed for better representation -->
+                      <!-- value will default to 8 -->
+                      <input
+                        type="number"
+                        class="form-control attribute-field"
+                        id="dexterity"
+                        name="dexterity"
+                        value="8"
+                        min="8"
+                        max="15"
+                        step="1"
+                      />
+                      <span class="input-group-text modifier" id="dexterity-mod"
+                        >+0</span
+                      >
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="constitution" class="form-label"
+                      >Constituição</label
+                    >
+                    <div class="input-group">
+                      <span class="input-group-text"
+                        ><i class="bi bi-heart-pulse-fill"></i
+                      ></span>
+                      <!-- Icon changed -->
+                      <!-- value will default to 8 -->
+                      <input
+                        type="number"
+                        class="form-control attribute-field"
+                        id="constitution"
+                        name="constitution"
+                        value="8"
+                        min="8"
+                        max="15"
+                        step="1"
+                      />
+                      <span
+                        class="input-group-text modifier"
+                        id="constitution-mod"
+                        >+0</span
+                      >
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="intelligence" class="form-label"
+                      >Inteligência</label
+                    >
+                    <div class="input-group">
+                      <span class="input-group-text"
+                        ><i class="bi bi-lightbulb-fill"></i
+                      ></span>
+                      <!-- Icon changed -->
+                      <!-- value will default to 8 -->
+                      <input
+                        type="number"
+                        class="form-control attribute-field"
+                        id="intelligence"
+                        name="intelligence"
+                        value="8"
+                        min="8"
+                        max="15"
+                        step="1"
+                      />
+                      <span
+                        class="input-group-text modifier"
+                        id="intelligence-mod"
+                        >+0</span
+                      >
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="wisdom" class="form-label">Sabedoria</label>
+                    <div class="input-group">
+                      <span class="input-group-text"
+                        ><i class="bi bi-book-half"></i
+                      ></span>
+                      <!-- Icon changed -->
+                      <!-- value will default to 8 -->
+                      <input
+                        type="number"
+                        class="form-control attribute-field"
+                        id="wisdom"
+                        name="wisdom"
+                        value="8"
+                        min="8"
+                        max="15"
+                        step="1"
+                      />
+                      <span class="input-group-text modifier" id="wisdom-mod"
+                        >+0</span
+                      >
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="charisma" class="form-label">Carisma</label>
+                    <div class="input-group">
+                      <span class="input-group-text"
+                        ><i class="bi bi-chat-heart-fill"></i
+                      ></span>
+                      <!-- Icon changed -->
+                      <!-- value will default to 8 -->
+                      <input
+                        type="number"
+                        class="form-control attribute-field"
+                        id="charisma"
+                        name="charisma"
+                        value="8"
+                        min="8"
+                        max="15"
+                        step="1"
+                      />
+                      <span class="input-group-text modifier" id="charisma-mod"
+                        >+0</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <h4 class="mb-3">
+                  <i class="bi bi-shield me-2"></i>Saúde e Vigor
+                </h4>
+                <div class="alert alert-info">
+                  <i class="bi bi-info-circle-fill me-2"></i>
+                  Calculado automaticamente com base nos atributos.
+                </div>
+                <div class="row mb-4">
+                  <div class="col-md-3 mb-3">
+                    <label for="max_hp" class="form-label">HP Máximo</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="max_hp"
+                      name="max_hp"
+                      value="10"
+                      <!--
+                      Will
+                      be
+                      calculated
+                      by
+                      JS
+                      --
+                    />
+                    readonly />
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <label for="current_hp" class="form-label">HP Atual</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="current_hp"
+                      name="current_hp"
+                      value="10"
+                      <!--
+                      Will
+                      be
+                      calculated
+                      by
+                      JS
+                      --
+                    />
+                    readonly />
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <label for="max_stamina" class="form-label"
+                      >Vigor Máximo</label
+                    >
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="max_stamina"
+                      name="max_stamina"
+                      value="10"
+                      readonly
+                    />
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <label for="current_stamina" class="form-label"
+                      >Vigor Atual</label
+                    >
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="current_stamina"
+                      name="current_stamina"
+                      value="10"
+                      readonly
+                    />
+                  </div>
+                </div>
+                <h4 class="mb-3">
+                  <i class="bi bi-info-circle me-2"></i>Informações Adicionais
+                </h4>
+                <div class="alert alert-info">
+                  <i class="bi bi-info-circle-fill me-2"></i>
+                  Estes são definidos pelo jogo.
+                </div>
+                <div class="row mb-4">
+                  <div class="col-md-4 mb-3">
+                    <label for="level" class="form-label">Nível</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="level"
+                      name="level"
+                      value="1"
+                      min="1"
+                      readonly
+                    />
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="experience" class="form-label"
+                      >Experiência</label
+                    >
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="experience"
+                      name="experience"
+                      value="0"
+                      min="0"
+                      readonly
+                    />
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="gold" class="form-label">Ouro</label>
+                    <div class="input-group">
+                      <span class="input-group-text"
+                        ><i class="bi bi-coin"></i
+                      ></span>
+                      <input
+                        type="number"
+                        class="form-control"
+                        id="gold"
+                        name="gold"
+                        value="50"
+                        <!--
+                        Default
+                        starting
+                        gold
+                        --
+                      />
+                      min="0" readonly />
+                    </div>
+                  </div>
+                </div>
+                <div class="mb-4">
+                  <label for="inventory" class="form-label">Inventário</label>
+                  <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    Itens iniciais baseados na raça e atributos.
+                  </div>
+                  <ul class="list-group" id="inventory-list">
+                    <li
+                      class="list-group-item bg-dark text-light border-secondary"
+                    >
+                      Carregando...
+                    </li>
+                  </ul>
+                  <input
+                    type="hidden"
+                    id="inventory"
+                    name="inventory"
+                    value=""
+                    <!--
+                    Inventory
+                    will
+                    be
+                    set
+                    by
+                    backend
+                    on
+                    creation
+                    --
+                  />
+                  <!-- Inventory will be set by backend on creation -->
+                </div>
+                <div class="d-grid gap-2">
+                  <button
+                    type="submit"
+                    id="createCharacterBtn"
+                    class="btn btn-primary btn-lg"
+                  >
+                    <i class="bi bi-check-lg me-1"></i> Criar Personagem
+                  </button>
+                  <!-- "Continuar Jogo" button removed as it was for edit context -->
+                </div>
+              </form>
+            </div>
+          </div>
+          {% else %}
+          <div class="alert alert-warning" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            Você atingiu o limite de 3 personagens. Exclua um personagem
+            existente para criar um novo.
+          </div>
+          {% endif %}
         </div>
+      </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Elementos
-            const rollDiceBtn = document.getElementById('rollDiceBtn');
-            const attrSwapButtons = document.querySelectorAll('.attr-swap');
-            const attributeFields = document.querySelectorAll('.attribute-field');
-            const description = document.getElementById('description');
-            const characterClass = document.getElementById('class');
-            const race = document.getElementById('race');
-            const inventoryList = document.getElementById('inventory-list');
-            const inventoryField = document.getElementById('inventory');
+      document.addEventListener("DOMContentLoaded", function () {
+        const attributeFields = Array.from(
+          document.querySelectorAll(".attribute-field")
+        );
+        const pointsSpentDisplay = document.getElementById("pointsSpent");
+        const pointsBudgetDisplay = document.getElementById("pointsBudget");
+        const createCharacterBtn =
+          document.getElementById("createCharacterBtn");
+        // 'character' for editing is no longer passed to this page for form population.
+        const characterNameInput = document.getElementById("name"); // Adicionado para checar se é novo personagem
+        const totalPointsBudget = 27;
+        const pointCosts = {
+          8: 0,
+          9: 1,
+          10: 2,
+          11: 3,
+          12: 4,
+          13: 5,
+          14: 7,
+          15: 9,
+        };
+        const baseAttributeValue = 8;
+        const maxAttributeValue = 15;
 
-            // Estado
-            let selectedAttributes = [];
-            let inventory = [];
+        // --- Core Calculation Functions ---
+        function getCost(attributeValue) {
+          // Ensure the value is an integer, clamp it if it's outside the defined cost range for safety
+          const val = parseInt(attributeValue);
+          if (val < baseAttributeValue) return pointCosts[baseAttributeValue];
+          if (val > maxAttributeValue) return pointCosts[maxAttributeValue];
+          return pointCosts[val] || 0; // Default to 0 if somehow still out of keys
+        }
 
-            // Atualizar modificadores de atributo
-            function updateModifiers() {
-                attributeFields.forEach(field => {
-                    const attrValue = parseInt(field.value);
-                    const modifier = Math.floor((attrValue - 10) / 2);
-                    
-                    const modifierElement = document.getElementById(`${field.id}-mod`);
-                    if (modifierElement) {
-                        modifierElement.textContent = modifier >= 0 ? `+${modifier}` : `${modifier}`;
-                    }
-                });
+        function calculateTotalSpentPoints() {
+          let totalSpent = 0;
+          attributeFields.forEach((field) => {
+            totalSpent += getCost(parseInt(field.value));
+          });
+          return totalSpent;
+        }
+
+        // --- Update Functions ---
+        function updatePointsDisplay() {
+          const spentPoints = calculateTotalSpentPoints();
+          if (pointsSpentDisplay) {
+            pointsSpentDisplay.textContent = spentPoints;
+          }
+          if (pointsBudgetDisplay) {
+            // Initialize budget display if not already set by HTML
+            pointsBudgetDisplay.textContent = totalPointsBudget;
+          }
+        }
+
+        function updateModifiers() {
+          attributeFields.forEach((field) => {
+            const attrValue = parseInt(field.value);
+            const modifier = Math.floor((attrValue - 10) / 2);
+            const modifierElement = document.getElementById(`${field.id}-mod`);
+            if (modifierElement) {
+              modifierElement.textContent =
+                modifier >= 0 ? `+${modifier}` : `${modifier}`;
+            }
+          });
+        }
+
+        function updateHpAndStamina() {
+          const constitution = parseInt(
+            document.getElementById("constitution").value
+          );
+          const strength = parseInt(document.getElementById("strength").value);
+          const dexterity = parseInt(
+            document.getElementById("dexterity").value
+          );
+
+          const conModifier = Math.floor((constitution - 10) / 2);
+          const dexModifier = Math.floor((dexterity - 10) / 2);
+
+          const defaultHitDie = 8;
+          const defaultBaseStamina = 10;
+
+          const maxHp = defaultHitDie + conModifier;
+          const maxStamina = defaultBaseStamina + dexModifier + conModifier;
+
+          document.getElementById("max_hp").value = maxHp;
+          document.getElementById("current_hp").value = maxHp;
+          document.getElementById("max_stamina").value = maxStamina;
+          document.getElementById("current_stamina").value = maxStamina;
+        }
+
+        function refreshAllCalculations() {
+          updatePointsDisplay();
+          updateModifiers();
+          updateHpAndStamina();
+        }
+
+        // --- Event Handlers & Initialization ---
+        attributeFields.forEach((field) => {
+          // Since this page is now only for creation, and Jinja defaults are set to 8
+          // or empty, we ensure client-side reflects this for point calculation.
+          // The `value="8"` in HTML or `value=""` for text fields handles the initial state.
+          // The JS logic for `isNewCharacter` previously ensured attributes start at 8.
+          // Now, the HTML directly sets attribute inputs to 8 for new forms.
+          // We still need to ensure that if a field is somehow not 8 (e.g. browser autofill on a non-attribute field),
+          // the logic correctly calculates from its actual initial value if it's an attribute field.
+          // The current `field.value = baseAttributeValue;` inside the `isNewCharacter`
+          // block is still good practice if the form is visible.
+          if (
+            document.querySelector(
+              "form[action=\"{{ url_for('routes.character') }}\"]"
+            )
+          ) {
+            // Check if creation form is on page
+            if (!field.value || parseInt(field.value) < baseAttributeValue) {
+              // Ensure it's at least base if empty or less
+              field.value = baseAttributeValue;
+            }
+          }
+          // Para personagens existentes, o valor será preenchido pelo Jinja:
+          // value="{{ character.attribute_name if character else 8 }}"
+          // Se isNewCharacter for falso, respeitamos o valor preenchido pelo servidor.
+
+          field.addEventListener("input", function (e) {
+            let currentValue = parseInt(e.target.value);
+
+            // 1. Clamp the value of the current field
+            if (isNaN(currentValue) || currentValue < baseAttributeValue) {
+              e.target.value = baseAttributeValue;
+            } else if (currentValue > maxAttributeValue) {
+              e.target.value = maxAttributeValue;
+            }
+            currentValue = parseInt(e.target.value); // Re-read after clamping
+
+            // 2. Check total points & adjust if over budget
+            let spentPoints = calculateTotalSpentPoints();
+
+            // If over budget, reduce the current field's value until budget is met or field is at base
+            while (
+              spentPoints > totalPointsBudget &&
+              currentValue > baseAttributeValue
+            ) {
+              currentValue--;
+              e.target.value = currentValue;
+              spentPoints = calculateTotalSpentPoints(); // Recalculate with the new value
             }
 
-            // Atualizar HP e Stamina com base nos atributos
-            function updateHpAndStamina() {
-                const constitution = parseInt(document.getElementById('constitution').value);
-                const strength = parseInt(document.getElementById('strength').value);
-                const classValue = document.getElementById('class').value;
+            refreshAllCalculations();
+          });
 
-                const conModifier = Math.floor((constitution - 10) / 2);
-                const strModifier = Math.floor((strength - 10) / 2);
-
-                // HP base por classe (Hit Die)
-                let hitDie = 8; // Padrão
-                if (classValue === 'Warrior') hitDie = 10;
-                if (classValue === 'Barbarian') hitDie = 12;
-                if (classValue === 'Mage') hitDie = 6;
-                if (classValue === 'Rogue') hitDie = 8;
-                if (classValue === 'Cleric') hitDie = 8;
-                if (classValue === 'Ranger') hitDie = 10;
-
-                // Stamina base por classe
-                let baseStamina = 8;
-                if (classValue === 'Warrior') baseStamina = 10;
-                if (classValue === 'Barbarian') baseStamina = 12;
-                if (classValue === 'Mage') baseStamina = 6;
-                if (classValue === 'Rogue') baseStamina = 12;
-                if (classValue === 'Cleric') baseStamina = 8;
-                if (classValue === 'Ranger') baseStamina = 10;
-
-                // Calcular HP e Stamina
-                // No nível 1, HP é o máximo do dado + modificador de constituição
-                const maxHp = hitDie + conModifier;
-                const maxStamina = baseStamina + strModifier + conModifier;
-
-                // Atualizar campos (sempre igualar max e current)
-                document.getElementById('max_hp').value = maxHp;
-                document.getElementById('current_hp').value = maxHp;
-                document.getElementById('max_stamina').value = maxStamina;
-                document.getElementById('current_stamina').value = maxStamina;
-            }
-
-            let rollCount = 3;
-            const maxTotalPoints = 75;
-
-            // Rolar atributos
-            function rollAttributes() {
-                if (rollCount <= 0) {
-                    alert('Você já usou todas as suas tentativas de re-roll!');
-                    return;
-                }
-
-                rollCount--;
-                document.getElementById('rollDiceBtn').innerHTML = `<i class="bi bi-dice-6 me-1"></i> Re-roll (${rollCount})`;
-                if (rollCount === 0) {
-                    document.getElementById('rollDiceBtn').disabled = true;
-                }
-
-                const attributes = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
-                const totalPointsTarget = 75;
-                let totalPoints = 0;
-                let remainingPoints = totalPointsTarget;
-                
-                // Primeiro, atribui um valor mínimo de 8 para cada atributo
-                attributes.forEach(attr => {
-                    document.getElementById(attr).value = 8;
-                });
-                
-                // Calcula quantos pontos já foram usados com o mínimo de 8 em cada atributo
-                const basePoints = 8 * attributes.length;
-                remainingPoints = totalPointsTarget - basePoints;
-                
-                // Distribui os pontos restantes aleatoriamente entre os atributos
-                while (remainingPoints > 0) {
-                    // Escolhe um atributo aleatório
-                    const randomIndex = Math.floor(Math.random() * attributes.length);
-                    const attr = attributes[randomIndex];
-                    const currentValue = parseInt(document.getElementById(attr).value);
-                    
-                    // Não permite que um atributo ultrapasse 18
-                    if (currentValue < 18) {
-                        document.getElementById(attr).value = currentValue + 1;
-                        remainingPoints--;
-                    }
-                }
-                
-                // Atualiza o total de pontos e modificadores
-                totalPoints = updateTotalPoints();
-                document.getElementById('totalPoints').textContent = totalPoints;
-                
-                // Atualiza modificadores e outros valores derivados
-                updateModifiers();
-                updateHpAndStamina();
-            }
-
-            function updateTotalPoints() {
-                const total = Array.from(attributeFields).reduce((sum, field) => sum + parseInt(field.value || 0), 0);
-                document.getElementById('totalPoints').textContent = total;
-                return total;
-            }
-
-            // Adicionar listeners para os inputs de atributos
-            attributeFields.forEach(field => {
-                field.addEventListener('change', function(e) {
-                    const newValue = parseInt(e.target.value);
-                    const currentTotal = updateTotalPoints();
-
-                    if (currentTotal > maxTotalPoints) {
-                        e.target.value = newValue - (currentTotal - maxTotalPoints);
-                        updateTotalPoints();
-                    }
-
-                    updateModifiers();
-                    updateHpAndStamina();
-                });
-            });
-
-            // Auto-roll on first load
-            if (!document.getElementById('strength').value || document.getElementById('strength').value == '10') {
-                rollAttributes();
-                updateTotalPoints(); // Garante atualização após rolagem automática
-            }
+          // Ensure min/max are set on the HTML elements for native browser validation/behavior
+          // These are also set in the HTML, but this reinforces it.
+          field.min = baseAttributeValue;
+          field.max = maxAttributeValue;
         });
+
+        // Configuração inicial e cálculos:
+        // Only run calculations if the creation form is present on the page
+        if (
+          document.querySelector(
+            "form[action=\"{{ url_for('routes.character') }}\"]"
+          )
+        ) {
+          if (pointsBudgetDisplay) {
+            pointsBudgetDisplay.textContent = totalPointsBudget;
+          }
+          refreshAllCalculations();
+        }
+
+        // Add event listener for the create character button
+        if (createCharacterBtn) {
+          createCharacterBtn.addEventListener("click", function (event) {
+            const spentPoints = calculateTotalSpentPoints();
+            const remainingPoints = totalPointsBudget - spentPoints;
+            if (remainingPoints > 0) {
+              const confirmation = confirm(
+                `Você ainda tem ${remainingPoints} pontos de atributo para gastar. Deseja continuar mesmo assim?`
+              );
+              if (!confirmation) {
+                event.preventDefault(); // Prevent form submission
+              }
+            }
+          });
+        }
+      });
     </script>
-</body>
+  </body>
 </html>

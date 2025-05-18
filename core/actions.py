@@ -1,14 +1,22 @@
+# filepath: c:\Users\rodri\Desktop\REPLIT RPG\core\actions.py
 import logging
 import os
 import random
-from typing import Any, Dict, List, Optional  # Added List
+import re
+from typing import Any, Dict, List, Optional, Tuple  # Added Tuple
 
 from core.enemy import Enemy  # Import Enemy class
 from core.models import Character
+from utils.dice import (
+    roll_dice,
+    calculate_attribute_modifier,
+    calculate_damage,
+)  # Importar funções de dado
 from utils.quest_generator import generate_quest  # Direct import for generate_quest
 
-from .skills import SkillManager  # For SkillActionHandler
 from .world_generator import WorldGenerator
+from .skills import SkillManager  # For SkillActionHandler
+from .recipes import CRAFTING_RECIPES  # For CraftActionHandler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -33,7 +41,7 @@ class ActionHandler:
         # Default response for unhandled actions
         return {
             "success": False,
-            "message": f"The action '{details if details else 'unknown'}' is not recognized or not implemented.",
+            "message": f"A ação '{details if details else 'desconhecida'}' não é reconhecida ou não foi implementada.",
         }
 
     def ai_response(
@@ -42,13 +50,13 @@ class ActionHandler:
         """Fallback AI response if a specific handler doesn't fully process."""
         return {
             "success": False,
-            "message": f"The action '{details}' is not recognized or not implemented.",
+            "message": f"A ação '{details}' não é reconhecida ou não foi implementada.",
         }
 
     def log_action(self, action: str, character: "Character") -> None:
         """Log the action performed by the character."""
         logger.info(
-            f"{character.name} performed action: {action} (handler: {self.__class__.__name__})"
+            f"{character.name} realizou a ação: {action} (handler: {self.__class__.__name__})"
         )
 
     def validate_action(self, action: str) -> bool:
@@ -60,8 +68,8 @@ class ActionHandler:
     ) -> Dict[str, Any]:
         """Handle the action based on its type."""
         if not self.validate_action(action):
-            logger.warning(f"Invalid action attempted: {action}")
-            return {"success": False, "message": f"Invalid action '{action}'."}
+            logger.warning(f"Tentativa de ação inválida: {action}")
+            return {"success": False, "message": f"Ação inválida '{action}'."}
 
         self.log_action(action, character)
         return self.handle(details, character, game_state)
@@ -79,7 +87,7 @@ class MoveActionHandler(ActionHandler):
 
         destination = details.strip().lower() if isinstance(details, str) else ""
         current_location_id = game_state.location_id
-        directions = ["north", "south", "east", "west"]
+        directions = ["norte", "sul", "leste", "oeste"]  # Traduzido
 
         # Normalize input
         normalized_direction: Optional[str] = next(
@@ -90,7 +98,14 @@ class MoveActionHandler(ActionHandler):
         if (
             not hasattr(game_state, "world_map")
             or "locations" not in game_state.world_map
+            or not game_state.world_map.get(
+                "locations"
+            )  # Adiciona verificação se 'locations' está vazio
         ):
+            logger.warning(
+                "MoveActionHandler: game_state.world_map não está configurado corretamente ou não contém 'locations'. "
+                f"world_map atual: {getattr(game_state, 'world_map', 'Não definido')}"
+            )
             return self.ai_response("move", details, character, game_state)
 
         current_location = game_state.world_map["locations"].get(
@@ -156,7 +171,7 @@ class MoveActionHandler(ActionHandler):
 
                 return {
                     "success": True,
-                    "message": f"You move to {next_location['name']}. {next_location['description']}",
+                    "message": f"Você se move para {next_location['name']}. {next_location['description']}",
                     "new_location": next_location["name"],
                     "description": next_location["description"],
                     "npcs": game_state.npcs_present,
@@ -179,7 +194,7 @@ class MoveActionHandler(ActionHandler):
 
             return {
                 "success": True,
-                "message": f"You arrive at {next_location['name']}. {next_location['description']}",
+                "message": f"Você chega em {next_location['name']}. {next_location['description']}",
                 "new_location": next_location["name"],
                 "description": next_location["description"],
                 "npcs": game_state.npcs_present,
@@ -207,20 +222,31 @@ class LookActionHandler(ActionHandler):
                 (npc for npc in game_state.npcs_present if npc.lower() == target), None
             )
 
-            if npc_name:
+            if npc_name:  # Se o alvo é um NPC conhecido
                 npc_details = self.get_npc_details(npc_name, character, game_state)
-
                 return {
                     "success": True,
                     "message": (
-                        f"You observe {npc_name} closely. "
-                        f"{npc_details.get('race', 'A humanoid')} who works as a {npc_details.get('profession', 'unknown')}. "
-                        f"{npc_name} seems {npc_details.get('personality', 'ordinary')}. "
-                        f"By their appearance and posture, you estimate they are about level {npc_details.get('level', '?')}."
+                        f"Você observa {npc_name} atentamente. "
+                        f"Um(a) {npc_details.get('race', 'Humanoide')} que trabalha como {npc_details.get('profession', 'desconhecido(a)')}. "
+                        f"{npc_name} parece {npc_details.get('personality', 'comum')}. "
+                        f"Pela aparência e postura, você estima que ele(a) seja nível {npc_details.get('level', '?')}."
                     ),
                 }
-
-        # Caso contrário, executa a resposta padrão do cenário
+            else:  # Se o alvo foi especificado mas não é um NPC conhecido
+                if (
+                    not target.strip()
+                    or len(target.strip()) < 2
+                    or re.fullmatch(r"[^a-zA-Z\s]+", target.strip())
+                ):
+                    return {
+                        "success": False,
+                        "message": "Não entendi o que você quer olhar. Por favor, seja mais específico ou use palavras reconhecíveis.",
+                    }
+                return {
+                    "success": True,
+                    "message": f"Você olha atentamente, mas não vê nada específico chamado '{details.capitalize()}' por aqui.",
+                }
         return self.ai_response("look", details, character, game_state)
 
     def get_npc_details(
@@ -231,10 +257,14 @@ class LookActionHandler(ActionHandler):
         Essa função deve ser implementada de acordo com seu sistema de NPCs.
         """
         return {
-            "race": "Human",
-            "profession": "merchant",
-            "personality": "friendly",
-            "level": 3,
+            "race": "Humano",
+            "profession": "catador",
+            "personality": "desconfiado",
+            "level": (
+                random.randint(character.level - 1, character.level + 2)
+                if character.level > 1
+                else 1
+            ),
         }
 
 
@@ -244,8 +274,7 @@ class TalkActionHandler(ActionHandler):
     def handle(
         self, details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
-        # If the player specified an NPC to talk to
-        if details and details.strip():  # User input for NPC name
+        if details and details.strip():
             npc_query_name = details.strip()
             npc_query_name_lower = npc_query_name.lower()
 
@@ -254,7 +283,6 @@ class TalkActionHandler(ActionHandler):
             ):
                 actual_npc_name: Optional[str] = None
                 try:
-                    # Find the exact name of the NPC (preserving case)
                     actual_npc_name = next(
                         npc
                         for npc in game_state.npcs_present
@@ -262,105 +290,71 @@ class TalkActionHandler(ActionHandler):
                     )
                 except StopIteration:
                     logger.error(
-                        f"Talk target '{npc_query_name_lower}' inconsistency: found by 'any' but not by 'next'."
+                        f"Alvo da conversa '{npc_query_name_lower}' inconsistência: encontrado por 'any' mas não por 'next'."
                     )
-                    # actual_npc_name remains None, will fall through to default AI response
 
                 if actual_npc_name:
-                    # Check if this NPC is already known
                     if (
                         hasattr(game_state, "known_npcs")
                         and actual_npc_name in game_state.known_npcs
                     ):
-                        # Retrieve information about the already known NPC
                         npc_details = game_state.known_npcs[actual_npc_name]
-
-                        # Update the interaction count
                         npc_details["interactions"] = (
                             npc_details.get("interactions", 0) + 1
                         )
-
-                        # Use the details to enrich the AI response
                         result = self.ai_response(
                             "talk", actual_npc_name, character, game_state
                         )
-
-                        # Add NPC information to the response based on the familiarity level
                         if "message" in result:
                             if npc_details["interactions"] <= 2:
                                 result[
                                     "message"
-                                ] += f"\n\nYou recognize {actual_npc_name}, a {npc_details['race']} {npc_details['profession']}."
+                                ] += f"\n\nVocê reconhece {actual_npc_name}, um(a) {npc_details['race']} {npc_details['profession']}."
                             else:
-                                # More details for NPCs the player has interacted with multiple times
                                 result[
                                     "message"
-                                ] += f"\n\n{actual_npc_name} smiles at a familiar face. As an experienced {npc_details['profession']}, {actual_npc_name} has many stories to tell."
-
-                                # Add a hint about quests if the NPC has any
-                                if (
-                                    npc_details.get("quests") and random.random() < 0.7
-                                ):  # 70% chance
+                                ] += f"\n\n{actual_npc_name} sorri para um rosto familiar. Como um(a) experiente {npc_details['profession']}, {actual_npc_name} tem muitas histórias para contar."
+                                if npc_details.get("quests") and random.random() < 0.7:
                                     result[
                                         "message"
-                                    ] += f" {actual_npc_name} mentions needing help with '{random.choice(npc_details['quests'])}'."
-
-                        # Update the NPC record
+                                    ] += f" {actual_npc_name} menciona precisar de ajuda com '{random.choice(npc_details['quests'])}'."
                         game_state.known_npcs[actual_npc_name] = npc_details
-
                         return result
-                    # First interaction with this NPC
+
                     npc_details = self.get_npc_details(
                         actual_npc_name, character, game_state
                     )
-
-                    # Use the details to enrich the AI response
                     result = self.ai_response(
                         "talk", actual_npc_name, character, game_state
                     )
-
-                    # Add NPC information to the response
                     if "message" in result:
                         result[
                             "message"
-                        ] += f"\n\nYou notice that {actual_npc_name} is a {npc_details['race']} {npc_details['profession']}."
-
-                        # Add a hint about the NPC's knowledge or quests
+                        ] += f"\n\nVocê nota que {actual_npc_name} é um(a) {npc_details['race']} {npc_details['profession']}."
                         if npc_details.get("knowledge"):
                             result[
                                 "message"
-                            ] += f" It seems that {actual_npc_name} knows about {', '.join(npc_details['knowledge'][:2])}."
-
+                            ] += f" Parece que {actual_npc_name} sabe sobre {', '.join(npc_details['knowledge'][:2])}."
                         if npc_details.get("quests"):
                             result[
                                 "message"
-                            ] += f" {actual_npc_name} mentions something about '{npc_details['quests'][0]}'."
-
-                    # Record the NPC as known
+                            ] += f" {actual_npc_name} menciona algo sobre '{npc_details['quests'][0]}'."
                     if hasattr(game_state, "known_npcs"):
                         npc_details["interactions"] = 1
                         game_state.known_npcs[actual_npc_name] = npc_details
-
                     return result
-
-        # Default behavior if no specific NPC is mentioned
         return self.ai_response("talk", details, character, game_state)
 
     def get_npc_details(
         self, npc_name: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
-        """
-        Placeholder para obter os detalhes de um NPC.
-        Essa função deve ser implementada de acordo com seu sistema de NPCs.
-        """
-        # Example: fetch from game_state.known_npcs or generate dynamically
         return game_state.known_npcs.get(
             npc_name,
             {
-                "race": "Unknown Race",
-                "profession": "Unknown Profession",
-                "personality": "Mysterious",
-                "level": character.level,  # Or some other logic
+                "race": "Humano",
+                "profession": "Sobrevivente",
+                "personality": "Cauteloso",
+                "level": character.level,
                 "knowledge": [],
                 "quests": [],
             },
@@ -373,45 +367,29 @@ class SearchActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
-        # Check if the player is looking for quests
         details_lower = details.lower() if isinstance(details, str) else ""
-        if "quest" in details_lower:
-            # Check if there are NPCs present who can offer quests
+        if "missão" in details_lower or "tarefa" in details_lower:  # Traduzido "quest"
             if not hasattr(game_state, "npcs_present") or not game_state.npcs_present:
                 return {
                     "success": False,
-                    "message": "There is no one around who can offer quests at the moment.",
+                    "message": "Não há ninguém por perto que possa oferecer missões no momento.",
                 }
-
-            # Initialize the list of quests if it doesn't exist
             if not hasattr(game_state, "quests"):
                 game_state.quests = []
-
-            # Randomly choose an NPC to offer a quest
             quest_giver = random.choice(game_state.npcs_present)
-
             new_quest = generate_quest(
                 location=game_state.current_location,
                 difficulty=character.level,
             )
-
-            # Add NPC information to the quest
             new_quest["giver"] = quest_giver
             new_quest["location"] = game_state.current_location
-
-            # Add the quest to the player's list of quests
             game_state.quests.append(new_quest)
-
-            # Return information about the quest
             return {
                 "success": True,
-                "message": f"{quest_giver} offers a new quest: {new_quest['name']}. {new_quest['description']} Reward: {new_quest['reward_gold']} gold coins.",
+                "message": f"{quest_giver} oferece uma nova missão: {new_quest['name']}. {new_quest['description']} Recompensa: {new_quest['reward_gold']} moedas de ouro.",
             }
 
-        # Default behavior for other searches
         result = self.ai_response("search", details, character, game_state)
-
-        # Record the search results in the current location
         if (
             hasattr(game_state, "visited_locations")
             and game_state.location_id in game_state.visited_locations
@@ -419,12 +397,9 @@ class SearchActionHandler(ActionHandler):
             location_info = game_state.visited_locations[game_state.location_id]
             if "search_results" not in location_info:
                 location_info["search_results"] = []
-
-            # Add the search result to the history
             location_info["search_results"].append(
                 {"query": details, "result": result.get("message", "")}
             )
-
         return result
 
 
@@ -434,19 +409,97 @@ class AttackActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
-        # Check if the player is trying to attack a specific NPC
         if details and details.strip():
             target_npc_lower = (
                 details.strip().lower() if isinstance(details, str) else ""
             )
+            if game_state.combat and game_state.combat.get("enemy"):
+                current_enemy_name = game_state.combat.get("enemy").name.lower()
+                if not details or target_npc_lower == current_enemy_name:
+                    enemy = game_state.combat.get("enemy")
+                    attacker_stats = character.attributes
+                    str_modifier = calculate_attribute_modifier(
+                        attacker_stats.get("strength", 10)
+                    )
+                    to_hit_dc = 10 + getattr(enemy, "level", 1)
+                    attack_roll_result = roll_dice(1, 20, str_modifier)
+                    attack_roll = attack_roll_result["total"]
 
-            # Check if the target is an NPC present
+                    if attack_roll >= to_hit_dc:
+                        weapon_damage_dice_num = 1
+                        weapon_damage_dice_sides = 6
+                        equipped_weapon_name = character.equipment.get("weapon")
+                        if equipped_weapon_name:
+                            from utils.item_generator import ItemGenerator
+
+                            item_gen = ItemGenerator(
+                                os.path.join(
+                                    os.path.dirname(os.path.abspath(__file__)), "data"
+                                )
+                            )
+                            weapon_data = item_gen.get_item_by_name(
+                                equipped_weapon_name
+                            )
+                            if weapon_data and weapon_data.get("type") == "weapon":
+                                dmg_min = weapon_data.get("damage_min", 1)
+                                dmg_max = weapon_data.get("damage_max", 4)
+                                damage_roll_result = roll_dice(
+                                    1,
+                                    (dmg_max - dmg_min + 1),
+                                    dmg_min - 1 + str_modifier,
+                                )
+                            else:
+                                damage_roll_result = roll_dice(
+                                    weapon_damage_dice_num,
+                                    weapon_damage_dice_sides,
+                                    str_modifier,
+                                )
+                        else:
+                            damage_roll_result = roll_dice(1, 4, str_modifier)
+                        damage_dealt = max(
+                            1,
+                            damage_roll_result["total"] - getattr(enemy, "defense", 0),
+                        )
+                        enemy.health = max(0, enemy.health - damage_dealt)
+                        game_state.combat["log"].append(
+                            f"Você atacou {enemy.name} e causou {damage_dealt} de dano! (Rolagem de ataque: {attack_roll} vs DC {to_hit_dc})"
+                        )
+                        if enemy.health <= 0:
+                            game_state.combat["log"].append(
+                                f"{enemy.name} foi derrotado!"
+                            )
+                            message_to_narrate = f"Você derrotou {enemy.name}!"
+                            game_state.combat = None
+                            return {
+                                "success": True,
+                                "message": message_to_narrate,
+                                "combat_ended": True,
+                                "action_performed": "attack_kill",
+                            }
+                        message_to_narrate = f"Você acertou {enemy.name} causando {damage_dealt} de dano. (Rolagem: {attack_roll} vs DC {to_hit_dc})"
+                    else:
+                        damage_dealt = 0
+                        game_state.combat["log"].append(
+                            f"Você tentou atacar {enemy.name}, mas errou! (Rolagem de ataque: {attack_roll} vs DC {to_hit_dc})"
+                        )
+                        message_to_narrate = f"Você errou o ataque contra {enemy.name}. (Rolagem: {attack_roll} vs DC {to_hit_dc})"
+                    return {
+                        "success": True,
+                        "message": message_to_narrate,
+                        "combat_ongoing": True,
+                        "damage_dealt": damage_dealt,
+                        "enemy_hp": enemy.health,
+                        "action_performed": "attack_resolved",
+                    }
+
+            target_npc_lower = (
+                details.strip().lower() if isinstance(details, str) else ""
+            )
             if game_state.npcs_present and any(
                 npc.lower() == target_npc_lower for npc in game_state.npcs_present
             ):
                 npc_to_attack: Optional[str] = None
                 try:
-                    # Find the exact name of the NPC (preserving case)
                     npc_to_attack = next(
                         npc
                         for npc in game_state.npcs_present
@@ -454,51 +507,40 @@ class AttackActionHandler(ActionHandler):
                     )
                 except StopIteration:
                     logger.error(
-                        f"Attack target '{target_npc_lower}' inconsistency: found by 'any' but not by 'next'."
+                        f"Alvo do ataque '{target_npc_lower}' inconsistência: encontrado por 'any' mas não por 'next'."
                     )
-                    # npc_to_attack remains None, will fall through to random enemy generation
-
                 if npc_to_attack:
-                    # Create an enemy based on the NPC
                     enemy = Enemy(
                         name=npc_to_attack,
                         level=random.randint(character.level, character.level + 2),
-                        max_health=random.randint(
-                            20, 50
-                        ),  # Use max_health from CombatStats
-                        health=random.randint(20, 50),  # Use health from CombatStats
+                        max_health=random.randint(20, 50),
+                        health=random.randint(20, 50),
                         attack_damage_min=random.randint(3, 8),
                         attack_damage_max=random.randint(9, 15),
                         defense=random.randint(3, 10),
-                        description=f"A hostile {npc_to_attack} that you decided to attack.",
+                        description=f"Um(a) hostil {npc_to_attack} que você decidiu atacar.",
                     )
-
-                    # Start the combat
                     if not hasattr(game_state, "combat") or not game_state.combat:
                         game_state.combat = {
                             "enemy": enemy,
                             "round": 1,
-                            "log": [f"You initiated combat with {npc_to_attack}!"],
+                            "log": [f"Você iniciou combate com {npc_to_attack}!"],
                         }
-
                         return {
                             "success": True,
-                            "message": f"You attacked {npc_to_attack} and started a combat! Get ready to fight!",
+                            "message": f"Você atacou {npc_to_attack} e iniciou um combate! Prepare-se para lutar!",
                             "combat": True,
                         }
-
-            # If the target is not an NPC present, try to start combat with a random enemy
             enemy_types = [
-                "Bandit",
-                "Wolf",
-                "Goblin",
-                "Skeleton",
-                "Zombie",
-                "Thief",
-                "Mercenary",
+                "Walker Lento",
+                "Corredor Ágil",
+                "Devorador Inchado",
+                "Cão Infectado Raivoso",
+                "Saqueador Oportunista",
+                "Membro de Gangue Brutal",
+                "Rato Mutante Gigante",
             ]
             enemy_name = random.choice(enemy_types)
-
             enemy = Enemy(
                 name=enemy_name,
                 level=random.randint(character.level, character.level + 2),
@@ -507,24 +549,19 @@ class AttackActionHandler(ActionHandler):
                 attack_damage_min=random.randint(3, 8),
                 attack_damage_max=random.randint(9, 15),
                 defense=random.randint(3, 10),
-                description=f"A hostile {enemy_name} that appeared suddenly.",
+                description=f"Um(a) hostil {enemy_name} que apareceu de repente.",
             )
-
-            # Start the combat
             if not hasattr(game_state, "combat") or not game_state.combat:
                 game_state.combat = {
                     "enemy": enemy,
                     "round": 1,
-                    "log": [f"A {enemy_name} appeared and you attacked it!"],
+                    "log": [f"Um(a) {enemy_name} apareceu e você o(a) atacou!"],
                 }
-
                 return {
                     "success": True,
-                    "message": f"You looked for enemies and found a {enemy_name}! Combat initiated!",
+                    "message": f"Você procurou por inimigos e encontrou um(a) {enemy_name}! Combate iniciado!",
                     "combat": True,
                 }
-
-        # Default behavior if no specific target is mentioned
         return self.ai_response("attack", details, character, game_state)
 
 
@@ -534,14 +571,11 @@ class UseItemActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
-        # Import the item generator
         from utils.item_generator import ItemGenerator
 
-        # Initialize the item generator
         item_generator = ItemGenerator(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
         )
-
         if (
             not details
             or not hasattr(character, "inventory")
@@ -549,18 +583,13 @@ class UseItemActionHandler(ActionHandler):
         ):
             return {
                 "success": False,
-                "message": "You don't have that item in your inventory.",
+                "message": "Você não tem esse item no seu inventário.",
             }
-
-        # Normalize the item name for comparison
         item_name_query = details.strip() if isinstance(details, str) else ""
-
-        # Check if the item is in the inventory
         item_found = False
         item_index = -1
         item_data = None
-
-        # Look for the exact item or partial match
+        actual_item_name: Optional[str] = None
         for i, inv_item in enumerate(character.inventory):
             if isinstance(inv_item, str) and (
                 inv_item.lower() == item_name_query.lower()
@@ -568,11 +597,7 @@ class UseItemActionHandler(ActionHandler):
             ):
                 item_found = True
                 item_index = i
-                actual_item_name = (
-                    inv_item  # Use the exact item name from the inventory
-                )
-
-                # Check if the item exists in the database
+                actual_item_name = inv_item
                 item_data = item_generator.get_item_by_name(actual_item_name)
                 break
             if (
@@ -584,262 +609,201 @@ class UseItemActionHandler(ActionHandler):
                 actual_item_name = inv_item.get("name")
                 item_data = inv_item
                 break
-
-        if not item_found:
+        if not item_found or actual_item_name is None:
             return {
                 "success": False,
-                "message": f"You don't have '{item_name_query}' in your inventory.",
+                "message": f"Você não tem '{item_name_query}' no seu inventário.",
             }
-
-        # If the item was found in the database, use its attributes
         if item_data:
             item_type = item_data.get("type", "")
             item_subtype = item_data.get("subtype", "")
             item_description = item_data.get("description", "")
-
-            # Logic for different item types
             if item_type == "weapon":
-                # Equip weapon
                 if not hasattr(character, "equipment") or character.equipment is None:
                     character.equipment = {}
-
-                # Store the previously equipped item, if any
                 old_item = character.equipment.get("weapon")
-
-                # Equip the new item
                 character.equipment["weapon"] = actual_item_name
-
-                # If there was a previously equipped item, put it back in the inventory
                 if old_item:
                     character.inventory.append(old_item)
-
-                # Remove the item from the inventory
                 character.inventory.pop(item_index)
-
-                # Add attribute bonuses
                 damage_info = ""
-                if "damage" in item_data:
-                    min_damage, max_damage = item_data["damage"]
-                    damage_info = f" Damage: {min_damage}-{max_damage}."
-
+                if "damage_min" in item_data and "damage_max" in item_data:
+                    min_damage = item_data["damage_min"]
+                    max_damage = item_data["damage_max"]
+                    damage_info = f" Dano: {min_damage}-{max_damage}."
                 return {
                     "success": True,
-                    "message": f"You equipped {actual_item_name}. {damage_info} {item_description} {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
+                    "message": f"Você equipou {actual_item_name}.{damage_info} {item_description} {f'Seu {old_item} foi guardado no inventário.' if old_item else ''}",
                 }
-
-            if item_type == "armor":
-                # Equip armor
+            if item_type == "protection":
                 if not hasattr(character, "equipment") or character.equipment is None:
                     character.equipment = {}
-
-                # Determine the slot based on the subtype
-                slot = "armor"
-                if item_subtype == "helmet":
+                slot = "body_armor"
+                if item_subtype and "capacete" in item_subtype.lower():
                     slot = "helmet"
-                elif item_subtype == "shield":
-                    slot = "shield"
-                elif item_subtype in ["boots", "gauntlets"]:
-                    slot = item_subtype
-
-                # Store the previously equipped item, if any
                 old_item = character.equipment.get(slot)
-
-                # Equip the new item
                 character.equipment[slot] = actual_item_name
-
-                # If there was a previously equipped item, put it back in the inventory
                 if old_item:
                     character.inventory.append(old_item)
-
-                # Remove the item from the inventory
                 character.inventory.pop(item_index)
-
-                # Add defense bonus
                 defense_info = ""
                 if "defense" in item_data:
-                    defense_info = f" Defense: +{item_data['defense']}."
-
+                    defense_info = f" Defesa: +{item_data['defense']}."
                 return {
                     "success": True,
-                    "message": f"You equipped {actual_item_name}. {defense_info} {item_description} {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
+                    "message": f"Você equipou {actual_item_name}.{defense_info} {item_description} {f'Seu {old_item} foi guardado no inventário.' if old_item else ''}",
                 }
-
             if item_type == "consumable":
-                # Use consumable item
-                effect = item_data.get("effect", {})
-                effect_type = effect.get("type", "")
-                effect_value = effect.get("value", 0)
-
-                if effect_type == "health":
-                    # Restore HP
-                    old_hp = character.health
-                    character.health = min(
-                        character.health + effect_value, character.max_hp
-                    )
-
-                    # Remove the item from the inventory
-                    character.inventory.pop(item_index)
-
-                    return {
-                        "success": True,
-                        "message": f"You used {actual_item_name} and restored {character.health - old_hp} health points. {item_description}",
-                    }
-
-                if (
-                    effect_type == "stamina"
-                ):  # Hunger and thirst are handled by survival_stats
-                    # Restore other attributes
-                    attr_name = f"current_{effect_type}"
-                    max_attr_name = f"max_{effect_type}"
-
-                    if hasattr(character, attr_name) and hasattr(
-                        character, max_attr_name
-                    ):
-                        # For stamina, assuming it's in attributes like hp
-                        if effect_type == "stamina":
-                            old_value = character.attributes.get(attr_name, 0)
-                            max_value = character.attributes.get(max_attr_name, 0)
-                            character.attributes[attr_name] = min(
-                                old_value + effect_value, max_value
-                            )
-
-                    # Remove the item from the inventory
-                    character.inventory.pop(item_index)
-
-                    return {
-                        "success": True,
-                        "message": f"You used {actual_item_name} and feel refreshed. {item_description}",
-                    }
-                if effect_type in ["hunger", "thirst"]:
-                    stat_key = f"current_{effect_type}"
-                    max_stat_key = f"max_{effect_type}"
-                    old_value = character.survival_stats.get(stat_key, 0)
-                    max_value = character.survival_stats.get(
-                        max_stat_key, 100
-                    )  # Default max if not set
-                    character.survival_stats[stat_key] = min(
-                        old_value + effect_value, max_value
-                    )
-
-                    character.inventory.pop(item_index)
-                    return {
-                        "success": True,
-                        "message": f"You used {actual_item_name} and feel less {effect_type}. {item_description}",
-                    }
-                # Other effects
-                # Remove the item from the inventory
+                effects_applied_messages = []
+                for effect in item_data.get("effects", []):
+                    effect_type = effect.get("type", "")
+                    effect_value = effect.get("value", 0)
+                    if effect_type == "heal_hp":
+                        old_hp = character.attributes.get("current_hp", 0)
+                        max_hp = character.attributes.get("max_hp", old_hp)
+                        character.attributes["current_hp"] = min(
+                            old_hp + effect_value, max_hp
+                        )
+                        healed_amount = character.attributes["current_hp"] - old_hp
+                        effects_applied_messages.append(
+                            f"restaurou {healed_amount} pontos de vida"
+                        )
+                    elif effect_type == "restore_hunger":
+                        stat_key = "current_hunger"
+                        max_stat_key = "max_hunger"
+                        old_value = character.survival_stats.get(stat_key, 0)
+                        max_value = character.survival_stats.get(max_stat_key, 100)
+                        character.survival_stats[stat_key] = min(
+                            old_value + effect_value, max_value
+                        )
+                        effects_applied_messages.append(
+                            f"reduziu a fome em {effect_value}"
+                        )
+                    elif effect_type == "restore_thirst":
+                        stat_key = "current_thirst"
+                        max_stat_key = "max_thirst"
+                        old_value = character.survival_stats.get(stat_key, 0)
+                        max_value = character.survival_stats.get(max_stat_key, 100)
+                        character.survival_stats[stat_key] = min(
+                            old_value + effect_value, max_value
+                        )
+                        effects_applied_messages.append(
+                            f"reduziu a sede em {effect_value}"
+                        )
                 character.inventory.pop(item_index)
-
-                return {
-                    "success": True,
-                    "message": f"You used {actual_item_name}. {item_description}",
-                }
-
+                message_summary = f"Você usou {actual_item_name}."
+                if effects_applied_messages:
+                    message_summary += (
+                        " Ele " + ", e ".join(effects_applied_messages) + "."
+                    )
+                message_summary += f" {item_description}"
+                return {"success": True, "message": message_summary}
             if item_type == "quest":
-                # Use quest item
                 if (
-                    item_subtype in ["document", "map", "letter"]
+                    item_subtype in ["documento", "mapa", "carta"]  # Traduzido
                     and "content" in item_data
                 ):
                     return {
                         "success": True,
-                        "message": f"You examine {actual_item_name}. {item_description}\n\nContent: {item_data['content']}",
+                        "message": f"Você examina {actual_item_name}. {item_description}\n\nConteúdo: {item_data['content']}",
                     }
                 return {
                     "success": True,
-                    "message": f"You examine {actual_item_name}. {item_description}",
+                    "message": f"Você examina {actual_item_name}. {item_description}",
                 }
-
-        # Logic for items without specific data
         item_name_lower = actual_item_name.lower() if actual_item_name else ""
-
-        # Health potions
-        if any(p in item_name_lower for p in ["potion", "life", "health"]):
-            heal_amount = 20  # Adjust based on potion type
-            max_hp = character.max_hp
-            old_hp = character.health
-            character.health = min(old_hp + heal_amount, max_hp)
-
-            # Remove the item from the inventory
+        if any(
+            p in item_name_lower
+            for p in ["bandagem", "kit médico", "analgésicos", "primeiros socorros"]
+        ):
+            heal_amount = (
+                item_data.get("effect", {}).get("value", 20)
+                if item_data and item_data.get("type") == "consumable"
+                else 20
+            )
+            old_hp = character.attributes.get("current_hp", 0)
+            max_hp = character.attributes.get("max_hp", old_hp)
+            character.attributes["current_hp"] = min(old_hp + heal_amount, max_hp)
+            healed_amount = character.attributes["current_hp"] - old_hp
+            current_hp_display = character.attributes.get("current_hp", 0)
+            max_hp_display = character.attributes.get("max_hp", 0)
             character.inventory.pop(item_index)
-
             return {
                 "success": True,
-                "message": f"You used {actual_item_name} and restored {character.health - old_hp} health points. Current HP: {character.health}/{max_hp}.",
+                "message": f"Você usou {actual_item_name} e recuperou {healed_amount} de vida. HP Atual: {current_hp_display}/{max_hp_display}.",
             }
-
-        # Equipment (weapons, armor, etc.)
-        if isinstance(actual_item_name, str) and any(  # Ensure actual_item_name is str
+        if isinstance(actual_item_name, str) and any(
             eq in actual_item_name.lower()
             for eq in [
-                "sword",
-                "shield",
-                "armor",
-                "bow",
-                "axe",
-                "dagger",
+                "faca",
+                "canivete",
+                "machado",
+                "pé de cabra",
+                "cano",
+                "bastão",
+                "pistola",
+                "revólver",
+                "espingarda",
+                "rifle",
+                "arco",
+                "besta",
+                "jaqueta",
+                "colete",
+                "capacete",
             ]
         ):
-            # Determine the equipment type
-            equip_type = "weapon"  # Default
-            if any(  # Ensure actual_item_name is str
+            equip_type = "weapon"
+            if any(
                 w in actual_item_name.lower()
                 for w in [
-                    "sword",
-                    "axe",
-                    "dagger",
-                    "bow",
+                    "faca",
+                    "canivete",
+                    "machado",
+                    "pé de cabra",
+                    "cano",
+                    "bastão",
+                    "pistola",
+                    "revólver",
+                    "espingarda",
+                    "rifle",
+                    "arco",
+                    "besta",
                 ]
             ) and isinstance(actual_item_name, str):
                 equip_type = "weapon"
             elif isinstance(actual_item_name, str) and any(
-                a in actual_item_name.lower() for a in ["shield"]
+                a in actual_item_name.lower() for a in ["jaqueta", "colete"]
             ):
-                equip_type = "shield"
+                equip_type = "body_armor"
             elif isinstance(actual_item_name, str) and any(
-                a in actual_item_name.lower() for a in ["armor", "breastplate"]
-            ):
-                equip_type = "armor"
-            elif isinstance(actual_item_name, str) and any(
-                h in actual_item_name.lower() for h in ["helmet", "hat"]
+                h in actual_item_name.lower()
+                for h in ["capacete", "helmet", "chapéu"]  # Traduzido "hat"
             ):
                 equip_type = "helmet"
-
-            # Initialize equipment if it doesn't exist
             if not hasattr(character, "equipment") or character.equipment is None:
                 character.equipment = {}
-
-            # Store the previously equipped item, if any
             old_item = character.equipment.get(equip_type)
-
-            # Equip the new item
             character.equipment[equip_type] = actual_item_name
-
-            # If there was a previously equipped item, put it back in the inventory
             if old_item:
                 character.inventory.append(old_item)
-
-            # Remove the item from the inventory
             character.inventory.pop(item_index)
-
             return {
                 "success": True,
-                "message": f"You equipped {actual_item_name}. {f'Your {old_item} was stored in the inventory.' if old_item else ''}",
+                "message": f"Você equipou {actual_item_name}. {f'Seu {old_item} foi guardado no inventário.' if old_item else ''}",
             }
-
-        # Consumable items (food, drink)
-        if isinstance(actual_item_name, str) and any(  # Ensure actual_item_name is str
+        if isinstance(actual_item_name, str) and any(
             f in actual_item_name.lower()
             for f in [
-                "food",
-                "bread",
-                "fruit",
-                "meat",
-                "water",
-                "drink",
+                "comida",
+                "lata",
+                "ração",
+                "barra",
+                "água",
+                "garrafa",
+                "refrigerante",
+                "suco",
             ]
         ):
-            # Restore hunger or thirst
             if (
                 "current_hunger" in character.survival_stats
                 and "max_hunger" in character.survival_stats
@@ -849,7 +813,6 @@ class UseItemActionHandler(ActionHandler):
                     character.survival_stats["current_hunger"] + hunger_restore,
                     character.survival_stats["max_hunger"],
                 )
-
             if (
                 "current_thirst" in character.survival_stats
                 and "max_thirst" in character.survival_stats
@@ -859,39 +822,27 @@ class UseItemActionHandler(ActionHandler):
                     character.survival_stats["current_thirst"] + thirst_restore,
                     character.survival_stats["max_thirst"],
                 )
-
-            # Remove the item from the inventory
             character.inventory.pop(item_index)
-
             return {
                 "success": True,
-                "message": f"You consumed {actual_item_name} and feel refreshed.",
+                "message": f"Você consumiu {actual_item_name} e se sente revigorado(a).",
             }
-
-        # Throwable items
         details_lower = details.lower() if isinstance(details, str) else ""
-        if "throw" in details_lower:
-            # Extract the target of the throw
+        if (
+            "arremessar" in details_lower or "jogar" in details_lower
+        ):  # Traduzido "throw"
             target = None
-            if "at" in details_lower:
-                target_part = details_lower.split("at ", 1)[1]
+            if "em " in details_lower:  # Traduzido "at "
+                target_part = details_lower.split("em ", 1)[1]
                 target = target_part.strip()
-
-            # Remove the item from the inventory
             character.inventory.pop(item_index)
-
             return {
                 "success": True,
-                "message": f"You threw {actual_item_name}{f' at {target}' if target else ''}.",
+                "message": f"Você arremessou {actual_item_name}{f' em {target}' if target else ''}.",
             }
-
-        # For other item types, use the AI response
         result = self.ai_response("use_item", details, character, game_state)
-
-        # If the AI indicates success, remove the item from the inventory
         if result.get("success", False):
             character.inventory.pop(item_index)
-
         return result
 
 
@@ -901,7 +852,34 @@ class FleeActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
-        return self.ai_response("flee", details, character, game_state)
+        if (
+            not hasattr(game_state, "combat")
+            or not game_state.combat
+            or not game_state.combat.get("enemy")
+        ):
+            return self.ai_response("flee", details, character, game_state)
+        dex_modifier = (character.attributes.get("dexterity", 10) - 10) // 2
+        flee_chance = 0.5 + (dex_modifier * 0.05)
+        flee_chance = max(0.1, min(0.9, flee_chance))
+        if random.random() < flee_chance:
+            enemy_name = game_state.combat["enemy"].name
+            game_state.combat = None
+            message = f"Você conseguiu escapar de {enemy_name}!"
+            return {
+                "success": True,
+                "message": message,
+                "combat_ended": True,
+                "action_performed": "flee_success",
+            }
+        else:
+            enemy_name = game_state.combat["enemy"].name
+            message = f"Você tentou fugir, mas {enemy_name} bloqueou seu caminho!"
+            return {
+                "success": True,
+                "message": message,
+                "combat_ended": False,
+                "action_performed": "flee_fail",
+            }
 
 
 class RestActionHandler(ActionHandler):
@@ -910,7 +888,38 @@ class RestActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
-        return self.ai_response("rest", details, character, game_state)
+        if (
+            hasattr(game_state, "combat")
+            and game_state.combat
+            and game_state.combat.get("enemy")
+        ):
+            return {
+                "success": False,
+                "message": "Você não pode descansar durante o combate!",
+            }
+        if random.random() < 0.2:
+            message = "Você tenta encontrar um lugar para descansar, mas os barulhos ao redor e a tensão no ar tornam impossível relaxar."
+            return {
+                "success": True,
+                "message": message,
+                "rested": False,
+                "action_performed": "rest_fail",
+            }
+        hp_to_restore = max(1, character.max_hp // 10)
+        stamina_to_restore = max(1, character.max_stamina // 5)
+        character.attributes["current_hp"] = min(
+            character.max_hp, character.current_hp + hp_to_restore
+        )
+        character.attributes["current_stamina"] = min(
+            character.max_stamina, character.current_stamina + stamina_to_restore
+        )
+        message = f"Você encontra um momento de relativa calma para descansar. Você recupera {hp_to_restore} HP e {stamina_to_restore} de Vigor."
+        return {
+            "success": True,
+            "message": message,
+            "rested": True,
+            "action_performed": "rest_success",
+        }
 
 
 class CustomActionHandler(ActionHandler):
@@ -920,107 +929,92 @@ class CustomActionHandler(ActionHandler):
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
         details_lower = details.lower() if isinstance(details, str) else ""
-        # Check if the player is trying to manage the inventory
         inventory_keywords = [
-            "get",
-            "collect",
-            "store",
-            "inventory",
-            "pick up",
+            "pegar",
+            "coletar",
+            "guardar",
+            "inventário",
+            "apanhar",
+            "saquear",
         ]
         if any(keyword in details_lower for keyword in inventory_keywords):
-            # Look for mentioned items
             items_to_add = []
-
-            # Check if specific items are mentioned
             common_items = [
-                "sword",
-                "shield",
-                "potion",
-                "dagger",
-                "bow",
-                "arrow",
-                "food",
-                "water",
-                "coin",
-                "scroll",
-                "book",
-                "map",
-                "key",
-                "gem",
-                "ring",
-                "amulet",
-                "bag",
-                "backpack",
-                "rope",
-                "torch",
-                "lantern",
-                "oil",
-                "herb",
-                "bandage",
-                "antidote",
-                "flask",
-                "bottle",
-                "knife",
-                "bread",
-                "fruit",
-                "meat",
+                "sucata de metal",
+                "fita adesiva",
+                "bandagens",
+                "analgésicos",
+                "kit médico",
+                "comida enlatada",
+                "garrafa de água",
+                "balas",
+                "cartuchos de espingarda",
+                "flechas",
+                "gasolina",
+                "bateria",
+                "pilha",
+                "corda",
+                "retalhos de tecido",
+                "tábuas de madeira",
+                "pregos",
+                "ferramentas",
+                "grampo",
+                "kit de arrombamento",
+                "pé de cabra",
+                "cano de metal",
+                "taco de beisebol",
+                "facão",
+                "faca",
+                "mochila",
+                "lanterna",
+                "isqueiro",
+                "fósforos",
+                "fragmento de mapa",
+                "bilhete",
+                "nota",
+                "peças de rádio",
+                "arame",
             ]
-
             for item in common_items:
                 if item in details_lower:
                     items_to_add.append(item.capitalize())
-
-            # If no specific items were found, but the player seems to want to pick something up
             if not items_to_add and any(
-                verb in details.lower() for verb in ["get", "collect", "take"]
+                verb in details.lower()
+                for verb in ["pegar", "coletar", "apanhar", "saquear"]
             ):
-                # Check if there are items in the environment (mentioned in the scene description)
                 scene_items: List[str] = []
                 if hasattr(game_state, "scene_description"):
                     scene_text = game_state.scene_description.lower()
                     for item in common_items:
                         if item in scene_text and item not in scene_items:
                             scene_items.append(item.capitalize())
-
                 if scene_items:
                     items_to_add = scene_items
-
-            # Add the items to the inventory
             if items_to_add:
                 if not hasattr(character, "inventory"):
                     character.inventory = []
-
                 for item in items_to_add:
                     character.inventory.append(item)
-
                 return {
                     "success": True,
-                    "message": f"You added the following items to your inventory: {', '.join(items_to_add)}.",
+                    "message": f"Você adicionou os seguintes itens ao seu inventário: {', '.join(items_to_add)}.",
                 }
-
-        # Check if the player is trying to initiate combat
         combat_keywords = [
-            "attack",
-            "fight",
-            "combat",
-            "kill",
-            "battle",
+            "atacar",
+            "lutar",
+            "combate",
+            "matar",
+            "batalha",
+            "enfrentar",
         ]
         if any(keyword in details_lower for keyword in combat_keywords):
-            # Extract possible target from the text
             target = None
-
-            # Look for NPCs mentioned in the command
             if game_state.npcs_present:
                 for npc in game_state.npcs_present:
                     if npc.lower() in details_lower:
                         target = npc
                         break
-
-            # If a specific target was found
             if target:
-                # Create an enemy based on the NPC
                 enemy = Enemy(
                     name=target,
                     level=random.randint(character.level, character.level + 2),
@@ -1029,35 +1023,30 @@ class CustomActionHandler(ActionHandler):
                     attack_damage_min=random.randint(3, 8),
                     attack_damage_max=random.randint(9, 15),
                     defense=random.randint(3, 10),
-                    description=f"A hostile {target} that you decided to attack.",
+                    description=f"Um(a) hostil {target} que você decidiu atacar.",
                 )
-
-                # Start the combat
                 if not hasattr(game_state, "combat") or not game_state.combat:
                     game_state.combat = {
                         "enemy": enemy,
                         "round": 1,
-                        "log": [f"You initiated combat with {target}!"],
+                        "log": [f"Você iniciou combate com {target}!"],
                     }
-
                     return {
                         "success": True,
-                        "message": f"You attacked {target} and started a combat! Get ready to fight!",
+                        "message": f"Você atacou {target} e iniciou um combate! Prepare-se para lutar!",
                         "combat": True,
                     }
             else:
-                # Generate a random enemy if no specific target is mentioned
                 enemy_types = [
-                    "Bandit",
-                    "Wolf",
-                    "Goblin",
-                    "Skeleton",
-                    "Zombie",
-                    "Thief",
-                    "Mercenary",
+                    "Walker Lento",
+                    "Corredor Ágil",
+                    "Devorador Inchado",
+                    "Cão Infectado Raivoso",
+                    "Saqueador Oportunista",
+                    "Membro de Gangue Brutal",
+                    "Rato Mutante Gigante",
                 ]
                 enemy_name = random.choice(enemy_types)
-
                 enemy = Enemy(
                     name=enemy_name,
                     level=random.randint(character.level, character.level + 2),
@@ -1066,76 +1055,143 @@ class CustomActionHandler(ActionHandler):
                     attack_damage_min=random.randint(3, 8),
                     attack_damage_max=random.randint(9, 15),
                     defense=random.randint(3, 10),
-                    description=f"A hostile {enemy_name} that appeared suddenly.",
+                    description=f"Um(a) hostil {enemy_name} que apareceu de repente.",
                 )
-
-                # Start the combat
                 if not hasattr(game_state, "combat") or not game_state.combat:
                     game_state.combat = {
                         "enemy": enemy,
                         "round": 1,
-                        "log": [f"A {enemy_name} appeared and you attacked it!"],
+                        "log": [f"Um(a) {enemy_name} apareceu e você o(a) atacou!"],
                     }
-
                     return {
                         "success": True,
-                        "message": f"You looked for enemies and found a {enemy_name}! Combat initiated!",
+                        "message": f"Você procurou por inimigos e encontrou um(a) {enemy_name}! Combate iniciado!",
                         "combat": True,
                     }
-
-        # Check if the player is trying to see the map or their location
         details_lower = details.lower() if isinstance(details, str) else ""
         if (
-            "map" in details_lower
-            or "where am i" in details_lower
-            or "location" in details_lower
+            "mapa" in details_lower
+            or "onde estou" in details_lower
+            or "localização" in details_lower
         ):
-            # Check if the player has an item to map with
             has_map_item = False
             if hasattr(character, "inventory"):
-                map_items = ["Map", "Map Scroll", "Compass", "Regional Map"]
+                map_items = [
+                    "Mapa",
+                    "Fragmento de Mapa",
+                    "Bússola",
+                    "GPS Quebrado",
+                ]
                 has_map_item = any(item in character.inventory for item in map_items)
-
             if has_map_item:
-                # Player has a map, show the current location
                 if hasattr(game_state, "coordinates") and hasattr(
                     game_state, "world_map"
                 ):
                     coords = game_state.coordinates
                     known_locations = []
-
-                    # List nearby locations the player has already visited
-                    for loc_id, loc_info in game_state.visited_locations.items():
-                        if loc_id in game_state.world_map:
-                            loc_coords = game_state.world_map[loc_id].get(
-                                "coordinates", {}
-                            )
-                            distance = (
-                                (loc_coords.get("x", 0) - coords.get("x", 0)) ** 2
-                                + (loc_coords.get("y", 0) - coords.get("y", 0)) ** 2
-                            ) ** 0.5
-                            if distance <= 2:  # Locations up to 2 units away
-                                known_locations.append(
-                                    f"{loc_info['name']} ({loc_coords.get('x', 0)}, {loc_coords.get('y', 0)})"
-                                )
-
+                    if hasattr(game_state, "visited_locations"):
+                        for loc_id, loc_info in game_state.visited_locations.items():
+                            if loc_id in game_state.world_map["locations"]:
+                                loc_coords = game_state.world_map["locations"][
+                                    loc_id
+                                ].get("coordinates", {})
+                                distance = (
+                                    (loc_coords.get("x", 0) - coords.get("x", 0)) ** 2
+                                    + (loc_coords.get("y", 0) - coords.get("y", 0)) ** 2
+                                ) ** 0.5
+                                if distance <= 2:
+                                    known_locations.append(
+                                        f"{loc_info['name']} ({loc_coords.get('x', 0)}, {loc_coords.get('y', 0)})"
+                                    )
                     return {
                         "success": True,
-                        "message": f"You consult your map. You are in {game_state.current_location}, at the coordinates ({coords.get('x', 0)}, {coords.get('y', 0)}). "
-                        + f"Nearby locations you know: {', '.join(known_locations) if known_locations else 'none besides this one'}.",
+                        "message": f"Você consulta seu mapa. Você está em {game_state.current_location}, nas coordenadas ({coords.get('x', 0)}, {coords.get('y', 0)}). "
+                        + f"Locais próximos que você conhece: {', '.join(known_locations) if known_locations else 'nenhum além deste'}.",
                     }
                 return {
                     "success": True,
-                    "message": f"You consult your map. You are in {game_state.current_location}.",
+                    "message": f"Você consulta seu mapa. Você está em {game_state.current_location}.",
                 }
-            # Player doesn't have a map
             return {
                 "success": False,
-                "message": "You don't have a map or compass to determine your exact location. You know you are in "
-                + f"{game_state.current_location}, but can't pinpoint your coordinates.",
+                "message": "Você não tem um mapa ou bússola para determinar sua localização exata. Você sabe que está em "
+                + f"{game_state.current_location}, mas não consegue identificar suas coordenadas.",
             }
-
-        # Default behavior for other custom actions
+        influence_keywords = [
+            "exigir",
+            "convencer",
+            "persuadir",
+            "intimidar",
+            "forçar",
+            "ameaçar",
+        ]
+        target_object_keywords = ["portão", "sair", "passagem"]
+        attempting_influence = any(kw in details_lower for kw in influence_keywords)
+        targeting_exit_action = any(
+            kw in details_lower for kw in target_object_keywords
+        )
+        if attempting_influence and game_state.npcs_present:
+            targeted_npc_name: Optional[str] = None
+            for npc_name_in_scene in game_state.npcs_present:
+                if npc_name_in_scene.lower() in details_lower:
+                    targeted_npc_name = npc_name_in_scene
+                    break
+            if (
+                not targeted_npc_name
+                and "velho" in details_lower
+                and targeting_exit_action
+            ):
+                if "Velho Sobrevivente Cansado" in game_state.npcs_present:
+                    targeted_npc_name = "Velho Sobrevivente Cansado"
+            if targeted_npc_name:
+                npc_details = game_state.known_npcs.get(targeted_npc_name)
+                if not npc_details:
+                    return {
+                        "success": False,
+                        "message": f"Não tenho detalhes suficientes sobre {targeted_npc_name}.",
+                    }
+                contest_stat = "charisma"
+                contest_type_message = "tentativa de intimidação"
+                if "persuadir" in details_lower or "convencer" in details_lower:
+                    contest_type_message = "tentativa de persuasão"
+                elif "forçar" in details_lower:
+                    contest_stat = "strength"
+                    contest_type_message = "tentativa de forçar"
+                player_modifier = calculate_attribute_modifier(
+                    character.attributes.get(contest_stat, 10)
+                )
+                player_roll_result = roll_dice(1, 20, player_modifier)
+                player_roll_total = player_roll_result["total"]
+                npc_level = npc_details.get("level", 1)
+                npc_personality = npc_details.get("personality", "Neutro").lower()
+                base_dc = 10 + npc_level
+                if "cansado" in npc_personality:
+                    base_dc -= 1
+                if "apavorada" in npc_personality:
+                    base_dc -= 2
+                if "desconfiado" in npc_personality:
+                    base_dc += 2
+                if "brutal" in npc_personality:
+                    base_dc += 3
+                npc_dc = max(5, base_dc)
+                mechanical_outcome_message = ""
+                if player_roll_total >= npc_dc:
+                    mechanical_outcome_message = (
+                        f"Sua {contest_type_message} contra {targeted_npc_name} teve sucesso! "
+                        f"(Rolagem: {player_roll_total} vs DC: {npc_dc}). "
+                        f"{targeted_npc_name} parece reconsiderar..."
+                    )
+                else:
+                    mechanical_outcome_message = (
+                        f"Sua {contest_type_message} contra {targeted_npc_name} falhou. "
+                        f"(Rolagem: {player_roll_total} vs DC: {npc_dc}). "
+                        f"{targeted_npc_name} não se convenceu ou resistiu à sua tentativa."
+                    )
+                return {
+                    "success": True,
+                    "message": mechanical_outcome_message,
+                    "action_performed": "social_contest_resolved",
+                }
         return self.ai_response("custom", details, character, game_state)
 
 
@@ -1158,53 +1214,187 @@ class SkillActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
-        """
-        Handle skill usage. Details should contain the skill ID to use.
-        """
         if not details:
             available_skills = self.skill_manager.get_available_skills(character)
             skill_names = [skill.name for skill in available_skills]
             return {
                 "success": True,
-                "message": f"Available skills: {', '.join(skill_names)}",
+                "message": f"Habilidades disponíveis: {', '.join(skill_names) if skill_names else 'Nenhuma'}",  # Traduzido
             }
-
-        # Extract skill ID
         skill_id = details.lower().replace(" ", "_")
-
-        # Get target - for now we assume enemy in combat
         target = None
         if hasattr(game_state, "combat") and game_state.combat:
             target = game_state.combat.get("enemy")
-
-        # Use the skill
         result = self.skill_manager.use_skill(character, skill_id, target)
-
-        # If successful and in combat, apply combat effects
-        if result["success"] and target:
-            self._apply_combat_effects(result, game_state)
-
-            # Add effects to combat log
-            if "combat" in game_state.__dict__ and "log" in game_state.combat:
-                for effect in result.get("effects", []):
-                    game_state.combat["log"].append(effect)
-
+        if result["success"]:
+            if (
+                hasattr(game_state, "combat")
+                and game_state.combat
+                and "log" in game_state.combat
+            ):
+                game_state.combat["log"].append(result["message"])
+            if target and hasattr(game_state, "combat") and game_state.combat:
+                log_entries_from_effects = self._apply_combat_effects(
+                    result, game_state, character
+                )
+                if "log" in game_state.combat:
+                    game_state.combat["log"].extend(log_entries_from_effects)
         return result
 
     @staticmethod
-    def _apply_combat_effects(result: Dict[str, Any], game_state: Any) -> None:
-        """Apply skill effects in combat."""
+    def _apply_combat_effects(
+        result: Dict[str, Any], game_state: Any, character: Character
+    ) -> List[str]:
+        combat_log_entries = []
         if not game_state.combat or not game_state.combat.get("enemy"):
-            return
+            return combat_log_entries
+        enemy = game_state.combat["enemy"]
+        raw_effects = result.get("raw_effects", [])
+        for effect_data in raw_effects:
+            target_entity: Optional[Any] = None
+            target_name: str = "Desconhecido"  # Traduzido
+            effect_target_type = effect_data.get("target")
+            if effect_target_type == "enemy":
+                if enemy:
+                    target_entity = enemy
+                    target_name = enemy.name
+                else:
+                    combat_log_entries.append(
+                        "Habilidade mira um inimigo, mas nenhum inimigo está presente para afetar."  # Traduzido
+                    )
+                    continue
+            elif effect_target_type == "self":
+                target_entity = character
+                target_name = character.name
+            if target_entity:
+                effect_type = effect_data.get("type")
+                amount = effect_data.get("amount", 0)
+                if effect_type == "damage" and hasattr(target_entity, "health"):
+                    skill_damage_roll = roll_dice(1, amount, 0)
+                    actual_damage = skill_damage_roll["total"]
+                    actual_damage = max(
+                        1, actual_damage - getattr(target_entity, "defense", 0)
+                    )
+                    target_entity.health = max(0, target_entity.health - actual_damage)
+                    combat_log_entries.append(
+                        f"{target_name} sofreu {actual_damage} de {effect_type} da habilidade!"  # Traduzido
+                    )
+                    if target_entity.health <= 0:
+                        combat_log_entries.append(
+                            f"{target_name} foi derrotado(a)!"
+                        )  # Traduzido
+                elif effect_type == "heal" and effect_data.get("target") == "self":
+                    old_hp = character.attributes.get("current_hp", 0)
+                    max_hp = character.attributes.get("max_hp", old_hp)
+                    heal_amount_from_skill = amount
+                    character.attributes["current_hp"] = min(old_hp + amount, max_hp)
+                    healed_amount = character.attributes["current_hp"] - old_hp
+                    combat_log_entries.append(
+                        f"{character.name} curou {healed_amount} HP."  # Traduzido
+                    )
+                elif effect_type == "status":
+                    stat_mods = effect_data.get("stat_modifier", {})
+                    duration = effect_data.get("duration", 0)
+                    combat_log_entries.append(
+                        f"{target_name} é afetado(a) por um status: {stat_mods} por {duration} turnos."  # Traduzido
+                    )
+        return combat_log_entries
 
-        combat = game_state.combat
-        enemy = combat["enemy"]
 
-        # For now we just apply damage
-        # This should be expanded to handle different effect types
-        for effect in result.get("effects", []):
-            if "damage" in effect:
-                enemy.current_hp = max(0, enemy.current_hp - effect["damage"])
+class CraftActionHandler(ActionHandler):
+    """Handler for 'craft' action."""
+
+    def __init__(self):
+        from utils.item_generator import ItemGenerator
+
+        self.item_generator = ItemGenerator(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+        )
+        self.skill_manager = SkillManager()
+
+    def handle(
+        self, details: str, character: Character, game_state: Any
+    ) -> Dict[str, Any]:
+        if not details:
+            available_crafts = []
+            for recipe_id, recipe_data in CRAFTING_RECIPES.items():
+                skill_req = recipe_data.get("skill_required")
+                if skill_req:
+                    skill_id_req, skill_level_req = skill_req
+                    if skill_id_req not in character.skills:
+                        continue
+                available_crafts.append(f"{recipe_data['name']} (ID: {recipe_id})")
+            if not available_crafts:
+                return {
+                    "success": True,
+                    "message": "Você não conhece nenhuma receita de criação ou não possui as habilidades necessárias para as conhecidas.",  # Traduzido
+                }
+            return {
+                "success": True,
+                "message": "Você pode tentar criar: "
+                + ", ".join(available_crafts)
+                + ". Use 'craft [ID da receita]'.",  # Traduzido
+            }
+        recipe_id_to_craft = details.strip().lower()
+        recipe = CRAFTING_RECIPES.get(recipe_id_to_craft)
+        if not recipe:
+            return {
+                "success": False,
+                "message": f"Receita '{recipe_id_to_craft}' não encontrada.",  # Traduzido
+            }
+        skill_req = recipe.get("skill_required")
+        if skill_req:
+            skill_id_req, skill_level_req = skill_req
+            if skill_id_req not in character.skills:
+                skill_obj = self.skill_manager.available_skills.get(skill_id_req)
+                skill_display_name = skill_obj.name if skill_obj else skill_id_req
+                return {
+                    "success": False,
+                    "message": f"Você precisa aprender a habilidade '{skill_display_name}' para criar isto.",  # Traduzido
+                }
+        required_components = recipe.get("components", {})
+        inventory_copy = character.inventory[:]
+        missing_components = []
+        components_to_remove_indices = {}
+        for comp_id_ref, quantity_needed in required_components.items():
+            found_quantity = 0
+            indices_for_this_component = []
+            for i, inv_item_obj in enumerate(inventory_copy):
+                item_name_in_inv = ""
+                if isinstance(inv_item_obj, str):
+                    item_name_in_inv = inv_item_obj
+                elif isinstance(inv_item_obj, dict) and "name" in inv_item_obj:
+                    item_name_in_inv = inv_item_obj["name"]
+                if item_name_in_inv.lower() == comp_id_ref.lower():
+                    indices_for_this_component.append(i)
+                    found_quantity += 1
+                    if found_quantity >= quantity_needed:
+                        break
+            if found_quantity < quantity_needed:
+                missing_components.append(
+                    f"{comp_id_ref} (precisa de {quantity_needed}, tem {found_quantity})"  # Traduzido
+                )
+            else:
+                components_to_remove_indices[comp_id_ref] = sorted(
+                    indices_for_this_component[:quantity_needed], reverse=True
+                )
+        if missing_components:
+            return {
+                "success": False,
+                "message": "Componentes faltando: "
+                + ", ".join(missing_components),  # Traduzido
+            }
+        for comp_id_ref, indices in components_to_remove_indices.items():
+            for index_to_remove in indices:
+                character.inventory.pop(index_to_remove)
+        output_item_name = recipe["name"]
+        output_quantity = recipe.get("output_quantity", 1)
+        for _ in range(output_quantity):
+            character.inventory.append(output_item_name)
+        return {
+            "success": True,
+            "message": f"Você criou com sucesso {output_quantity}x {output_item_name}!",  # Traduzido
+        }
 
 
 # Action handler factory
@@ -1227,8 +1417,8 @@ def get_action_handler(action: str) -> ActionHandler:
         "use_item": UseItemActionHandler(),
         "flee": FleeActionHandler(),
         "rest": RestActionHandler(),
-        "custom": CustomActionHandler(),  # Add support for freeform actions
-        "skill": SkillActionHandler(),  # Now locally defined
+        "custom": CustomActionHandler(),
+        "skill": SkillActionHandler(),
+        "craft": CraftActionHandler(),
     }
-
     return action_handlers.get(action, UnknownActionHandler())

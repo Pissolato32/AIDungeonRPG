@@ -252,21 +252,22 @@ class WorldGenerator:
         """
         prompt = f"""
         Gere uma descrição detalhada e atmosférica para um local chamado '{location_name}',
-        que é um(a) {location_type} em um mundo pós-apocalíptico infestado por zumbis.
+        que é um(a) '{location_type}' em um mundo pós-apocalíptico infestado por zumbis e onde a sobrevivência é uma luta diária.
 
         A descrição deve ter 2-3 parágrafos e incluir:
-        - Aparência visual (destruição, abandono, sinais de luta, pichações de sobreviventes).
-        - Atmosfera e sensações (cheiro de podridão, silêncio opressor, sons distantes de zumbis ou tiros).
-        - Pistas sobre o que aconteceu ali (sinais de evacuação apressada, barricadas falhas,
-          restos de suprimentos).
-        - Alguma característica única que torne o local memorável (um grafite específico,
-          um veículo abandonado de forma peculiar, um perigo óbvio ou uma oportunidade).
+        - Aparência visual: Detalhes sobre destruição, abandono, sinais de luta recente ou antiga, pichações de sobreviventes (avisos, pedidos de ajuda, marcas de gangues), barricadas improvisadas (bem-sucedidas ou falhas).
+        - Atmosfera e sensações: O cheiro predominante (podridão, mofo, fumaça, sangue seco). O silêncio opressor que pode ser quebrado por sons repentinos e ameaçadores (o arrastar de pés de um zumbi, o choro distante, o estalar de um galho). A sensação de estar sendo observado.
+        - Pistas sobre o que aconteceu ali: Evidências de uma luta desesperada, sinais de uma evacuação apressada, barricadas que falharam ou que ainda resistem. Restos de suprimentos (embalagens vazias, fogueiras frias, munição deflagrada). Veículos abandonados, talvez com corpos dentro ou próximos.
+        - Perigos e Oportunidades Imediatas: Indique sutilmente se o local parece relativamente seguro por enquanto, se há sinais claros de infestação de zumbis, ou se parece ter sido recentemente pilhado por outros sobreviventes. Há alguma cobertura óbvia? Rotas de fuga visíveis?
+        - Alguma característica única que torne o local memorável: Um grafite específico e perturbador,
+          um veículo abandonado de forma peculiar, um perigo óbvio ou uma oportunidade sutil (como uma porta entreaberta que leva a um local desconhecido).
 
         Mantenha a descrição imersiva e focada no tema de sobrevivência e perigo.
         """
 
         try:
-            response = self.ai_client.generate_response(prompt)
+            prompt_dict = {"role": "user", "content": prompt}
+            response = self.ai_client.generate_response(prompt_dict)
             if isinstance(response, str) and response.strip():
                 return response.strip()
         except ConnectionError as e:  # Exemplo de exceção mais específica para rede
@@ -343,17 +344,17 @@ class WorldGenerator:
         try:
             prompt = f"""
             Gere o nome e uma breve descrição (1 frase) de um personagem NPC único e
-            interessante que poderia ser encontrado em '{location_name}', um(a) {location_type}
+            interessante que poderia ser encontrado em '{location_name}', um(a) '{location_type}'
             durante um apocalipse zumbi.
-            O personagem deve ter alguma característica ou história implícita que o
-            torne memorável.
+            O personagem deve ter alguma característica marcante, uma peculiaridade, uma necessidade urgente ou uma história implícita que o
+            torne memorável e potencialmente interativo (amigável, hostil, necessitado, desconfiado).
             Responda apenas com o nome e a descrição.
             Exemplo: "Corvo, um ex-militar que perdeu seu esquadrão e agora só confia em
             seu rifle." ou "Lily, uma garotinha que carrega um ursinho de pelúcia manchado
-            de sangue e não fala."
             """
 
-            response = self.ai_client.generate_response(prompt)
+            prompt_dict = {"role": "user", "content": prompt}
+            response = self.ai_client.generate_response(prompt_dict)
             if isinstance(response, str) and response.strip():
                 unique_npc = response.strip().split("\n", maxsplit=1)[0]
                 if unique_npc not in npcs:  # Avoid duplicates if AI gives a base one
@@ -413,14 +414,17 @@ class WorldGenerator:
 
         # Try to generate a unique event using AI - ADAPTED PROMPT
         try:
-            prompt = f"""
+            prompt = (
+                prompt
+            ) = f"""
             Gere uma breve descrição de um evento ou situação interessante e tensa
-            acontecendo em '{location_name}', um(a) {location_type} durante um apocalipse zumbi.
-            O evento deve aumentar a sensação de perigo ou desolação.
+            acontecendo em '{location_name}', um(a) '{location_type}' durante um apocalipse zumbi.
+            O evento deve aumentar a sensação de perigo, desolação, mistério ou uma rara oportunidade. Pode ser um som, um movimento, algo encontrado.
             Responda com apenas uma frase descritiva, sem explicações adicionais.
             """
 
-            response = self.ai_client.generate_response(prompt)
+            prompt_dict = {"role": "user", "content": prompt}
+            response = self.ai_client.generate_response(prompt_dict)
             if isinstance(response, str) and response.strip():
                 unique_event = response.strip().split("\n", maxsplit=1)[0]
                 if unique_event not in events:

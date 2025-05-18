@@ -117,16 +117,16 @@ class PromptManager:
         """
         npcs = ", ".join(game_state.npcs_present or []) or "Nenhum"
         return (
-            "Você é o Mestre de um jogo de RPG medieval fantastico. "
-            "Como narrador, sua missão é criar uma experiência imersiva "
-            "e envolvente para o jogador.\n\n"
+            "Você é o Mestre de um jogo de RPG de apocalipse zumbi. "
+            "Como narrador, sua missão é criar uma experiência imersiva, tensa "
+            "e focada na sobrevivência para o jogador.\n\n"
             f"Local atual: {game_state.current_location}\n"
             f"Descrição: {game_state.scene_description}\n"
             f"NPCs presentes: {npcs}\n\n"
             f"Personagem do jogador:\n"
             f"- Nome: {character.name}\n"
             f"- Raça: {character.race}\n"
-            f"- Classe: {character.character_class}\n"
+            # f"- Classe: {character.character_class}\n" # Removido
             f"- Nível: {character.level}\n"
             f"- HP: {character.current_hp}/{character.max_hp}\n"
         )
@@ -140,10 +140,10 @@ class PromptManager:
         """
         return (
             "\nVocê está controlando um NPC em uma conversa. "
-            "Crie uma interação envolvente que:\n"
-            "1. Reflita a personalidade e atitude do NPC\n"
-            "2. Use informações prévias se o jogador já conhece o NPC\n"
-            "3. Revele detalhes do mundo e possíveis missões\n"
+            "Crie uma interação realista e envolvente que:\n"
+            "1. Reflita a personalidade, o estado emocional (medo, desconfiança, esperança) e a atitude do NPC no contexto de um apocalipse zumbi.\n"
+            "2. Use informações prévias se o jogador já interagiu com este NPC.\n"
+            "3. Revele detalhes sobre o mundo devastado, perigos imediatos, rumores, necessidades de sobrevivência ou possíveis missões/trocas.\n"
             "4. Mantenha consistência com interações anteriores\n"
             "5. Permita que o jogador faça escolhas significativas\n\n"
         )
@@ -190,7 +190,7 @@ class PromptManager:
         return (
             f"\nO jogador está tentando conversar com '{npc_name}'. "
             "Crie um diálogo realista e interessante que desenvolva "
-            "a narrativa e o mundo do jogo.\n"
+            "a narrativa, a tensão e o mundo pós-apocalíptico do jogo.\n"
         )
 
     @staticmethod
@@ -206,12 +206,11 @@ class PromptManager:
             str: A formatted combat prompt
         """
         return (
-            "You are the Game Master for a medieval fantasy RPG.\n"
+            "Você é o Mestre de um jogo de RPG de apocalipse zumbi.\n"
             f"The player is in combat with {enemy['name']}.\n\n"
             f"Character information:\n"
             f"- Name: {character.name}\n"
             f"- Race: {character.race}\n"
-            f"- Class: {character.character_class}\n"
             f"- Level: {character.level}\n"
             f"- HP: {character.current_hp}/{character.max_hp}\n\n"
             f"Enemy information:\n"
@@ -227,5 +226,5 @@ class PromptManager:
             '    "damage_taken": 0,\n'
             '    "combat_ended": true/false\n'
             "}\n\n"
-            "Be brief but vivid in your combat descriptions.\n"
+            "Seja breve, mas vívido e brutal em suas descrições de combate. Enfatize a luta pela sobrevivência.\n"
         )

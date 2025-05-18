@@ -1,3 +1,4 @@
+# filepath: c:\Users\rodri\Desktop\REPLIT RPG\ai\conversation_manager.py
 """
 Conversation manager module.
 
@@ -19,7 +20,6 @@ class ConversationMessage(TypedDict, total=True):
 
     role: str
     content: str
-    # Define the role of the message (user or assistant)
 
 
 class NPCMemory(TypedDict, total=True):
@@ -75,7 +75,7 @@ class ConversationManager:
         """
         if context.npc_name not in self.npc_memory:
             self.npc_memory[context.npc_name] = NPCMemory(
-                topics=set(),  # Explicitly initialize as empty sets
+                topics=set(),
                 shared_info=set(),
                 mentioned_quests=set(),
                 trust_level=0,
@@ -91,7 +91,9 @@ class ConversationManager:
 
         prompt = (
             f"Você é {context.npc_name}, um personagem (NPC) em um jogo de RPG com tema de apocalipse zumbi. "
-            "Interaja com o jogador de forma natural e consistente com sua personalidade e o contexto do mundo devastado.\n\n"
+            "Interaja com o jogador de forma natural e consistente com sua personalidade e o contexto do mundo devastado. "
+            "Suas ações e falas devem refletir diretamente sua profissão e conhecimento listados abaixo. Aja de forma lógica. "
+            "RESPONDA SEMPRE EM PORTUGUÊS DO BRASIL (pt-br).\n\n"  # Instrução de idioma adicionada
             "Sua personalidade:\n"
             f"- Raça: {context.npc_details.get('race', 'Humano')}\n"
             f"- Profissão/Papel: {npc_profession}\n"
@@ -118,12 +120,9 @@ class ConversationManager:
 
         if history:
             prompt += "\nHistórico da conversa (mais recente primeiro, últimas 5 interações):\n"
-            for msg in reversed(history[-5:]):  # Mostrar as mais recentes primeiro
+            for msg in reversed(history[-5:]):
                 role_prefix = (
-                    "Jogador:"
-                    if msg["role"] == "user"
-                    else f"{
-                        context.npc_name}:"
+                    "Jogador:" if msg["role"] == "user" else f"{context.npc_name}:"
                 )
                 prompt += f"{role_prefix} {msg['content']}\n"
 
@@ -132,7 +131,8 @@ class ConversationManager:
             "Mantenha a conversa interessante e imersiva no tema de apocalipse zumbi. "
             "Revele informações gradualmente, talvez baseado na confiança ou no rumo da conversa. "
             "Seja breve e direto quando apropriado, mas também capaz de elaborar se o jogador demonstrar interesse. "
-            "Lembre-se do perigo constante e da escassez de recursos."
+            "Lembre-se do perigo constante e da escassez de recursos. "
+            "Responda sempre em Português do Brasil (pt-br)."  # Reforço da instrução de idioma
         )
 
         return prompt
@@ -173,7 +173,7 @@ class ConversationManager:
         self.conversation_history[character_id].append(new_message)
         self._trim_conversation_history(character_id)
 
-        if context:  # Only update memory if context is provided
+        if context:
             self._update_npc_memory(npc_name, message, context)
 
     def _get_conversation_history(self, character_id: str) -> List[ConversationMessage]:
@@ -193,7 +193,7 @@ class ConversationManager:
         Args:
             character_id: Unique identifier for the player character
         """
-        if character_id in self.conversation_history:  # Check if key exists
+        if character_id in self.conversation_history:
             history = self.conversation_history[character_id]
             if len(history) > self.max_history_length:
                 start_index = len(history) - self.max_history_length
@@ -202,10 +202,7 @@ class ConversationManager:
     def _update_npc_memory(
         self, npc_name: str, message: str, context: Dict[str, Any]
     ) -> None:
-        """Update NPC's memory based on conversation context.
-        'message' (NPC's own response) is currently unused here but kept for potential future use
-        (e.g., sentiment analysis on NPC response to adjust mood or extract entities).
-        """
+        """Update NPC's memory based on conversation context."""
         if npc_name not in self.npc_memory:
             self.npc_memory[npc_name] = NPCMemory(
                 topics=set(), shared_info=set(), mentioned_quests=set(), trust_level=0
@@ -213,21 +210,18 @@ class ConversationManager:
 
         memory = self.npc_memory[npc_name]
 
-        # Ensure context is a dictionary before proceeding
         if not isinstance(context, dict):
             logger.warning(
-                f"Context for NPC memory update is not a dict for {npc_name}. Context: {context}"
+                f"Contexto para atualização da memória do NPC não é um dict para {npc_name}. Contexto: {context}"
             )
             return
 
-        # Update memory sets safely
         new_topics = context.get("topics")
         if isinstance(new_topics, (list, set)):
             memory["topics"].update(new_topics)
         elif new_topics is not None:
             logger.warning(
-                f"Invalid type for 'topics' in context for {npc_name}: {
-                    type(new_topics)}"
+                f"Tipo inválido para 'topics' no contexto para {npc_name}: {type(new_topics)}"
             )
 
         new_shared_info = context.get("shared_info")
@@ -235,22 +229,17 @@ class ConversationManager:
             memory["shared_info"].update(new_shared_info)
         elif new_shared_info is not None:
             logger.warning(
-                f"Invalid type for 'shared_info' in context for {npc_name}: {
-                    type(new_shared_info)}"
+                f"Tipo inválido para 'shared_info' no contexto para {npc_name}: {type(new_shared_info)}"
             )
 
-        new_mentioned_quests = context.get(
-            "quests"
-        )  # Assuming 'quests' key in context maps to mentioned_quests
+        new_mentioned_quests = context.get("quests")
         if isinstance(new_mentioned_quests, (list, set)):
             memory["mentioned_quests"].update(new_mentioned_quests)
         elif new_mentioned_quests is not None:
             logger.warning(
-                f"Invalid type for 'quests' in context for {npc_name}: {
-                    type(new_mentioned_quests)}"
+                f"Tipo inválido para 'quests' no contexto para {npc_name}: {type(new_mentioned_quests)}"
             )
 
-        # Update trust level with boundaries
         trust_change = context.get("trust_change")
         if isinstance(trust_change, (int, float)):
             current_trust = memory["trust_level"]
@@ -259,6 +248,5 @@ class ConversationManager:
             )
         elif trust_change is not None:
             logger.warning(
-                f"Invalid type for 'trust_change' in context for {npc_name}: {
-                    type(trust_change)}"
+                f"Tipo inválido para 'trust_change' no contexto para {npc_name}: {type(trust_change)}"
             )

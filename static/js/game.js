@@ -16,19 +16,19 @@ class GameUIManager {
     initializeEventListeners() {
         // Set up MutationObservers to watch for changes
         this.setupMutationObservers();
-        
+
         // Set up form submission handler
         this.setupActionForm();
-        
+
         // Set up combat buttons
         this.setupCombatButtons();
-        
+
         // Set up rest button
         this.setupRestButton();
-        
+
         // Set up use item buttons
         this.setupUseItemButtons();
-        
+
         // Set up reset game button
         this.setupResetGameButton();
     }
@@ -59,11 +59,11 @@ class GameUIManager {
         const enemyHpBar = document.getElementById('enemyHpBar');
         const enemyHp = document.getElementById('enemyHp');
         const enemyMaxHp = document.getElementById('enemyMaxHp');
-        
+
         if (enemyHpBar && enemyHp && enemyMaxHp) {
             const currentHp = parseInt(enemyHp.textContent) || 0;
             const maxHp = parseInt(enemyMaxHp.textContent) || 1;
-            
+
             if (maxHp > 0) {
                 const percentage = (currentHp / maxHp * 100).toFixed(1);
                 enemyHpBar.style.width = percentage + '%';
@@ -85,7 +85,7 @@ class GameUIManager {
             hunger: document.getElementById('hungerBar'),
             thirst: document.getElementById('thirstBar')
         };
-        
+
         for (const [key, bar] of Object.entries(progressBars)) {
             if (bar?.dataset.width) {
                 bar.style.width = bar.dataset.width + '%';
@@ -99,65 +99,65 @@ class GameUIManager {
     setupActionForm() {
         const actionForm = document.getElementById('actionForm');
         if (!actionForm) return;
-        
+
         actionForm.addEventListener('submit', (e) => {
             e.preventDefault();
             if (this.isProcessing) return; // Prevent multiple submissions
-            
+
             const actionTypeElement = document.querySelector('#actionType');
-            if (!actionTypeElement) {
-                this.displayErrorMessage('Action type element not found');
-                return;
-            }
-            
-            const actionType = actionTypeElement.value;
+            // if (!actionTypeElement) { // Comentado pois actionType foi removido do HTML
+            //     this.displayErrorMessage('Action type element not found');
+            //     return;
+            // }
+
+            const actionType = "interpret"; // Ação agora é sempre "interpret"
             const actionDetailsElement = document.getElementById('actionDetails');
             const actionDetails = actionDetailsElement ? actionDetailsElement.value : '';
-            
+
             // Show loading state
             this.isProcessing = true;
             const submitButton = actionForm.querySelector('button[type="submit"]');
             const originalButtonContent = submitButton.innerHTML;
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
-            
+
             // Add player's action to the message container
-            this.addPlayerMessage(`${actionType}: ${actionDetails}`);
-            
+            this.addPlayerMessage(actionDetails); // Apenas os detalhes, já que o tipo é implícito
+
             // Show "thinking" indicator
             this.showThinkingIndicator();
-            
+
             // Send action to server
             this.sendGameAction(
-                actionType, 
+                actionType,
                 actionDetails,
                 (data) => {
                     // Remove thinking indicator
                     this.removeThinkingIndicator();
-                    
+
                     // Reset form
                     if (actionDetailsElement) actionDetailsElement.value = '';
-                    
+
                     // Reset button state
                     submitButton.disabled = false;
                     submitButton.innerHTML = originalButtonContent;
                     this.isProcessing = false;
-                    
+
                     // Handle the response
                     this.handleActionResponse(data);
-                    
+
                     // Update bars after response
                     this.updateProgressBars();
                 },
                 (error) => {
                     // Remove thinking indicator
                     this.removeThinkingIndicator();
-                    
+
                     // Reset button state
                     submitButton.disabled = false;
                     submitButton.innerHTML = originalButtonContent;
                     this.isProcessing = false;
-                    
+
                     // Display error message
                     this.displayErrorMessage('An error occurred while processing your action. Please try again.');
                 }
@@ -172,12 +172,12 @@ class GameUIManager {
     addPlayerMessage(message) {
         const messagesContainer = document.getElementById('messagesContainer');
         if (!messagesContainer) return;
-        
+
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message player-message';
         messageDiv.innerHTML = `<strong>You:</strong> ${message}`;
         messagesContainer.appendChild(messageDiv);
-        
+
         // Scroll to the bottom of the messages container
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
@@ -188,13 +188,13 @@ class GameUIManager {
     showThinkingIndicator() {
         const messagesContainer = document.getElementById('messagesContainer');
         if (!messagesContainer) return;
-        
+
         const thinkingDiv = document.createElement('div');
         thinkingDiv.className = 'message thinking-indicator';
         thinkingDiv.innerHTML = '<strong>Game Master:</strong> <span class="thinking-dots">...</span>';
         thinkingDiv.id = 'thinkingIndicator';
         messagesContainer.appendChild(thinkingDiv);
-        
+
         // Animate the dots
         const dots = thinkingDiv.querySelector('.thinking-dots');
         let count = 0;
@@ -202,7 +202,7 @@ class GameUIManager {
             count = (count + 1) % 4;
             dots.textContent = '.'.repeat(count || 3);
         }, 500);
-        
+
         // Scroll to the bottom of the messages container
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
@@ -226,10 +226,10 @@ class GameUIManager {
         combatButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const action = button.id === 'fleeButton' ? 'flee' : 'attack';
-                const details = button.id === 'attackBasic' ? 'basic' : 
-                               button.id === 'attackLight' ? 'light' : 
-                               button.id === 'attackHeavy' ? 'heavy' : '';
-                
+                const details = button.id === 'attackBasic' ? 'basic' :
+                    button.id === 'attackLight' ? 'light' :
+                        button.id === 'attackHeavy' ? 'heavy' : '';
+
                 this.handleButtonAction(action, details, combatButtons);
             });
         });
@@ -241,7 +241,7 @@ class GameUIManager {
     setupRestButton() {
         const restButton = document.getElementById('restButton');
         if (!restButton) return;
-        
+
         restButton.addEventListener('click', () => {
             this.handleButtonAction('rest', '', restButton);
         });
@@ -270,14 +270,14 @@ class GameUIManager {
     handleButtonAction(action, details, buttons, reloadOnSuccess = true) {
         // Add player's action to the message container
         this.addPlayerMessage(`${action}${details ? ': ' + details : ''}`);
-        
+
         // Show "thinking" indicator
         this.showThinkingIndicator();
-        
+
         // Disable buttons
         const buttonArray = buttons instanceof NodeList || Array.isArray(buttons) ? Array.from(buttons) : [buttons];
         buttonArray.forEach(btn => { btn.disabled = true; });
-        
+
         // Send action to server
         this.sendGameAction(
             action,
@@ -285,10 +285,10 @@ class GameUIManager {
             (data) => {
                 // Remove thinking indicator
                 this.removeThinkingIndicator();
-                
+
                 // Handle the response
                 this.handleActionResponse(data);
-                
+
                 // Reload page or continue
                 if (reloadOnSuccess && data.success && (data.combat || data.new_location)) {
                     window.location.reload();
@@ -300,10 +300,10 @@ class GameUIManager {
             (error) => {
                 // Remove thinking indicator
                 this.removeThinkingIndicator();
-                
+
                 // Re-enable buttons
                 buttonArray.forEach(btn => { btn.disabled = false; });
-                
+
                 // Display error message
                 this.displayErrorMessage('An error occurred while processing your action. Please try again.');
             }
@@ -317,7 +317,7 @@ class GameUIManager {
         const resetGameBtn = document.getElementById('resetGameBtn');
         const confirmResetBtn = document.getElementById('confirmResetBtn');
         if (!resetGameBtn || !confirmResetBtn) return;
-        
+
         resetGameBtn.addEventListener('click', () => {
             // Show confirmation modal
             if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -327,12 +327,12 @@ class GameUIManager {
                 alert('Bootstrap JS não carregado.');
             }
         });
-        
+
         confirmResetBtn.addEventListener('click', () => {
             // Disable button
             confirmResetBtn.disabled = true;
             confirmResetBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Resetting...';
-            
+
             // Send reset action to server
             fetch(this.RESET_ENDPOINT, {
                 method: 'POST',
@@ -340,19 +340,19 @@ class GameUIManager {
                     'Content-Type': 'application/json',
                 }
             })
-            .then(response => response.json())
-            .then(() => {
-                // Redirect to character creation
-                window.location.href = '/character';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                // Re-enable button
-                confirmResetBtn.disabled = false;
-                confirmResetBtn.innerHTML = 'Reset Game';
-                // Show error message
-                this.displayErrorMessage('An error occurred while resetting the game. Please try again.');
-            });
+                .then(response => response.json())
+                .then(() => {
+                    // Redirect to character creation
+                    window.location.href = '/character';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Re-enable button
+                    confirmResetBtn.disabled = false;
+                    confirmResetBtn.innerHTML = 'Reset Game';
+                    // Show error message
+                    this.displayErrorMessage('An error occurred while resetting the game. Please try again.');
+                });
         });
     }
 
@@ -372,7 +372,7 @@ class GameUIManager {
             },
             body: JSON.stringify({ action, details })
         };
-        
+
         fetch(this.API_ENDPOINT, requestOptions)
             .then(response => {
                 if (!response.ok) {
@@ -399,25 +399,30 @@ class GameUIManager {
             if (data.message) {
                 this.addMessage(data.message);
             }
-            
+
             // Update scene description if it changed
             if (data.description) {
                 this.updateSceneDescription(data.description);
             }
-            
+
             // Update location if it changed
             if (data.new_location) {
                 this.updateLocation(data.new_location);
             }
-            
+
             // Update NPCs if they changed
             if (data.npcs) {
                 this.updateNPCs(data.npcs);
             }
-            
+
             // Update events if they changed
             if (data.events) {
                 this.updateEvents(data.events);
+            }
+
+            // Update interactable elements
+            if (data.interactable_elements) {
+                this.updateInteractableElements(data.interactable_elements);
             }
         } else {
             // Display error message
@@ -435,7 +440,7 @@ class GameUIManager {
     addMessage(message, isError = false) {
         const messagesContainer = document.getElementById('messagesContainer');
         if (!messagesContainer) return;
-        
+
         // Highlight dice rolls with regex pattern
         const diceRollPattern = /rolagem (de \w+\s)?foi de (\d+)|roll(ed)? (a )?(\d+)|rolled (\d+)|rolagem: (\d+)|roll: (\d+)|rolou (\d+)/gi;
         const highlightedMessage = message.replace(diceRollPattern, match => {
@@ -447,12 +452,12 @@ class GameUIManager {
             }
             return match;
         });
-        
+
         const messageDiv = document.createElement('div');
         messageDiv.className = isError ? 'message text-danger' : 'message';
         messageDiv.innerHTML = `<strong>Game Master:</strong> ${highlightedMessage}`;
         messagesContainer.appendChild(messageDiv);
-        
+
         // Scroll to the bottom of the messages container
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
@@ -532,6 +537,45 @@ class GameUIManager {
             }
         } else if (eventsElement) {
             eventsElement.style.display = 'none';
+        }
+    }
+
+    /**
+     * Update the interactable elements display
+     * @param {Array<string>} elements - Array of interactable element names
+     */
+    updateInteractableElements(elements) {
+        const container = document.getElementById('interactableElementsContainer');
+        if (!container) return;
+
+        container.innerHTML = ''; // Limpa elementos anteriores
+
+        if (elements && elements.length > 0) {
+            const title = document.createElement('strong');
+            title.textContent = 'Você percebe:'; // Ou "Pontos de Interesse:"
+            container.appendChild(title);
+
+            const listGroup = document.createElement('div');
+            listGroup.className = 'list-group list-group-flush mt-1';
+
+            elements.forEach(elementName => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'list-group-item list-group-item-action list-group-item-secondary p-2'; // Estilo sutil
+                button.textContent = elementName;
+                button.addEventListener('click', () => {
+                    const actionDetailsInput = document.getElementById('actionDetails');
+                    if (actionDetailsInput) {
+                        actionDetailsInput.value = `Examinar ${elementName}`; // Ou "Interagir com ${elementName}"
+                        // Opcionalmente, submeter o formulário automaticamente:
+                        // document.getElementById('actionForm').requestSubmit();
+                        // Ou chamar sendGameAction diretamente se preferir não depender do input visível
+                        // this.handleButtonAction("interpret", `Examinar ${elementName}`, document.getElementById('actionForm').querySelector('button[type="submit"]'));
+                    }
+                });
+                listGroup.appendChild(button);
+            });
+            container.appendChild(listGroup);
         }
     }
 }

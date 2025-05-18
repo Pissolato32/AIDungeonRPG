@@ -14,7 +14,7 @@ from typing import (  # Added Set for visited_locations previous type
 # Import NPC here if it's a clean dependency (i.e., npc.py doesn't import GameState)
 # If core.npc also imports GameState or related models, this might need further refactoring.
 # For now, we assume core.npc is independent or only depends on basic types.
-from core.npc import NPC  # Assuming this import is safe
+from core.npc import NPC
 
 
 class LocationCoords(TypedDict):
@@ -39,6 +39,7 @@ class LocationData(TypedDict, total=False):
     danger_level: Optional[int]
     events: List[str]
     welcome: Optional[str]
+    npcs: List[str]  # Adicionado para corresponder ao uso em game_engine.py
 
 
 class SearchResultEntry(TypedDict):
@@ -57,6 +58,17 @@ class VisitedLocationDetail(TypedDict):
     npcs_seen: List[str]
     events_seen: List[str]
     search_results: List[SearchResultEntry]
+
+
+class CombatState(TypedDict, total=False):
+    """Type definition for the combat state."""
+
+    enemy: Any  # Idealmente, seria 'Enemy' do core.enemy, mas para evitar import circular, usamos Any
+    round: int
+    log: List[str]
+    # Você pode adicionar mais campos aqui conforme necessário, como:
+    # player_turn: bool
+    # combat_ended: bool
 
 
 @dataclass
@@ -82,6 +94,9 @@ class GameState:
     events: List[str] = field(default_factory=list)
     world_map: Dict[str, LocationData] = field(default_factory=dict)
     visited_locations: Dict[str, VisitedLocationDetail] = field(default_factory=dict)
+    combat: Optional[CombatState] = field(
+        default=None
+    )  # Novo atributo para estado de combate
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert game state to a dictionary."""
@@ -100,6 +115,7 @@ class GameState:
             "events": self.events,
             "world_map": self.world_map,
             "visited_locations": self.visited_locations,
+            "combat": self.combat,
         }
 
     @classmethod
@@ -120,6 +136,7 @@ class GameState:
             events=data.get("events", []),
             world_map=data.get("world_map", {}),
             visited_locations=data.get("visited_locations", {}),
+            combat=data.get("combat", None),
         )
 
     def add_message(self, message: str) -> None:
