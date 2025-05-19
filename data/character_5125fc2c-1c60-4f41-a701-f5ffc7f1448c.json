@@ -1,0 +1,32 @@
+{
+  "name": "Cachorro",
+  "level": 1,
+  "attributes": {
+    "strength": 8,
+    "dexterity": 8,
+    "constitution": 8,
+    "intelligence": 8,
+    "wisdom": 8,
+    "charisma": 8,
+    "max_hp": 7,
+    "current_hp": 7,
+    "max_stamina": 8,
+    "current_stamina": 8,
+    "gold": 13
+  },
+  "owner_session_id": "unknown_owner",
+  "id": "5125fc2c-1c60-4f41-a701-f5ffc7f1448c",
+  "description": "teste",
+  "experience": 0,
+  "gold": 0,
+  "inventory": [
+    "Bandagem Suja",
+    "Lata de Comida Amassada",
+    "Isqueiro (pouco g\u00e1s)",
+    "Faca de Cozinha Enferrujada",
+    "Garrafa de \u00c1gua (metade)",
+    "Mochila Pequena e Gasta"
+  ],
+  "equipment": {},
+  "skills": []
+}

@@ -55,10 +55,6 @@ class GameEngine:
             ],
         }
 
-    def _get_save_path(self, user_id: str, data_type: str) -> str:
-        """Helper to get the save file path for general user data (legacy or non-character specific)."""
-        return os.path.join(self.data_dir, f"{user_id}_{data_type}.json")
-
     def _get_character_save_path(self, character_id: str) -> str:
         """Helper to get the save file path for a specific character."""
         return os.path.join(self.data_dir, f"character_{character_id}.json")
@@ -72,12 +68,32 @@ class GameEngine:
         if not character.id:
             logger.error("Character has no ID, cannot save.")
             return
+        character_data_to_save = None  # Para logging em caso de erro
         path = self._get_character_save_path(character.id)
         try:
+            character_data_to_save = character.to_dict()
             with open(path, "w", encoding="utf-8") as f:
-                json.dump(character.to_dict(), f, indent=2)
-        except IOError as e:
-            logger.error(f"Error saving character {character.id}: {e}")
+                json.dump(character_data_to_save, f, indent=2)
+            logger.info(f"Character {character.id} saved successfully to {path}")
+        except (
+            IOError,
+            TypeError,
+            ValueError,
+        ) as e:  # Captura erros de I/O e serialização JSON
+            logger.error(f"Error saving character {character.id} to {path}: {e}")
+            if character_data_to_save is not None:
+                logger.error(
+                    f"Data that failed to save: {str(character_data_to_save)[:500]}..."
+                )
+        except Exception as e:  # Captura quaisquer outros erros inesperados
+            logger.error(
+                f"Unexpected error saving character {character.id} to {path}: {e}",
+                exc_info=True,
+            )
+            if character_data_to_save is not None:
+                logger.error(
+                    f"Data that failed to save (unexpected error): {str(character_data_to_save)[:500]}..."
+                )
 
     def load_character(self, character_id: str) -> Optional[Character]:
         """Load character data from a file."""
@@ -85,8 +101,13 @@ class GameEngine:
         if os.path.exists(path):
             try:
                 with open(path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    return Character.from_dict(data)
+                    content = f.read()
+                    if not content:
+                        logger.error(f"Character file {character_id} is empty.")
+                        return None
+                    data = json.loads(content)
+                    character = Character.from_dict(data)
+                    return character
             except (IOError, json.JSONDecodeError) as e:
                 logger.error(f"Error loading character {character_id}: {e}")
         return None
@@ -348,19 +369,6 @@ class GameEngine:
                             )
                     # <<< FIM NOVO: Processar suggested_roll
 
-                    # Atualiza o game_state com os novos dados da IA
-                    new_detailed_location = current_ai_response.get(
-                        "current_detailed_location"
-                    )
-                    if new_detailed_location:
-                        game_state.current_location = new_detailed_location
-
-                    new_scene_description = current_ai_response.get(
-                        "scene_description_update"
-                    )
-                    if new_scene_description:
-                        game_state.scene_description = new_scene_description
-
                     # Add AI's response to message history
                     ai_message_content = current_ai_response.get("message")
                     if ai_message_content:
@@ -598,32 +606,6 @@ class GameEngine:
         game_state.npcs_present = location_data.get("npcs", [])
         game_state.events = location_data.get("events", [])
         self._handle_connections(game_state, new_location_id, new_coords)
-
-    # TODO: Este método não está sendo utilizado atualmente no código.
-    # Se for necessário no futuro, a chamada para _generate_location_npcs
-    # precisa ser corrigida, pois game_state=None causará um erro.
-    # def _create_location_data(
-    #     self, result: Dict[str, Any], new_coords: LocationCoords, loc_id: str
-    # ) -> LocationData:
-    #     location_type = result.get("location_type")
-    #     if not location_type or location_type not in self._location_types:
-    #         location_type = random.choice(list(self._location_types.keys()))
-    #     return {
-    #         "name": result.get(
-    #             "location_name", self._generate_location_name(location_type)
-    #         ),
-    #         "coordinates": new_coords,
-    #         "type": location_type,
-    #         "description": result.get(
-    #             "description", self._generate_location_description(location_type)
-    #         ),
-    #         "visited": True,
-    #         "connections": {},
-    #         "resources": self._generate_location_resources(location_type),
-    #         "danger_level": random.randint(1, 5),
-    #         "events": self._generate_location_events(location_type),
-    #         "npcs": self._generate_location_npcs(location_type, game_state=None), # Erro aqui: game_state não pode ser None
-    #     }
 
     def _handle_connections(
         self,

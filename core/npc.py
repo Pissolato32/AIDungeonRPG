@@ -1,8 +1,18 @@
+# filepath: c:\Users\rodri\Desktop\REPLIT RPG\core\npc.py
 """NPC module for managing non-player characters in the game world."""
 
 import random
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Literal, Optional, TypedDict, cast
+from typing import (
+    Any,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    TypedDict,
+    cast,
+)  # Ensure these are imported
+import uuid  # Ensure uuid is imported if generating IDs
 
 from .models import NPCBase
 
@@ -49,7 +59,7 @@ DialogueDict = Dict[str, List[DialogueOption]]
 
 
 @dataclass
-class NPC(NPCBase):
+class NPC:
     """Represents an NPC in the game world.
 
     Attributes:
@@ -68,22 +78,38 @@ class NPC(NPCBase):
         dialogue_options: Available conversation choices
     """
 
-    race: str = field(default="Human")
-    profession: str = field(default="Commoner")
-    personality: str = field(default="Neutral")
-    current_state: str = field(default="Normal")
-    faction: str = field(default="Neutral")
+    # Non-default fields (required) must come first
+    name: str  # Inherited from NPCBase, likely required
+    level: int  # This was the problematic field, now correctly positioned
 
+    # Fields with default values (optional)
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    race: Optional[str] = field(default="Human")  # Assuming default for race
+    profession: Optional[str] = field(
+        default="Commoner"
+    )  # Assuming default for profession
+    personality: Optional[str] = field(
+        default="Neutral"
+    )  # Assuming default for personality
+    current_mood: Optional[str] = field(
+        default="Normal"
+    )  # Renamed from current_state for consistency with NPCBase
+    disposition: Optional[str] = field(
+        default="neutral"
+    )  # e.g., "friendly", "neutral", "hostile"
+
+    # Other fields that might have defaults or be initialized as empty
+    faction: Optional[str] = field(default="Neutral")  # Assuming default for faction
     knowledge: List[str] = field(default_factory=list)
     skills: List[str] = field(default_factory=list)
     available_quests: List[QuestData] = field(default_factory=list)
-
     interaction_count: int = field(default=0)
     last_interaction: ActionType = field(default="greet")
     relationship_level: int = field(default=0)
-
     daily_schedule: List[DailySchedule] = field(default_factory=list)
     dialogue_options: DialogueDict = field(default_factory=dict)
+    # Attributes for NPCs, similar to Characters
+    attributes: Dict[str, Any] = field(default_factory=dict)
 
     def get_greeting(self) -> str:
         """Generate a contextual greeting based on NPC's disposition.

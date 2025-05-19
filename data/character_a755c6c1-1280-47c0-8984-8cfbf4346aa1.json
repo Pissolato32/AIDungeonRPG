@@ -1,0 +1,32 @@
+{
+  "name": "Replit",
+  "level": 1,
+  "attributes": {
+    "strength": 8,
+    "dexterity": 8,
+    "constitution": 8,
+    "intelligence": 8,
+    "wisdom": 8,
+    "charisma": 8,
+    "max_hp": 7,
+    "current_hp": 7,
+    "max_stamina": 8,
+    "current_stamina": 8,
+    "gold": 6
+  },
+  "owner_session_id": "unknown_owner",
+  "id": "a755c6c1-1280-47c0-8984-8cfbf4346aa1",
+  "description": "replit",
+  "experience": 0,
+  "gold": 0,
+  "inventory": [
+    "Mochila Pequena e Gasta",
+    "Isqueiro (pouco g\u00e1s)",
+    "Garrafa de \u00c1gua (metade)",
+    "Faca de Cozinha Enferrujada",
+    "Bandagem Suja",
+    "Lata de Comida Amassada"
+  ],
+  "equipment": {},
+  "skills": []
+}

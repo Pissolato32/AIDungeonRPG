@@ -1,0 +1,32 @@
+{
+  "name": "Blanka",
+  "level": 1,
+  "attributes": {
+    "strength": 8,
+    "dexterity": 8,
+    "constitution": 8,
+    "intelligence": 8,
+    "wisdom": 8,
+    "charisma": 8,
+    "max_hp": 7,
+    "current_hp": 7,
+    "max_stamina": 8,
+    "current_stamina": 8,
+    "gold": 28
+  },
+  "owner_session_id": "unknown_owner",
+  "id": "edf3a7d1-055c-4147-a559-dd3277869f54",
+  "description": "teste",
+  "experience": 0,
+  "gold": 0,
+  "inventory": [
+    "Faca de Cozinha Enferrujada",
+    "Bandagem Suja",
+    "Lata de Comida Amassada",
+    "Mochila Pequena e Gasta",
+    "Garrafa de \u00c1gua (metade)",
+    "Isqueiro (pouco g\u00e1s)"
+  ],
+  "equipment": {},
+  "skills": []
+}

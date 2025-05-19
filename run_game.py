@@ -1,3 +1,4 @@
+# filepath: c:\Users\rodri\Desktop\REPLIT RPG\run_game.py
 #!/usr/bin/env python
 """
 Script de inicialização para o jogo RPG.

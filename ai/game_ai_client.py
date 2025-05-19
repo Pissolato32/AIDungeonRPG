@@ -7,17 +7,17 @@ and responses."""
 import json
 import logging
 from typing import Any, Dict, List, Optional, TypedDict, cast, Protocol
-
-from core.game_state_model import GameState
-from core.models import Character
+from core.models import CharacterType  # Import CharacterType from core.models
 from .prompt_builder import PromptBuilder  # Importar o novo PromptBuilder
 from .fallback_handler import (
     generate_fallback_response,
-    FallbackResponse as FallbackResponseType,
-)  # Importar fallback
+    FallbackResponse as FallbackResponseType,  # Importar fallback
 )  # Importar fallback
 
 logger = logging.getLogger(__name__)
+from core.game_state_model import (
+    GameState,
+)  # Mover importação para evitar potencial ciclo
 
 
 class AIPrompt(TypedDict):
@@ -64,22 +64,6 @@ class AIModelClientType(Protocol):
             The raw string response from the AI (e.g., a JSON string or plain text).
         """
         ...
-
-
-class CharacterAttributes(TypedDict, total=False):
-    """Expected structure for character attributes relevant to the AI.
-    `total=False` allows other attributes to exist without being typed here."""
-
-    current_hp: int
-    max_hp: int
-
-
-class CharacterType(Protocol):
-    """Protocol for character objects passed to the AI client."""
-
-    name: str
-    level: int
-    attributes: Dict[str, Any]  # Alterado para compatibilidade
 
 
 class GameAIClient:
@@ -229,38 +213,26 @@ class GameAIClient:
             )
             logger.debug(
                 f"Raw response from AI service type: {type(response_from_ai_service)}, content: {str(response_from_ai_service)[:500]}"
+            )  # Importar validate_ai_response_structure
+
+            from .response_processor import (
+                process_ai_response,
+                validate_ai_response_structure,
             )
 
-            from .response_processor import process_ai_response
             parsed_ai_dict = process_ai_response(response_from_ai_service)
             logger.info(f"Parsed AI response dictionary: {parsed_ai_dict}")
 
             # Validar a estrutura da resposta da IA
-            if not isinstance(parsed_ai_dict, dict) or not validate_ai_response_structure(parsed_ai_dict):
+            if not isinstance(
+                parsed_ai_dict, dict
+            ) or not validate_ai_response_structure(
+                cast(Dict[str, Any], parsed_ai_dict)
+            ):
                 logger.warning(
                     f"Resposta da IA com estrutura inválida ou campos essenciais faltando: {str(parsed_ai_dict)[:500]}. Usando fallback."
                 )
                 return self._handle_ai_failure(action, details, game_state)
-
-            # A verificação original de 'isinstance(parsed_ai_dict, dict)' ainda é útil antes de chamar validate_ai_response_structure
-            if not isinstance(parsed_ai_dict, dict):
-                logger.error(
-                    f"process_ai_response did not return a dict: {parsed_ai_dict}"
-                )
-                return AIResponse(
-                    success=False,
-                    message="Falha interna ao processar a resposta da IA.",
-                    error="Formato de resposta inesperado do processador.",
-                    current_detailed_location=game_state.current_location
-                    or "Localização Indefinida",
-                    scene_description_update=game_state.scene_description
-                    or "A cena permanece como antes.",
-                    details={},
-                    interpreted_action_type=None,
-                    interpreted_action_details=None,
-                    interactable_elements=None,
-                    suggested_roll=None,  # Adicionado para completar a definição
-                )
 
             # Extrair valores do parsed_ai_dict, preparando para fallbacks
             is_successful = parsed_ai_dict.get("success", False)

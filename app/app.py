@@ -1,4 +1,5 @@
 # filepath: c:\Users\rodri\Desktop\REPLIT RPG\app\app.py
+
 import logging
 import os
 import sys
@@ -124,18 +125,10 @@ class GameApp:
 
                 character_data = request.form.to_dict()
                 # CharacterManager should assign a unique ID (e.g., character.id = str(uuid.uuid4()))
-                # and set character.owner_session_id = owner_session_id
-                character = self._create_character_from_form(character_data)
-
-                # Ensure owner_session_id is set on the character object by CharacterManager or here
-                if (
-                    not hasattr(character, "owner_session_id")
-                    or not character.owner_session_id
-                ):
-                    character.owner_session_id = owner_session_id
-                if not hasattr(character, "id") or not character.id:
-                    # Assign a unique ID if not already set by CharacterManager
-                    character.id = str(uuid.uuid4())
+                # Pass the current owner_session_id to the creation process
+                character = self._create_character_from_form(
+                    character_data, owner_session_id
+                )
 
                 self.game_engine.save_character(
                     character
@@ -215,6 +208,11 @@ class GameApp:
 
         # Verify character ownership if necessary, though selection should handle this
         if character.owner_session_id != owner_session_id:
+            logger.error(
+                f"Ownership mismatch for character {active_character_id}. "
+                f"Character owner: {character.owner_session_id}, "
+                f"Session user: {owner_session_id}"
+            )
             flash("Erro de permissão ao carregar personagem.", "error")
             session.pop("active_character_id", None)  # Clear invalid selection
             return redirect(url_for("routes.character"))
@@ -419,10 +417,14 @@ class GameApp:
         return GameStateManager.create_initial_game_state()
 
     @staticmethod
-    def _create_character_from_form(character_data: Dict[str, Any]) -> Character:
+    def _create_character_from_form(
+        character_data: Dict[str, Any], owner_session_id: str
+    ) -> Character:
         # This manager should now also handle setting a unique character.id
         # and potentially character.owner_session_id if passed in character_data or as an arg.
-        return CharacterManager.create_character_from_form(character_data)
+        return CharacterManager.create_character_from_form(
+            character_data, owner_session_id
+        )
 
     def _load_game_state(self, character_id: str) -> Optional[GameState]:
         # GameStateManager.load_game_state needs to accept character_id
@@ -482,27 +484,6 @@ class GameApp:
     @staticmethod
     def _error_response(error_key: str, error_details: str = "") -> Any:
         return ErrorHandler.create_error_response(error_key, "pt-br", error_details)
-
-    @staticmethod
-    def _log_game_action(
-        action: str,
-        details: str = "",
-        user_id: Optional[str] = None,
-        level: str = "info",
-    ) -> None:
-        # Determine effective_user_id, ensuring it's a string
-        _effective_user_id: Optional[str] = user_id or session.get("user_id")
-        effective_user_id_str: str = (
-            _effective_user_id if _effective_user_id is not None else "anonymous"
-        )
-
-        # Ensure action and details are strings if they somehow become None
-        GameLogger.log_game_action(
-            action if action is not None else "unspecified_action",
-            details if details is not None else "",
-            effective_user_id_str,  # Pass the guaranteed string
-            level,
-        )
 
     @staticmethod
     def get_app_config() -> Dict[str, Any]:

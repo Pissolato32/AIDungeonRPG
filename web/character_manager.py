@@ -45,7 +45,9 @@ class CharacterManager:
         return max(1, max_hp)
 
     @classmethod
-    def create_character_from_form(cls, character_data: Dict[str, Any]) -> "Character":
+    def create_character_from_form(
+        cls, character_data: Dict[str, Any], owner_session_id: str
+    ) -> "Character":
         from utils.character_utils import (
             calculate_initial_gold,
             generate_initial_inventory,
@@ -53,13 +55,17 @@ class CharacterManager:
 
         # 1. Get direct Character fields or set defaults for a new character
         name_val = character_data.get("name", cls.ATTRIBUTE_DEFAULTS["str"]["name"])
-        description_val = character_data.get("description", "")
+        description_val = character_data.get(
+            "description", ""
+        )  # Define description_val here
         level_val = 1  # New characters always start at level 1
-        experience_val = 0  # New characters start with 0 experience
-
         # 2. Initialize core attributes dictionary (strength, dexterity, etc.)
-        # This dictionary will become Character.attributes
-        final_character_attributes_dict: Dict[str, int] = {}
+        # These will now be passed as direct arguments to Character constructor.
+        # The 'attributes' dict on Character can be used for other, more dynamic stats.
+        character_direct_attrs: Dict[str, Any] = {
+            "attributes": {}
+        }  # Initialize attributes dict
+
         core_stat_names = [
             "strength",
             "dexterity",
@@ -74,28 +80,22 @@ class CharacterManager:
                 value = character_data.get(
                     stat_name, cls.ATTRIBUTE_DEFAULTS["int"].get(stat_name, 10)
                 )
-                final_character_attributes_dict[stat_name] = int(value)
+                character_direct_attrs[stat_name] = int(value)
             except (ValueError, TypeError):
                 default_stat_val = cls.ATTRIBUTE_DEFAULTS["int"].get(stat_name, 10)
-                final_character_attributes_dict[stat_name] = default_stat_val
+                character_direct_attrs[stat_name] = default_stat_val
                 logger.warning(
                     f"Invalid value for {stat_name}, using default: {default_stat_val}"
                 )
 
         # 3. Calculate derived attributes (HP, Stamina, Gold) and add them
-        constitution_for_hp_calc = final_character_attributes_dict.get(
-            "constitution", 10
-        )
+        constitution_for_hp_calc = character_direct_attrs.get("constitution", 10)
         max_hp_val = cls.calculate_max_hp_survivor(constitution_for_hp_calc, level_val)
-        final_character_attributes_dict["max_hp"] = max_hp_val
-        final_character_attributes_dict["current_hp"] = max_hp_val
+        character_direct_attrs["max_hp"] = max_hp_val
+        character_direct_attrs["current_hp"] = max_hp_val
 
-        dexterity_for_stamina_calc = final_character_attributes_dict.get(
-            "dexterity", 10
-        )
-        constitution_for_stamina_calc = final_character_attributes_dict.get(
-            "constitution", 10
-        )
+        dexterity_for_stamina_calc = character_direct_attrs.get("dexterity", 10)
+        constitution_for_stamina_calc = character_direct_attrs.get("constitution", 10)
         stamina_base = 10
         dex_mod_stamina = (dexterity_for_stamina_calc - 10) // 2
         con_mod_stamina = (constitution_for_stamina_calc - 10) // 2
@@ -105,53 +105,37 @@ class CharacterManager:
             + (dex_mod_stamina * level_val)
             + (con_mod_stamina * level_val),
         )
-        final_character_attributes_dict["max_stamina"] = max_stamina_val
-        final_character_attributes_dict["current_stamina"] = max_stamina_val
+        character_direct_attrs["max_stamina"] = max_stamina_val
+        character_direct_attrs["current_stamina"] = max_stamina_val
 
-        final_character_attributes_dict["gold"] = calculate_initial_gold(
-            # No longer depends on race
+        # Other direct fields
+        character_direct_attrs["description"] = (
+            description_val  # Ensure description from form is included
         )
+        character_direct_attrs["experience"] = (
+            0  # New characters start with 0 experience
+        )
+        character_direct_attrs["gold"] = calculate_initial_gold()
 
         # 4. Generate initial inventory
-        strength_for_inv_calc = final_character_attributes_dict.get("strength", 10)
-        dexterity_for_inv_calc = final_character_attributes_dict.get("dexterity", 10)
-        intelligence_for_inv_calc = final_character_attributes_dict.get(
-            "intelligence", 10
-        )
+        strength_for_inv_calc = character_direct_attrs.get("strength", 10)
+        dexterity_for_inv_calc = character_direct_attrs.get("dexterity", 10)
+        intelligence_for_inv_calc = character_direct_attrs.get("intelligence", 10)
         generated_inventory_items = generate_initial_inventory(
             strength_for_inv_calc,
             dexterity_for_inv_calc,
             intelligence_for_inv_calc,
             description_val,
         )
-        initial_inventory_list: List[Union[str, Dict[str, Any]]] = list(
-            generated_inventory_items
-        )
+        character_direct_attrs["inventory"] = list(generated_inventory_items)
+        # equipment and skills default to empty lists/dicts in Character model
 
+        # 5. Create the Character object, passing the collected attributes dictionary
         return Character(
             name=name_val,
-            strength=final_character_attributes_dict.get("strength", 10),
-            dexterity=final_character_attributes_dict.get("dexterity", 10),
-            constitution=final_character_attributes_dict.get("constitution", 10),
-            intelligence=final_character_attributes_dict.get("intelligence", 10),
-            wisdom=final_character_attributes_dict.get("wisdom", 10),
-            charisma=final_character_attributes_dict.get("charisma", 10),
-            description=description_val,
             level=level_val,
-            experience=experience_val,
-            gold=final_character_attributes_dict.get("gold", 50),
-            inventory=initial_inventory_list,
-            equipment={},  # Character __init__ handles default if None
-            skills=[],  # Character __init__ handles default if None
-            max_hp=final_character_attributes_dict.get("max_hp", 10),
-            current_hp=final_character_attributes_dict.get(
-                "current_hp", 10
-            ),  # Should be same as max_hp for new char
-            max_stamina=final_character_attributes_dict.get("max_stamina", 10),
-            current_stamina=final_character_attributes_dict.get(
-                "current_stamina", 10
-            ),  # Should be same as max_stamina
-            # id and owner_session_id are handled by Character.__init__ defaults or set later in app.py
+            owner_session_id=owner_session_id,  # Use the owner_session_id passed as an argument
+            **character_direct_attrs,  # Pass all other collected attributes
         )
 
     # The get_character_attributes method is no longer needed with the streamlined
