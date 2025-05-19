@@ -41,9 +41,9 @@
     "max_stamina": 14
   },
   "survival_stats": {
-    "current_hunger": 70,
+    "current_hunger": 60,
     "max_hunger": 100,
-    "current_thirst": 55,
+    "current_thirst": 40,
     "max_thirst": 100
   }
 }

@@ -159,6 +159,23 @@ class GameEngine:
     ) -> Dict[str, Any]:
         """Process a player action."""
 
+        # Verificar se a entrada atual é uma repetição das últimas N entradas do usuário
+        if details and details.strip():
+            player_input_lower = details.strip().lower()
+            # Considerar apenas as últimas 6 mensagens (3 turnos de user/assistant) para encontrar as últimas 3 do usuário
+            recent_user_inputs = [
+                msg["content"].lower()
+                for msg in game_state.messages[-6:]
+                if msg["role"] == "user"
+            ][
+                -3:
+            ]  # Pega as últimas 3 entradas do usuário
+            if player_input_lower in recent_user_inputs:
+                game_state.add_message(
+                    role="system",
+                    content="Nota ao Mestre: o jogador repetiu a entrada/pergunta. Aprofunde com novos detalhes ou forneça uma perspectiva diferente.",
+                )
+
         # Add player's raw input to message history before any processing
         if details and details.strip():
             game_state.add_message(role="user", content=details)
@@ -257,6 +274,10 @@ class GameEngine:
 
                 # Verifica se a resposta da IA foi bem-sucedida
                 if current_ai_response.get("success"):
+                    # >>> NOVO: Método para aplicar atualizações da IA ao GameState
+                    self._apply_ai_updates_to_gamestate(current_ai_response, game_state)
+                    # <<< FIM NOVO
+
                     # >>> NOVO: Processar suggested_roll
                     if current_ai_response.get("suggested_roll") and isinstance(
                         actual_handler, CustomActionHandler
@@ -407,6 +428,48 @@ class GameEngine:
                 return result_from_handler
 
         return result_from_handler
+
+    def _apply_ai_updates_to_gamestate(
+        self, ai_response: AIResponse, game_state: GameState
+    ) -> None:
+        """
+        Applies updates from the AIResponse to the GameState.
+        This includes location, scene description, and potentially NPCs/events if
+        the AI is empowered to suggest them directly.
+        """
+        new_detailed_location = ai_response.get("current_detailed_location")
+        if new_detailed_location:
+            # A lógica de _update_location já existe e é mais completa,
+            # mas ela espera um location_id. Se a IA retorna um nome,
+            # precisamos de uma forma de mapear nome para ID ou atualizar diretamente.
+            # Por enquanto, vamos atualizar os campos diretos do game_state.
+            # Idealmente, a IA retornaria um location_id ou o GameEngine
+            # resolveria o nome para um ID.
+            if game_state.current_location != new_detailed_location:
+                logger.info(
+                    f"AI updated location from '{game_state.current_location}' to '{new_detailed_location}'"
+                )
+                game_state.current_location = new_detailed_location
+                # Se a IA também fornecer um novo location_id, atualize-o:
+                # if ai_response.get("new_location_id"):
+                #     game_state.location_id = ai_response["new_location_id"]
+
+        new_scene_description = ai_response.get("scene_description_update")
+        if new_scene_description:
+            game_state.scene_description = new_scene_description
+
+        # Exemplo de como você poderia lidar com interactable_elements,
+        # npcs_present, ou events se a IA os modificasse diretamente.
+        # Atualmente, o GameEngine já lida com npcs_present e events baseado
+        # na carga de uma nova localização.
+        # Se a IA puder adicionar/remover NPCs/eventos dinamicamente na mesma cena:
+        # if ai_response.get("interactable_elements"):
+        #     # Você precisaria de um método em GameState para adicionar/gerenciar estes
+        #     # game_state.update_interactable_elements(ai_response["interactable_elements"])
+        # if ai_response.get("npcs_present_update"): # Um novo campo hipotético
+        #     game_state.npcs_present = ai_response["npcs_present_update"]
+        # if ai_response.get("events_update"): # Um novo campo hipotético
+        #     game_state.events = ai_response["events_update"]
 
     # Note: The GameAIClient class (in ai/game_ai_client.py) will need to be adapted
     # to use game_state.messages as the 'messages' argument for

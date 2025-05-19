@@ -1,52 +1,12 @@
 {
-  "current_location": "Abrigo Subterr\u00e2neo - Sala Principal",
-  "scene_description": "A sala permanece sombria, mas a luz fraca de esperan\u00e7a continua a brilhar. O som do gerador e o gotejar de \u00e1gua continuam, agora com um tom mais tranquilizador devido ao trabalho em equipe.",
+  "current_location": "Abrigo Subterr\u00e2neo - Port\u00e3o Principal",
+  "scene_description": "O ambiente continua sombrio devido \u00e0 falta de luz solar, mas agora h\u00e1 uma sensa\u00e7\u00e3o de esperan\u00e7a com a possibilidade de sair do abrigo. O gotejar de \u00e1gua continua no fundo, e o gerador continua a piscar, mas a tens\u00e3o \u00e9 menor com a perspectiva de uma sa\u00edda.",
   "npcs_present": [
     "Velho Sobrevivente Cansado",
     "M\u00e9dica de Campo Apavorada"
   ],
   "known_npcs": {},
   "messages": [
-    {
-      "role": "user",
-      "content": "Saio do abrigo subterraneo para procurar suprimentos fora do abrigo "
-    },
-    {
-      "role": "assistant",
-      "content": "Voc\u00ea retorna ao Abrigo Subterr\u00e2neo, e a porta se fecha atr\u00e1s de voc\u00ea com um rangido, trazendo um senso de seguran\u00e7a. A M\u00e9dica de Campo olha para voc\u00ea com um misto de al\u00edvio e preocupa\u00e7\u00e3o, enquanto o Velho Sobrevivente Cansado suspira, reconhecendo a necessidade de sua presen\u00e7a l\u00e1 fora. A luz no abrigo pisca novamente, e o gerador continua a funcionar, embora com um som mais fraco agora."
-    },
-    {
-      "role": "user",
-      "content": "Examinar Mesa de Planejamento"
-    },
-    {
-      "role": "assistant",
-      "content": "Voc\u00ea se aproxima da Mesa de Planejamento e come\u00e7a a examinar os mapas e anota\u00e7\u00f5es espalhados por cima. O Velho Sobrevivente Cansado, notando sua interesse, se aproxima e come\u00e7a a explicar os planos de fuga e busca por suprimentos. A M\u00e9dica de Campo, que estava trabalhando em um paciente, olha para voc\u00ea com curiosidade, esperando para ver o que voc\u00ea encontrou."
-    },
-    {
-      "role": "user",
-      "content": "Examinar Mapa do Exterior"
-    },
-    {
-      "role": "assistant",
-      "content": "```json\n{\n  \"message\": \"Ao examinar o Mapa do Exterior, voc\u00ea nota que as suas anota\u00e7\u00f5es indicam que a regi\u00e3o ao norte da sua localiza\u00e7\u00e3o \u00e9 considerada relativamente segura, com algumas ru\u00ednas de edif\u00edcios que podem ter suprimentos \u00fateis. No entanto, h\u00e1 tamb\u00e9m uma grande quantidade de zumbis nessa \u00e1rea, o que torna qualquer sa\u00edda arriscada. O Velho Sobrevivente Cansado observa seu interesse no mapa e come\u00e7a a explicar os perigos e poss\u00edveis recompensas da regi\u00e3o norte, enquanto a M\u00e9dica de Campo analisa suas anota\u00e7\u00f5es com um olhar de preocupa\u00e7\u00e3o.\",\n  \"current_detailed_location\": \"Abrigo Subterr\u00e2neo - Sala Principal\",\n  \"scene_description_update\": \"A sala principal do abrigo permanece sombria, mas com um tom de esperan\u00e7a no ar. Os sobreviventes discutem estrat\u00e9gias silenciosamente, evitando fazer barulho. O gerador funciona com um som fraco e intermitente, e o gotejar de \u00e1gua continua a ser um som constante.\",\n  \"success\": true,\n  \"interpreted_action_type\": \"search\",\n  \"interpreted_action_details\": {\"target\": \"Mapa do Exterior\"},\n  \"interactable_elements\": [\"Mesa de Planejamento\", \""
-    },
-    {
-      "role": "user",
-      "content": "ir at\u00e9 a enfermaria"
-    },
-    {
-      "role": "assistant",
-      "content": "```json\n{\n  \"message\": \"Ao ir at\u00e9 a enfermaria, voc\u00ea nota que a M\u00e9dica de Campo est\u00e1 ocupada com um paciente, que parece estar em estado cr\u00edtico. Ela olha para voc\u00ea com uma mistura de curiosidade e preocupa\u00e7\u00e3o, pedindo: 'Pode me ajudar a estabilizar o paciente? Preciso de algu\u00e9m para segurar a v\u00edtima enquanto eu aplico os cuidados necess\u00e1rios.' O Velho Sobrevivente Cansado, que estava observando de longe, se aproxima e come\u00e7a a explicar a situa\u00e7\u00e3o, '\u00c9 um ferimento grave, n\u00e3o sei se ele vai sobreviver...'\",\n  \"current_detailed_location\": \"Abrigo Subterr\u00e2neo - Sala Principal\",\n  \"scene_description_update\": \"A sala principal do abrigo permanece sombria, mas com um tom de esperan\u00e7a no ar. Os sobreviventes discutem estrat\u00e9gias em voz baixa, evitando fazer barulho. O gerador funciona com um som fraco e intermitente, e o gotejar de \u00e1gua continua a ser um som constante.\",\n  \"success\": true,\n  \"interpreted_action_type\": \"move\",\n  \"interpreted_action_details\": {\"destination\": \"Enfermaria\"},\n  \"interactable_elements\": [\"Mesa de Planejamento\", \"Enfermaria Improvis"
-    },
-    {
-      "role": "user",
-      "content": "Isqueiro (pouco g\u00e1s)"
-    },
-    {
-      "role": "assistant",
-      "content": "Voc\u00ea est\u00e1 de p\u00e9 na Sala Principal do Abrigo Subterr\u00e2neo, cercado por sobreviventes cansados e preocupados. O gerador funciona com um som fraco e intermitente, e o gotejar de \u00e1gua continua a ser um som constante. O Velho Sobrevivente Cansado olha para voc\u00ea com desconfian\u00e7a, enquanto a M\u00e9dica de Campo est\u00e1 ocupada estabilizando um paciente cr\u00edtico. De repente, o isqueiro que voc\u00ea usou para iluminar momentaneamente a sala agora est\u00e1 sem g\u00e1s, e o ambiente volta a ser sombrio."
-    },
     {
       "role": "user",
       "content": "Examinar Enfermaria Improvisada"
@@ -86,6 +46,46 @@
     {
       "role": "assistant",
       "content": "```json\n{\n  \"message\": \"Ao examinar a Mesa de Opera\u00e7\u00f5es, voc\u00ea nota que a equipe de m\u00e9dicos fez um excelente trabalho em estabilizar sua condi\u00e7\u00e3o. H\u00e1 v\u00e1rios kit de primeiros socorros espalhados pela mesa, al\u00e9m de uma pequena quantidade de medicamentos. A M\u00e9dica de Campo nota sua presen\u00e7a e diz: 'Estamos fazendo o melhor que podemos com os recursos que temos. Seu estado est\u00e1 melhorando, mas precisamos manter a vigil\u00e2ncia alta por poss\u00edveis amea\u00e7as externas.' O Velho Sobrevivente Cansado acrescenta, 'Se voc\u00ea quiser ajudar, podemos sempre usar mais algu\u00e9m para vigiar as entradas e sa\u00eddas.'\",\n  \"current_detailed_location\": \"Abrigo Subterr\u00e2neo - Sala Principal\",\n  \"scene_description_update\": \"A sala permanece sombria, mas a luz fraca oferece um pouco de conforto. O som do gerador e o gotejar de \u00e1gua continuam, criando um tom de tranquilidade ap\u00f3s os esfor\u00e7os em equipe.\",\n  \"success\": true,\n  \"interpreted_action_type\": \"search\",\n  \"interpreted_action_details\": {\"target\": \"Mesa de Opera\u00e7\u00f5es\"},\n  \"interactable_elements\": [\"Mesa de Opera\u00e7\u00f5es\", \"Bancadas de Enfermagem\", \"Arm\u00e1rio de Rem\u00e9dios\"]"
+    },
+    {
+      "role": "user",
+      "content": "saio correndo em dire\u00e7\u00e3o ao port\u00e3o principal, procurando uma maneira de sair ddaqui."
+    },
+    {
+      "role": "assistant",
+      "content": "Ao sair correndo em dire\u00e7\u00e3o ao port\u00e3o principal, voc\u00ea sente o ar frio do abrigo subterr\u00e2neo e o som do gerador e do gotejar de \u00e1gua se tornam mais intensos. A luz pisca de forma mais r\u00e1pida, como se o gerador estivesse lutando para manter a ilumina\u00e7\u00e3o. Voc\u00ea chega ao port\u00e3o e v\u00ea que est\u00e1 trancado, com fechaduras e correntes que parecem mais resistentes do que esperava. A porta \u00e9 feita de a\u00e7o grosso e parece ter sido refor\u00e7ada recentemente."
+    },
+    {
+      "role": "user",
+      "content": "Pe\u00e7o o velho para abrir para mim. Dou a desculpa de que vou procurar suprimentos, mas na verdade vou fugir"
+    },
+    {
+      "role": "assistant",
+      "content": "Ao pedir ao Velho Sobrevivente Cansado para abrir o port\u00e3o principal, ele olha para voc\u00ea com um misto de desconfian\u00e7a e preocupa\u00e7\u00e3o. 'O que voc\u00ea est\u00e1 fazendo?', pergunta ele. 'Ainda estamos em perigo l\u00e1 fora. N\u00e3o podemos simplesmente sair correndo sem planejar.' A M\u00e9dica de Campo se aproxima, interferindo: 'Ele diz que vai procurar suprimentos, mas... bem, n\u00e3o estamos t\u00e3o convencidos disso.' Ela olha para voc\u00ea com um olhar c\u00e9tico."
+    },
+    {
+      "role": "user",
+      "content": "Tentar convencer os dois"
+    },
+    {
+      "role": "assistant",
+      "content": "Voc\u00ea tenta convencer o Velho Sobrevivente Cansado e a M\u00e9dica de Campo de que precisa sair do abrigo para procurar suprimentos, mas eles parecem n\u00e3o acreditar na sua hist\u00f3ria. A M\u00e9dica de Campo olha para voc\u00ea com desconfian\u00e7a, enquanto o Velho Sobrevivente Cansado balan\u00e7a a cabe\u00e7a, dizendo: 'N\u00e3o \u00e9 seguro sair agora, n\u00e3o sabemos o que est\u00e1 acontecendo l\u00e1 fora'. O gerador do abrigo continua a piscar, criando uma atmosfera de incerteza."
+    },
+    {
+      "role": "user",
+      "content": "Examinar fechaduras e corrents"
+    },
+    {
+      "role": "assistant",
+      "content": "Voc\u00ea examina as fechaduras e correntes do port\u00e3o principal do abrigo, procurando por alguma vulnerabilidade. O Velho Sobrevivente Cansado observa seu esfor\u00e7o com desconfian\u00e7a, enquanto a M\u00e9dica de Campo se afasta, olhando para voc\u00ea com um misto de preocupa\u00e7\u00e3o e desgaste. Ap\u00f3s um momento, voc\u00ea nota que as correntes parecem estar presas por uma fechadura antiga, que pode ser aberta com a chave certa."
+    },
+    {
+      "role": "user",
+      "content": "procurar a chave d afechadura"
+    },
+    {
+      "role": "assistant",
+      "content": "Voc\u00ea come\u00e7a a procurar a chave para a fechadura antiga que prende as correntes do port\u00e3o principal. O Velho Sobrevivente Cansado observa com aten\u00e7\u00e3o, enquanto a M\u00e9dica de Campo continua a examinar alguns suprimentos m\u00e9dicos, parecendo distra\u00edda. Ap\u00f3s alguns minutos de busca, voc\u00ea encontra uma chave antiga escondida em uma pequena gaveta pr\u00f3xima. A chave parece ser do per\u00edodo certo e voc\u00ea consegue abri-la com sucesso."
     }
   ],
   "coordinates": {

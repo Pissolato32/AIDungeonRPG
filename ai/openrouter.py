@@ -112,9 +112,14 @@ class OpenRouterClient:
 
         # Apply default and then override with provided generation_params
         default_gen_params = {
-            "temperature": 0.8,
-            "max_tokens": 300,
+            "temperature": 0.7,  # Ajustado conforme sua sugestão
+            "max_tokens": 450,  # Aumentado um pouco para permitir respostas mais longas
+            "presence_penalty": 0.6,  # Conforme sua sugestão
+            "frequency_penalty": 0.3,  # Conforme sua sugestão
+            "top_p": 0.95,  # Conforme sua sugestão
+            # "stop": ["\nJogador:", "Você:", "Mestre:"] # Exemplo de stop sequences
         }  # Sensible defaults
+        # As stop sequences podem ser uma lista de strings.
         final_gen_params = {**default_gen_params, **(generation_params or {})}
         payload.update(final_gen_params)
 
