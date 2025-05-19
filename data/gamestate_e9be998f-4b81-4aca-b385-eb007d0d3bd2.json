@@ -1,0 +1,182 @@
+{
+  "current_location": "Abrigo Subterr\u00e2neo - Sala Principal",
+  "scene_description": "A sala permanece sombria, mas a luz fraca de esperan\u00e7a continua a brilhar. O som do gerador e o gotejar de \u00e1gua continuam, agora com um tom mais tranquilizador devido ao trabalho em equipe.",
+  "npcs_present": [
+    "Velho Sobrevivente Cansado",
+    "M\u00e9dica de Campo Apavorada"
+  ],
+  "known_npcs": {},
+  "messages": [
+    {
+      "role": "user",
+      "content": "Saio do abrigo subterraneo para procurar suprimentos fora do abrigo "
+    },
+    {
+      "role": "assistant",
+      "content": "Voc\u00ea retorna ao Abrigo Subterr\u00e2neo, e a porta se fecha atr\u00e1s de voc\u00ea com um rangido, trazendo um senso de seguran\u00e7a. A M\u00e9dica de Campo olha para voc\u00ea com um misto de al\u00edvio e preocupa\u00e7\u00e3o, enquanto o Velho Sobrevivente Cansado suspira, reconhecendo a necessidade de sua presen\u00e7a l\u00e1 fora. A luz no abrigo pisca novamente, e o gerador continua a funcionar, embora com um som mais fraco agora."
+    },
+    {
+      "role": "user",
+      "content": "Examinar Mesa de Planejamento"
+    },
+    {
+      "role": "assistant",
+      "content": "Voc\u00ea se aproxima da Mesa de Planejamento e come\u00e7a a examinar os mapas e anota\u00e7\u00f5es espalhados por cima. O Velho Sobrevivente Cansado, notando sua interesse, se aproxima e come\u00e7a a explicar os planos de fuga e busca por suprimentos. A M\u00e9dica de Campo, que estava trabalhando em um paciente, olha para voc\u00ea com curiosidade, esperando para ver o que voc\u00ea encontrou."
+    },
+    {
+      "role": "user",
+      "content": "Examinar Mapa do Exterior"
+    },
+    {
+      "role": "assistant",
+      "content": "```json\n{\n  \"message\": \"Ao examinar o Mapa do Exterior, voc\u00ea nota que as suas anota\u00e7\u00f5es indicam que a regi\u00e3o ao norte da sua localiza\u00e7\u00e3o \u00e9 considerada relativamente segura, com algumas ru\u00ednas de edif\u00edcios que podem ter suprimentos \u00fateis. No entanto, h\u00e1 tamb\u00e9m uma grande quantidade de zumbis nessa \u00e1rea, o que torna qualquer sa\u00edda arriscada. O Velho Sobrevivente Cansado observa seu interesse no mapa e come\u00e7a a explicar os perigos e poss\u00edveis recompensas da regi\u00e3o norte, enquanto a M\u00e9dica de Campo analisa suas anota\u00e7\u00f5es com um olhar de preocupa\u00e7\u00e3o.\",\n  \"current_detailed_location\": \"Abrigo Subterr\u00e2neo - Sala Principal\",\n  \"scene_description_update\": \"A sala principal do abrigo permanece sombria, mas com um tom de esperan\u00e7a no ar. Os sobreviventes discutem estrat\u00e9gias silenciosamente, evitando fazer barulho. O gerador funciona com um som fraco e intermitente, e o gotejar de \u00e1gua continua a ser um som constante.\",\n  \"success\": true,\n  \"interpreted_action_type\": \"search\",\n  \"interpreted_action_details\": {\"target\": \"Mapa do Exterior\"},\n  \"interactable_elements\": [\"Mesa de Planejamento\", \""
+    },
+    {
+      "role": "user",
+      "content": "ir at\u00e9 a enfermaria"
+    },
+    {
+      "role": "assistant",
+      "content": "```json\n{\n  \"message\": \"Ao ir at\u00e9 a enfermaria, voc\u00ea nota que a M\u00e9dica de Campo est\u00e1 ocupada com um paciente, que parece estar em estado cr\u00edtico. Ela olha para voc\u00ea com uma mistura de curiosidade e preocupa\u00e7\u00e3o, pedindo: 'Pode me ajudar a estabilizar o paciente? Preciso de algu\u00e9m para segurar a v\u00edtima enquanto eu aplico os cuidados necess\u00e1rios.' O Velho Sobrevivente Cansado, que estava observando de longe, se aproxima e come\u00e7a a explicar a situa\u00e7\u00e3o, '\u00c9 um ferimento grave, n\u00e3o sei se ele vai sobreviver...'\",\n  \"current_detailed_location\": \"Abrigo Subterr\u00e2neo - Sala Principal\",\n  \"scene_description_update\": \"A sala principal do abrigo permanece sombria, mas com um tom de esperan\u00e7a no ar. Os sobreviventes discutem estrat\u00e9gias em voz baixa, evitando fazer barulho. O gerador funciona com um som fraco e intermitente, e o gotejar de \u00e1gua continua a ser um som constante.\",\n  \"success\": true,\n  \"interpreted_action_type\": \"move\",\n  \"interpreted_action_details\": {\"destination\": \"Enfermaria\"},\n  \"interactable_elements\": [\"Mesa de Planejamento\", \"Enfermaria Improvis"
+    },
+    {
+      "role": "user",
+      "content": "Isqueiro (pouco g\u00e1s)"
+    },
+    {
+      "role": "assistant",
+      "content": "Voc\u00ea est\u00e1 de p\u00e9 na Sala Principal do Abrigo Subterr\u00e2neo, cercado por sobreviventes cansados e preocupados. O gerador funciona com um som fraco e intermitente, e o gotejar de \u00e1gua continua a ser um som constante. O Velho Sobrevivente Cansado olha para voc\u00ea com desconfian\u00e7a, enquanto a M\u00e9dica de Campo est\u00e1 ocupada estabilizando um paciente cr\u00edtico. De repente, o isqueiro que voc\u00ea usou para iluminar momentaneamente a sala agora est\u00e1 sem g\u00e1s, e o ambiente volta a ser sombrio."
+    },
+    {
+      "role": "user",
+      "content": "Examinar Enfermaria Improvisada"
+    },
+    {
+      "role": "assistant",
+      "content": "```json\n{\n  \"message\": \"Ao examinar a Enfermaria Improvisada, voc\u00ea nota que a M\u00e9dica de Campo est\u00e1 ainda ocupada com o paciente cr\u00edtico. Ela olha para voc\u00ea com uma mistura de curiosidade e preocupa\u00e7\u00e3o, pedindo: 'Pode me ajudar a estabilizar o paciente? Preciso de algu\u00e9m para segurar a v\u00edtima enquanto eu aplico os cuidados necess\u00e1rios.' O Velho Sobrevivente Cansado, que estava observando de longe, se aproxima e come\u00e7a a explicar a situa\u00e7\u00e3o, '\u00c9 um ferimento grave, n\u00e3o sei se ele vai sobreviver...'\",\n  \"current_detailed_location\": \"Abrigo Subterr\u00e2neo - Sala Principal\",\n  \"scene_description_update\": \"A sala principal do abrigo permanece sombria, com um tom de esperan\u00e7a fr\u00e1gil. O gerador funciona com um som intermitente, e o gotejar de \u00e1gua continua a ser um som constante. A tens\u00e3o \u00e9 palp\u00e1vel, com os sobreviventes discutindo em voz baixa.\",\n  \"success\": true,\n  \"interpreted_action_type\": \"search\",\n  \"interpreted_action_details\": {\"target\": \"Enfermaria Improvisada\"},\n  \"interactable_elements\": [\"Mesa de Planejamento\", \"Enfermaria Improvisada\", \"Ger"
+    },
+    {
+      "role": "user",
+      "content": "Ajudar a segurar o paciente cr\u00edtico"
+    },
+    {
+      "role": "assistant",
+      "content": "Voc\u00ea decide ajudar a segurar o paciente cr\u00edtico, trabalhando em harmonia com a M\u00e9dica de Campo para estabiliz\u00e1-lo. O Velho Sobrevivente Cansado,izando a tentativa de salvar a vida do paciente, olha para voc\u00ea com uma mistura de gratid\u00e3o e expectativa. Apesar do ambiente hostil e do gerador intermitente, h\u00e1 um momento de uni\u00e3o e determina\u00e7\u00e3o entre os sobreviventes."
+    },
+    {
+      "role": "user",
+      "content": "- Ele vai sobreviver?"
+    },
+    {
+      "role": "assistant",
+      "content": "A M\u00e9dica de Campo olha para voc\u00ea com uma mistura de preocupa\u00e7\u00e3o e curiosidade, perguntando: 'Ele vai sobreviver? Precisamos saber se nossos esfor\u00e7os est\u00e3o surtindo efeito'. O Velho Sobrevivente Cansado suspira, 'Ainda \u00e9 cedo para dizer, mas a estabilidade do paciente \u00e9 um bom sinal. Precisamos continuar cuidando dele e manter a esperan\u00e7a viva.'"
+    },
+    {
+      "role": "user",
+      "content": "- Eu estou perguntando do paciente que estou aqui segurando, voc\u00ea acha que ele vai sobreviver?"
+    },
+    {
+      "role": "assistant",
+      "content": "A M\u00e9dica de Campo olha para voc\u00ea com uma mistura de preocupa\u00e7\u00e3o e curiosidade, perguntando: 'Ele vai sobreviver? Precisamos saber se nossos esfor\u00e7os est\u00e3o surtindo efeito'. O Velho Sobrevivente Cansado suspira, 'Ainda \u00e9 cedo para dizer, mas a estabilidade do paciente \u00e9 um bom sinal. Precisamos continuar cuidando dele e manter a esperan\u00e7a viva.'"
+    },
+    {
+      "role": "user",
+      "content": "Examinar Mesa de Opera\u00e7\u00f5es"
+    },
+    {
+      "role": "assistant",
+      "content": "```json\n{\n  \"message\": \"Ao examinar a Mesa de Opera\u00e7\u00f5es, voc\u00ea nota que a equipe de m\u00e9dicos fez um excelente trabalho em estabilizar sua condi\u00e7\u00e3o. H\u00e1 v\u00e1rios kit de primeiros socorros espalhados pela mesa, al\u00e9m de uma pequena quantidade de medicamentos. A M\u00e9dica de Campo nota sua presen\u00e7a e diz: 'Estamos fazendo o melhor que podemos com os recursos que temos. Seu estado est\u00e1 melhorando, mas precisamos manter a vigil\u00e2ncia alta por poss\u00edveis amea\u00e7as externas.' O Velho Sobrevivente Cansado acrescenta, 'Se voc\u00ea quiser ajudar, podemos sempre usar mais algu\u00e9m para vigiar as entradas e sa\u00eddas.'\",\n  \"current_detailed_location\": \"Abrigo Subterr\u00e2neo - Sala Principal\",\n  \"scene_description_update\": \"A sala permanece sombria, mas a luz fraca oferece um pouco de conforto. O som do gerador e o gotejar de \u00e1gua continuam, criando um tom de tranquilidade ap\u00f3s os esfor\u00e7os em equipe.\",\n  \"success\": true,\n  \"interpreted_action_type\": \"search\",\n  \"interpreted_action_details\": {\"target\": \"Mesa de Opera\u00e7\u00f5es\"},\n  \"interactable_elements\": [\"Mesa de Opera\u00e7\u00f5es\", \"Bancadas de Enfermagem\", \"Arm\u00e1rio de Rem\u00e9dios\"]"
+    }
+  ],
+  "coordinates": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "current_action": "interpret",
+  "discovered_locations": {},
+  "npcs_by_location": {},
+  "npc_relationships": {},
+  "location_id": "bunker_main",
+  "events": [
+    "Ouve-se o gotejar constante de \u00e1gua em algum lugar pr\u00f3ximo.",
+    "Um gerador falha e a luz pisca antes de voltar."
+  ],
+  "world_map": {
+    "bunker_main": {
+      "name": "Abrigo Subterr\u00e2neo - Principal",
+      "coordinates": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "connections": {
+        "north": "bunker_exit_tunnel",
+        "east": "bunker_infirmary",
+        "west": "bunker_storage"
+      }
+    },
+    "bunker_exit_tunnel": {
+      "name": "T\u00fanel de Sa\u00edda do Abrigo",
+      "coordinates": {
+        "x": 0,
+        "y": 1,
+        "z": 0
+      },
+      "connections": {
+        "south": "bunker_main",
+        "north": "ruined_street_01"
+      }
+    },
+    "bunker_infirmary": {
+      "name": "Enfermaria do Abrigo",
+      "coordinates": {
+        "x": 1,
+        "y": 0,
+        "z": 0
+      },
+      "connections": {
+        "west": "bunker_main"
+      }
+    },
+    "bunker_storage": {
+      "name": "Dep\u00f3sito do Abrigo",
+      "coordinates": {
+        "x": -1,
+        "y": 0,
+        "z": 0
+      },
+      "connections": {
+        "east": "bunker_main"
+      }
+    },
+    "ruined_street_01": {
+      "name": "Rua Devastada Pr\u00f3xima ao Abrigo",
+      "coordinates": {
+        "x": 0,
+        "y": 2,
+        "z": 0
+      },
+      "connections": {
+        "south": "bunker_exit_tunnel"
+      }
+    }
+  },
+  "visited_locations": {
+    "bunker_main": {
+      "name": "Abrigo Subterr\u00e2neo - Principal",
+      "last_visited": "initial",
+      "description": "Voc\u00ea est\u00e1 na sala principal de um abrigo subterr\u00e2neo improvisado. As paredes de concreto s\u00e3o \u00famidas e a \u00fanica luz vem de algumas l\u00e2mpadas de emerg\u00eancia piscando. H\u00e1 um port\u00e3o de metal refor\u00e7ado ao norte que leva \u00e0 superf\u00edcie, uma enfermaria improvisada a leste e um dep\u00f3sito de suprimentos a oeste.",
+      "npcs_seen": [
+        "Velho Sobrevivente Cansado",
+        "M\u00e9dica de Campo Apavorada"
+      ],
+      "events_seen": [
+        "Ouve-se o gotejar constante de \u00e1gua em algum lugar pr\u00f3ximo.",
+        "Um gerador falha e a luz pisca antes de voltar."
+      ],
+      "search_results": []
+    }
+  },
+  "combat": null
+}

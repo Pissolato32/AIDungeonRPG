@@ -4,10 +4,12 @@
 This module handles AI model interactions for generating game content
 and responses."""
 
+import json
 import logging
 from typing import Any, Dict, List, Optional, TypedDict, cast, Protocol
 
 from core.game_state_model import GameState
+from core.models import Character
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,9 @@ class AIResponse(TypedDict):
     interpreted_action_details: Optional[
         Dict[str, Any]
     ]  # Novo: Detalhes da ação interpretada
+    suggested_roll: Optional[
+        Dict[str, Any]
+    ]  # Novo: Sugestão de rolagem de dados pela IA
     interactable_elements: Optional[List[str]]  # Novo: Elementos interativos na cena
 
 
@@ -39,14 +44,18 @@ class AIResponse(TypedDict):
 class AIModelClientType(Protocol):
     """Protocol for AI model clients that can generate text responses."""
 
-    def generate_response(self, prompt_data: AIPrompt) -> str:
+    def generate_response(
+        self,
+        messages: List[AIPrompt],
+        generation_params: Optional[Dict[str, Any]] = None,
+    ) -> str:
         """Generates a response from the AI model based on the prompt.
 
         Args:
-            prompt_data: The prompt to send to the AI.
-
+            messages: A list of message dictionaries to send to the AI.
+            generation_params: Optional dictionary of generation parameters.
         Returns:
-            The raw string response from the AI (e.g., a JSON string).
+            The raw string response from the AI (e.g., a JSON string or plain text).
         """
         ...
 
@@ -174,29 +183,106 @@ class GameAIClient:
                     prompt += "\n"
 
         if recent_messages:
-            messages_text = "\n".join([f"- {msg}" for msg in recent_messages])
+            messages_text = "\n".join(
+                [
+                    f"- {msg.get('role', 'unknown')}: {msg.get('content', '')}"
+                    for msg in recent_messages
+                ]
+            )
             prompt += (
                 f"Histórico recente da conversa (para contexto):\n{messages_text}\n\n"
             )
         # Lógica principal para interpretação de ação ou ação direta
         # Assumindo que 'interpret' será o novo 'action' padrão vindo do GameEngine para entrada de texto livre
-        if (
-            action.lower() == "interpret" or action.lower() == "custom"
-        ):  # Unificando 'custom' para ser interpretativo
+
+        # The 'action' parameter received by _create_action_prompt is 'action_for_ai' from GameEngine.
+        # The 'details' parameter received here is 'message_for_ai_narration' from GameEngine.
+
+        if action.lower() == "interpret":
+            # 'details' contains the raw player input.
+            # Check if the interpreted action is likely movement
+            is_movement_intent = False
+            details_lower = details.lower() if isinstance(details, str) else ""
+            movement_keywords = [
+                "sair",
+                "entrar",
+                "ir para",
+                "mover para",
+                "seguir para",
+                "voltar para",  # "voltar para" pode ser complicado, mas a IA deve determinar o destino.
+                "norte",
+                "sul",
+                "leste",
+                "oeste",
+                "corredor",  # Exemplo de alvo de local
+                "exterior",
+            ]
+            if any(keyword in details_lower for keyword in movement_keywords):
+                is_movement_intent = True
+
+            if is_movement_intent:
+                prompt += (
+                    f"Ação de Movimento do Jogador (interprete e execute): {details}\n"
+                    f"Localização Atual do Jogador (antes do movimento): {state_dict['current_location']}\n\n"
+                    "SUA TAREFA (para movimento interpretado):\n"
+                    "1. DETERMINE O NOVO LOCAL: Baseado na 'Ação de Movimento do Jogador' e na 'Localização Atual do Jogador', determine para onde o jogador está tentando ir. Se for 'sair do abrigo', o novo local é claramente fora do abrigo. Se for uma direção, é um local adjacente. Se for um nome de local, é esse local.\n"
+                    "2. NARRE A TRANSIÇÃO E O NOVO LOCAL: Sua `message` DEVE descrever o jogador saindo do local atual e chegando ao NOVO local. Descreva brevemente o que ele vê e sente ao chegar no NOVO local. É CRUCIAL que sua narrativa reflita a chegada ao NOVO local e NÃO um retorno ao local anterior ou qualquer confusão sobre a movimentação.\n"
+                    "3. ATUALIZE OS CAMPOS JSON PARA O NOVO LOCAL: No seu JSON de resposta:\n"
+                    "   - `current_detailed_location` DEVE ser o nome detalhado do NOVO local para onde o jogador se moveu.\n"
+                    "   - `scene_description_update` DEVE ser a descrição do NOVO local.\n"
+                    "   - `interpreted_action_type` deve ser 'move'.\n"
+                    "   - `interpreted_action_details` deve conter informações sobre o movimento (ex: {'direction': 'saindo do abrigo', 'target_location_name': 'Corredor Externo'}).\n\n"
+                )
+            else:  # Default 'interpret' prompt for non-movement actions
+                prompt += (
+                    f"Ação textual do jogador (interprete a intenção): {details}\n\n"
+                    "SUA TAREFA PRINCIPAL (quando a ação é 'interpret' e NÃO é explicitamente movimento):\n"
+                    "1. INTERPRETE A INTENÇÃO: Analise a 'Ação textual do jogador' para determinar a intenção principal. Categorize-a como uma das seguintes: 'look', 'talk', 'vocal_action', 'search', 'use_item', 'attack', 'flee', 'rest', 'skill', 'craft', 'custom_complex'.\n"
+                    "2. GERE A NARRATIVA: Com base na intenção interpretada, narre o resultado da ação como Mestre do Jogo. Aplique as 'Diretrizes Gerais para Resposta' e, se a intenção corresponder a uma das ações com 'SUB-DIRETRIZES PARA INTENÇÕES ESPECÍFICAS' abaixo, aplique essas sub-diretrizes também.\n"
+                    "3. INCLUA INTERPRETAÇÃO NO JSON: No seu JSON de resposta, além dos campos padrão, inclua 'interpreted_action_type' (a categoria que você escolheu) e 'interpreted_action_details' (um dicionário com parâmetros relevantes).\n\n"
+                )
+        elif (
+            "resolved" in action.lower()
+            or "success" in action.lower()
+            or "fail" in action.lower()
+            or game_state.current_action == "attack"
+        ):  # Heuristic
+            # This means an ActionHandler likely resolved a mechanic (e.g., dice roll).
+            # 'details' (message_for_ai_narration) contains the description of this mechanical outcome.
+            # Example: "Você tentou forçar a porta e conseguiu! (Rolagem: 18 vs DC: 15)."
             prompt += (
-                f"Ação textual do jogador (interprete a intenção): {details}\n\n"
-                "SUA TAREFA PRINCIPAL:\n"
-                "1. INTERPRETE A INTENÇÃO: Analise a 'Ação textual do jogador' para determinar a intenção principal. Categorize-a como uma das seguintes: 'move', 'look', 'talk' (tentativa de diálogo), 'vocal_action' (para gritos, canções, etc., que não são diálogos diretos), 'search', 'use_item', 'attack', 'flee', 'rest', 'skill', 'craft', 'custom_complex' (para ações complexas ou não listadas que exigem narração criativa).\n"
-                "2. GERE A NARRATIVA: Com base na intenção interpretada, narre o resultado da ação como Mestre do Jogo. Aplique as 'Diretrizes Gerais para Resposta' e, se a intenção corresponder a uma das ações com 'SUB-DIRETRIZES PARA INTENÇÕES ESPECÍFICAS' abaixo, aplique essas sub-diretrizes também.\n"
-                "3. INCLUA INTERPRETAÇÃO NO JSON: No seu JSON de resposta, além dos campos padrão, inclua 'interpreted_action_type' (a categoria que você escolheu) e 'interpreted_action_details' (um dicionário com parâmetros relevantes, ex: {'direction': 'norte'} para 'move', {'target_npc': 'NomeDoNPC'} para 'talk', {'item_name': 'Bandagem'} para 'use_item', {'vocal_text': 'Gritar muito alto'} para 'vocal_action').\n\n"
+                f"Resultado da Ação Mecânica do Jogador (baseado em regras/dados): {details}\n\n"
+                "SUA TAREFA PRINCIPAL (quando um resultado mecânico é fornecido):\n"
+                "1. NARRE O RESULTADO: Use o 'Resultado da Ação Mecânica do Jogador' como base para sua narrativa. Descreva vividamente o que aconteceu no mundo do jogo.\n"
+                "2. CONSEQUÊNCIAS IMEDIATAS: Descreva as consequências diretas e as reações do ambiente ou NPCs a este resultado mecânico.\n"
+                "3. ATUALIZE A CENA: Forneça uma `scene_description_update` que reflita quaisquer mudanças no ambiente devido à ação.\n"
+                "4. MANTENHA A COERÊNCIA: Siga as 'Diretrizes Gerais para Resposta'.\n"
+                "NÃO re-interprete a intenção original do jogador se um resultado mecânico claro foi fornecido; sua tarefa é narrar esse resultado e suas implicações.\n\n"
             )
-        else:  # Mantém a lógica antiga para ações diretas, se necessário, ou pode ser removido gradualmente
+        else:
+            # Se a ação for "narrate_roll_outcome", 'details' conterá a string do resultado mecânico da rolagem.
+            if action.lower() == "narrate_roll_outcome":
+                prompt += (
+                    f"Resultado Mecânico de um Teste Recente: {details}\n\n"
+                    "SUA TAREFA: Narre vividamente o que aconteceu no mundo do jogo com base neste resultado de teste. Descreva as consequências e reações. Siga as 'Diretrizes Gerais para Resposta'.\n\n"
+                )
+            # Lógica original para outras ações diretas
+            # This handles direct, non-interpretive actions that might not have had a specific
+            # mechanical resolution message yet (e.g., simple "look", "move" if not handled by specific logic above).
+            # 'action' is the command type (e.g., "look"), 'details' is the target/specification.
             prompt += f"Ação atual do jogador (direta): {action}"
             if details:
                 prompt += f" (Detalhes: {details})"
             prompt += "\n\n"
 
         prompt += "SUB-DIRETRIZES PARA INTENÇÕES ESPECÍFICAS (aplique se relevante para a intenção que você interpretou ou para a ação direta fornecida):\n"
+        # ... (o restante das sub-diretrizes permanece o mesmo) ...
+
+        prompt += (
+            "Diretrizes Gerais para Resposta (aplique sempre, independentemente da intenção interpretada):\n"
+            # ... (as diretrizes gerais permanecem as mesmas) ...
+        )
+        # ... (o restante do prompt, incluindo a instrução de formatação JSON, permanece o mesmo) ...
 
         prompt += (
             "INTENÇÃO 'search': Descreva o que o personagem encontra (ou não encontra) com base no ambiente e nos detalhes da busca. "
@@ -214,14 +300,20 @@ class GameAIClient:
         )
         prompt += (
             "INTENÇÕES 'talk' (diálogo) ou 'vocal_action' (ação vocal genérica):\n"
-            "   Se a intenção for 'talk' (tentativa de conversa direta com um NPC específico):\n"
+            # Prioriza o tratamento de perguntas se a intenção for 'talk' e a entrada for uma pergunta.
+            "   Se a 'Ação textual do jogador' for uma PERGUNTA (ex: 'Ele vai sobreviver?', 'O que aconteceu aqui?', 'Você tem comida?') E a intenção interpretada for 'talk':\n"
+            "     - Identifique o NPC mais apropriado para responder à pergunta com base no contexto e no conhecimento esperado do NPC (ex: uma médica sobre questões médicas, um engenheiro sobre reparos).\n"
+            "     - A resposta do NPC DEVE ser uma tentativa de responder à pergunta do jogador, e NÃO fazer a mesma pergunta de volta ao jogador ou a outros NPCs, a menos que seja uma pergunta retórica clara ou uma forma de desviar o assunto intencionalmente (o que deve ser raro e justificado pela personalidade do NPC).\n"
+            "     - Se nenhum NPC presente puder responder, a narrativa pode indicar isso (ex: 'Ninguém parece saber a resposta.' ou 'A Médica de Campo balança a cabeça, incerta.').\n"
+            "     - A resposta deve ser consistente com o papel do NPC. Uma médica não perguntaria ao jogador sobre o prognóstico de um paciente que ela está tratando.\n"
+            "   Senão, se a intenção for 'talk' (tentativa de conversa direta com um NPC específico, não coberta pela lógica de PERGUNTA acima):\n"
             "     Gere a resposta ou o início do diálogo do NPC alvo. Considere a personalidade do NPC, sua profissão, o estado atual do mundo e o que ele poderia querer ou saber. A resposta do NPC deve ser útil ou, pelo menos, crível. A conversa deve parecer natural e pode revelar informações, missões ou perigos.\n"
-            "   Se a intenção for 'vocal_action' (ex: 'Gritar MUITO ALTO', 'Sussurrar', 'Chamar por ajuda', 'Cantar uma música triste') e NÃO uma tentativa de conversa direta com um NPC:\n"
+            "   Senão, se a intenção for 'vocal_action' (ex: 'Gritar MUITO ALTO', 'Sussurrar', 'Chamar por ajuda', 'Cantar uma música triste') e NÃO uma tentativa de conversa direta com um NPC ou uma pergunta já tratada:\n"
             "     - Primeiro, RESPEITE a intensidade da ação vocal descrita pelo jogador. Se o jogador diz 'Gritar MUITO ALTO', o som É muito alto e perceptível. Não o atenue ou descreva como 'amortecido' arbitrariamente, a menos que o ambiente (ex: dentro de um cofre à prova de som que o jogador conhece) justifique explicitamente e o jogador já tenha essa informação contextual.\n"
             "     - Descreva o efeito físico imediato dessa ação no ambiente (ex: o som ecoa agudamente, poeira cai do teto, objetos próximos vibram).\n"
             "     - Em seguida, conecte IMEDIATAMENTE esta ação à diretriz geral '11. CONSEQUÊNCIAS DE RUÍDO'. As reações dos NPCs DEVEM refletir o perigo de atrair atenção indesejada (zumbis, saqueadores). Eles devem parecer visivelmente alarmados, podem repreender o jogador com urgência (ex: 'Você quer nos matar?! Fique quieto!'), gesticular freneticamente por silêncio, olhar nervosamente para as saídas, ou até mesmo se preparar para um possível ataque/invasão. Evite que os NPCs iniciem um diálogo casual ou façam perguntas simples como 'O que foi isso?'. Suas reações devem ser de medo, raiva pela imprudência, ou pânico.\n"
             "     - O foco da sua narrativa deve ser na tensão criada, no perigo iminente percebido, e na reação de alerta/pânico dos NPCs, não em iniciar uma nova conversa. A reação deve ser natural para sobreviventes experientes (ou apavorados) em um mundo hostil.\n"
-            "   Se a intenção for 'talk' mas sem detalhes ou alvo claro (jogador apenas indicou querer falar):\n"
+            "   Senão, se a intenção for 'talk' mas sem detalhes ou alvo claro (jogador apenas indicou querer falar):\n"
             "     Descreva se algum NPC próximo toma a iniciativa de falar com o jogador, ou se o ambiente permanece em silêncio aguardando uma ação mais específica. Se houver NPCs, um deles pode perguntar 'Você disse alguma coisa?' ou 'Precisa de algo?'.\n"
             "   Se os detalhes para 'talk' ou 'vocal_action' forem vagos ou sem sentido, aplique a diretriz geral '9. AÇÕES OU DETALHES IMPRECISOS/IRRELEVANTES'.\n\n"
         )
@@ -262,7 +354,15 @@ class GameAIClient:
             "10. **ENVOLVIMENTO DE NPCs:** Descreva a reação ou envolvimento de outros NPCs presentes *apenas se a ação do jogador os afetar diretamente, se eles teriam uma reação natural e imediata ao resultado da ação do jogador, ou se o jogador interagir diretamente com eles*. Caso contrário, mantenha o foco narrativo no jogador e no ambiente imediato da ação.\n"
             "11. **CONSEQUÊNCIAS DE RUÍDO:** Em um mundo pós-apocalíptico, barulhos altos (gritos, tiros, explosões, máquinas barulhentas) são inerentemente perigosos, pois podem atrair zumbis ou sobreviventes hostis. Suas descrições e as reações dos NPCs a ações barulhentas DEVEM refletir essa tensão e perigo. NPCs podem ficar visivelmente alarmados, repreender o jogador por fazer barulho desnecessário, sugerir silêncio, ou até mesmo tomar medidas defensivas. A narrativa pode sutilmente sugerir o risco de atenção indesejada (ex: 'um silêncio tenso se segue ao seu grito, quebrado apenas pelo som distante de algo se arrastando').\n"
             "\n"
-            "12. **ELEMENTOS INTERATIVOS:** Ao descrever uma `current_detailed_location` e sua `scene_description_update`, identifique de 2 a 4 elementos, objetos ou pequenas áreas de interesse chave DENTRO dessa sub-localização específica. Liste os nomes desses elementos no campo `interactable_elements` da sua resposta JSON. Estes são itens que o jogador poderia querer examinar mais de perto ou interagir. Mantenha os nomes concisos e diretos (ex: 'Mesa de Operações', 'Armário de Remédios', 'Cama de Paciente').\n"
+            "12. **SUGESTÃO DE TESTES (ROLAGENS DE DADOS):** Se a 'Ação textual do jogador' (quando a ação é 'interpret') descrever uma tentativa que claramente envolve risco, desafio físico, social ou mental que não é automaticamente resolvido (ex: tentar arrombar uma porta trancada, escalar uma parede difícil, persuadir um guarda cético, decifrar um texto antigo), você DEVE incluir um objeto `suggested_roll` no seu JSON de resposta. Este objeto deve conter:\n"
+            "    - `description`: (string) Uma breve descrição da ação que requer o teste (ex: 'Arrombar a porta do cofre', 'Persuadir o guarda a deixá-lo passar').\n"
+            "    - `attribute`: (string) O atributo principal para o teste (ex: 'strength', 'dexterity', 'charisma', 'intelligence', 'wisdom').\n"
+            "    - `skill`: (string, opcional) Uma perícia específica, se aplicável (ex: 'acrobatics', 'stealth', 'persuasion', 'investigation'). Se nenhuma perícia específica se aplicar, use `null` ou omita.\n"
+            "    - `dc`: (integer) A Classe de Dificuldade (CD) sugerida para o teste. Use seu julgamento: Fácil (10-12), Médio (13-15), Difícil (16-18), Muito Difícil (19-20+).\n"
+            "    - `reasoning`: (string, opcional) Uma breve justificativa para a CD sugerida (ex: 'A porta parece reforçada', 'O guarda é notoriamente teimoso').\n"
+            "   Se você sugerir um `suggested_roll`, sua `message` principal deve descrever o jogador iniciando a tentativa, mas SEM o resultado final, pois o resultado dependerá da rolagem de dados que será feita pelo sistema do jogo. Ex: 'Você se prepara para tentar arrombar a porta do cofre. Parece bem resistente...'\n"
+            "   NÃO sugira rolagens para ações triviais ou que já são cobertas por mecânicas simples (como um 'look' básico ou um 'move' para uma área adjacente aberta).\n\n"
+            "13. **ELEMENTOS INTERATIVOS:** Ao descrever uma `current_detailed_location` e sua `scene_description_update`, identifique de 2 a 4 elementos, objetos ou pequenas áreas de interesse chave DENTRO dessa sub-localização específica. Liste os nomes desses elementos no campo `interactable_elements` da sua resposta JSON. Estes são itens que o jogador poderia querer examinar mais de perto ou interagir. Mantenha os nomes concisos e diretos (ex: 'Mesa de Operações', 'Armário de Remédios', 'Cama de Paciente').\n"
             "INSTRUÇÃO DE FORMATAÇÃO DA RESPOSTA:\n"
             "RESPONDA SEMPRE E APENAS com uma string JSON válida contendo os seguintes campos, E TODO O TEXTO GERADO DEVE ESTAR EM PORTUGUÊS DO BRASIL (pt-br):\n"
             "- `message`: (string) Sua descrição narrativa principal da cena e do resultado da ação do jogador (em pt-br).\n"
@@ -271,6 +371,7 @@ class GameAIClient:
             "- `success`: (boolean) Sempre `true` se você puder gerar uma resposta narrativa. Use `false` apenas em caso de um erro interno seu ao processar o pedido (o que deve ser raro).\n\n"
             "- `interpreted_action_type`: (string, opcional mas PREFERÍVEL) A categoria da intenção que você interpretou (ex: 'move', 'talk', 'vocal_action', 'search', 'custom_complex').\n"
             "- `interpreted_action_details`: (object, opcional mas PREFERÍVEL) Um dicionário com parâmetros relevantes para a ação interpretada (ex: {'direction': 'norte'}, {'target_npc': 'NomeDoNPC'}, {'item_name': 'Bandagem', 'vocal_text': 'Gritar muito alto'}).\n\n"
+            "- `suggested_roll`: (object, opcional) Se a ação do jogador ('interpret') justificar um teste, inclua este objeto com os campos `description`, `attribute`, `skill` (opcional), `dc`, `reasoning` (opcional).\n\n"
             "- `interactable_elements`: (list[string], opcional) Uma lista de 2-4 nomes de elementos ou sub-áreas chave dentro da `current_detailed_location` com os quais o jogador pode interagir (ex: ['Mesa de Operações', 'Armário de Remédios', 'Cama de Paciente']). Mantenha os nomes concisos e diretos.\n\n"
             "Exemplo de JSON de resposta para uma ação textual 'Gritar muito alto!' no 'Abrigo Subterrâneo - Sala Principal':\n"
             "```json\n"
@@ -320,6 +421,7 @@ class GameAIClient:
                 interpreted_action_type=None,
                 interpreted_action_details=None,
                 interactable_elements=None,
+                suggested_roll=None,  # Adicionado para completar a definição
             )
 
         try:
@@ -330,7 +432,11 @@ class GameAIClient:
                 f"Generated AI Prompt (first 500 chars): {prompt_data['content'][:500]}"
             )
 
-            response_from_ai_service = self.ai_client.generate_response(prompt_data)
+            # Wrap the single prompt_data dictionary in a list for the client
+            # Also, pass generation_params if you intend to use them here.
+            response_from_ai_service = self.ai_client.generate_response(
+                messages=[prompt_data]
+            )
             logger.debug(
                 f"Raw response from AI service type: {type(response_from_ai_service)}, content: {str(response_from_ai_service)[:500]}"
             )
@@ -356,6 +462,7 @@ class GameAIClient:
                     interpreted_action_type=None,
                     interpreted_action_details=None,
                     interactable_elements=None,
+                    suggested_roll=None,  # Adicionado para completar a definição
                 )
 
             # Extrair valores do parsed_ai_dict, preparando para fallbacks
@@ -418,6 +525,9 @@ class GameAIClient:
                 "interpreted_action_details": parsed_ai_dict.get(
                     "interpreted_action_details"
                 ),
+                "suggested_roll": parsed_ai_dict.get(
+                    "suggested_roll"
+                ),  # Adicionar suggested_roll aqui também
             }
 
             logger.info(f"Final AIResponse data: {response_data}")
@@ -442,6 +552,7 @@ class GameAIClient:
                 "interpreted_action_type": None,
                 "interpreted_action_details": None,
                 "interactable_elements": None,
+                "suggested_roll": None,  # Adicionado para completar a definição
             }
             if (
                 "unavailable" in error_message_lower

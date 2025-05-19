@@ -17,7 +17,7 @@ from flask import (
 )
 import uuid  # Import uuid at the top level
 
-from ai.groq_client import GroqClient
+from ai.openrouter import OpenRouterClient  # Corrigido o caminho de importação
 from app.routes import bp as routes_bp
 from core.error_handler import ErrorHandler
 from core.game_engine import GameEngine
@@ -59,7 +59,9 @@ class GameApp:
             # _game_app_instance
 
             # Initialize clients and engines
-            self.groq_client = GroqClient()
+            self.ai_client = (
+                OpenRouterClient()
+            )  # Corrigida a instanciação e nome da variável
             self.game_engine = GameEngine()  # GameEngine agora tem seu próprio data_dir
 
             # data_dir para GameApp, se necessário para outros fins (embora
@@ -276,21 +278,15 @@ class GameApp:
                 details=details,
                 character=character,
                 game_state=game_state,
-                # action_handler é deixado como padrão (None)
-                ai_client=self.groq_client,  # Passa groq_client para o parâmetro correto
+                ai_client=self.ai_client,  # Passa o cliente de IA correto
             )
 
-            # Adicionar ação do jogador e resposta da IA ao histórico de mensagens do GameState
+            # game_state.messages is already updated by GameEngine.process_action
+            # with the user's input (if non-empty) and the AI's response.
+            # The calls below were redundant and used the old add_message signature.
             if game_state:  # Ensure game_state is not None
-                player_action_log = (
-                    f"You: {action_name_for_log}"  # Use consistent action variable
-                )
-                if details:
-                    player_action_log += f": {details}"
-                game_state.add_message(player_action_log)
-                if result.get("message"):
-                    ai_response_log = f"Game Master: {result['message']}"
-                    game_state.add_message(ai_response_log)
+                # No longer need to add messages here; GameEngine handles it.
+                pass
 
             self._save_character_and_state(active_character_id, character, game_state)
 

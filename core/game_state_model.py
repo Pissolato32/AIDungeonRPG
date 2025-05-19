@@ -17,6 +17,14 @@ from typing import (  # Added Set for visited_locations previous type
 from core.npc import NPC
 
 
+# TypedDict for chat messages
+class MessageDict(TypedDict):
+    """Type definition for a single message in a conversation."""
+
+    role: str
+    content: str
+
+
 class LocationCoords(TypedDict):
     """Type definition for location coordinates."""
 
@@ -78,10 +86,8 @@ class GameState:
     current_location: str = ""
     scene_description: str = ""
     npcs_present: List[str] = field(default_factory=list)
-    known_npcs: Dict[str, Dict[str, Any]] = field(
-        default_factory=dict
-    )  # Stores NPC data as dicts
-    messages: List[str] = field(default_factory=list)
+    known_npcs: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    messages: List[MessageDict] = field(default_factory=list)  # Changed from List[str]
     coordinates: LocationCoords = field(
         default_factory=lambda: {"x": 0, "y": 0, "z": 0}
     )
@@ -139,20 +145,26 @@ class GameState:
             combat=data.get("combat", None),
         )
 
-    def add_message(self, message: str) -> None:
-        """Add a message to game state history."""
-        self.messages.append(message)
-        if len(self.messages) > 50:
-            self.messages = self.messages[-50:]
+    def add_message(self, role: str, content: str) -> None:
+        """Add a message to the game state's conversation history.
+
+        Args:
+            role: The role of the message sender (e.g., "user", "assistant").
+            content: The content of the message.
+        """
+        self.messages.append({"role": role, "content": content})
+        # Keep the last N messages (e.g., 20 messages for 10 exchanges)
+        # Adjust this limit based on context window needs and token limits.
+        if len(self.messages) > 20:  # Example limit
+            self.messages = self.messages[-20:]
 
     def discover_location(self, location_id: str, location_data: LocationData) -> None:
         """Add a new discovered location."""
         self.discovered_locations[location_id] = location_data
+        # Add a system message for discovering a location
         self.add_message(
-            f"Você descobriu: {
-                location_data.get(
-                    'name',
-                    'um novo local desconhecido')}!"
+            role="system",
+            content=f"Você descobriu: {location_data.get('name', 'um novo local desconhecido')}!",
         )
 
     def add_npc(

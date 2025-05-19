@@ -28,11 +28,42 @@ body {
     min-height: 0;
 }
 
+.game-scene .card-body {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 56px - 57px - 73px);
+    /* Ajuste estes valores conforme a altura da sua navbar, card-header e game-input-container */
+    /* 56px (navbar) + 57px (card-header) + 73px (game-input-container) = 186px (aproximadamente) */
+    /* Uma abordagem mais robusta seria usar JavaScript para calcular essas alturas dinamicamente se elas variarem muito. */
+    /* Ou, se a altura do card-body for fixa de outra forma, você pode não precisar do calc. */
+    overflow: hidden;
+    /* Impede que o card-body em si role */
+}
+
 /* Game Output Styling */
 .game-output {
     height: calc(100% - 100px);
-    overflow-y: auto;
     background-color: rgba(0, 0, 0, 0.1);
+    flex-grow: 1;
+    /* Faz o game-output ocupar o espaço restante */
+    overflow-y: auto;
+    /* Permite rolagem vertical APENAS para o game-output */
+    position: relative;
+    /* Necessário para o posicionamento sticky do filho */
+    display: flex;
+    flex-direction: column;
+}
+
+#game-static-info {
+    position: sticky;
+    top: 0;
+    background-color: var(--bs-body-bg, #212529);
+    /* Cor de fundo para não ficar transparente sobre o texto que rola */
+    z-index: 10;
+    /* Para garantir que fique sobre o messagesContainer */
+    border-bottom: 1px solid var(--bs-border-color, #343a40);
+    /* Linha divisória opcional */
+    /* padding já está sendo aplicado pela classe p-3 */
 }
 
 .scene-description {
@@ -42,7 +73,12 @@ body {
 }
 
 .messages-container {
-    margin-top: 20px;
+    flex-grow: 1;
+    /* Ocupa o espaço restante dentro de game-output */
+    /* overflow-y: auto; */
+    /* A rolagem agora é gerenciada pelo .game-output */
+    padding: 1rem;
+    /* Adiciona padding ao redor das mensagens */
 }
 
 .message {
@@ -57,6 +93,8 @@ body {
     height: calc(100% - 100px);
     overflow-y: auto;
     background-color: rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+    /* Impede que encolha */
 }
 
 .combat-log {
@@ -103,6 +141,8 @@ body {
 /* Input Form Styling */
 .game-input-container {
     background-color: rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+    /* Impede que encolha */
 }
 
 /* Landing Page Styling */

@@ -10,7 +10,7 @@ import os
 import random
 from typing import Any, Dict, List, Optional
 
-from ai.groq_client import GroqClient
+from ai.openrouter import OpenRouterClient  # Corrigido o caminho e nome da classe
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ class WorldGenerator:
         """
         self.data_dir = data_dir
         self.world_file = os.path.join(data_dir, "world_map.json")
-        self.ai_client = GroqClient()
+        self.ai_client = OpenRouterClient()  # Corrigida a instanciação da classe
 
     def load_world(self) -> Dict[str, Any]:
         """
@@ -267,7 +267,9 @@ class WorldGenerator:
 
         try:
             prompt_dict = {"role": "user", "content": prompt}
-            response = self.ai_client.generate_response(prompt_dict)
+            response = self.ai_client.generate_response(
+                [prompt_dict]
+            )  # Envolve em uma lista
             if isinstance(response, str) and response.strip():
                 return response.strip()
         except ConnectionError as e:  # Exemplo de exceção mais específica para rede
@@ -354,7 +356,9 @@ class WorldGenerator:
             """
 
             prompt_dict = {"role": "user", "content": prompt}
-            response = self.ai_client.generate_response(prompt_dict)
+            response = self.ai_client.generate_response(
+                [prompt_dict]
+            )  # Envolve em uma lista
             if isinstance(response, str) and response.strip():
                 unique_npc = response.strip().split("\n", maxsplit=1)[0]
                 if unique_npc not in npcs:  # Avoid duplicates if AI gives a base one
@@ -424,7 +428,9 @@ class WorldGenerator:
             """
 
             prompt_dict = {"role": "user", "content": prompt}
-            response = self.ai_client.generate_response(prompt_dict)
+            response = self.ai_client.generate_response(
+                [prompt_dict]
+            )  # Envolve em uma lista
             if isinstance(response, str) and response.strip():
                 unique_event = response.strip().split("\n", maxsplit=1)[0]
                 if unique_event not in events:

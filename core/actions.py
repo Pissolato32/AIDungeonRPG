@@ -1192,6 +1192,48 @@ class CustomActionHandler(ActionHandler):
                     "message": mechanical_outcome_message,
                     "action_performed": "social_contest_resolved",
                 }
+
+        # Example: Physical challenge for forcing/breaking objects
+        physical_force_keywords = ["forçar", "arrombar", "quebrar"]
+        target_physical_keywords = ["porta", "portão", "caixa", "cadeado", "janela"]
+
+        attempting_physical_force = any(
+            kw in details_lower for kw in physical_force_keywords
+        )
+        targeting_physical_object = any(
+            kw in details_lower for kw in target_physical_keywords
+        )
+
+        if attempting_physical_force and targeting_physical_object:
+            target_object_name = "o objeto"
+            for kw in target_physical_keywords:
+                if kw in details_lower:
+                    target_object_name = (
+                        kw  # Gets the first matched keyword as the target
+                    )
+                    break
+
+            strength_modifier = calculate_attribute_modifier(
+                character.attributes.get("strength", 10)
+            )
+            # DC can be dynamic based on target_object_name or game_state
+            dc = 15  # Medium difficulty for a generic object
+            roll_result_obj = roll_dice(1, 20, strength_modifier)
+            roll_total = roll_result_obj["total"]
+
+            if roll_total >= dc:
+                outcome_message = f"Você tentou {random.choice(physical_force_keywords)} {target_object_name} e conseguiu! (Rolagem: {roll_total} vs DC: {dc})."
+                # TODO: Potentially update game_state here if the object is now open/broken
+            else:
+                outcome_message = f"Você tentou {random.choice(physical_force_keywords)} {target_object_name}, mas falhou. (Rolagem: {roll_total} vs DC: {dc}). O objeto permanece intacto."
+
+            return {
+                "success": True,  # Handler processed it, mechanical success depends on roll
+                "message": outcome_message,  # This is the mechanical outcome for the AI to narrate
+                "action_performed": "physical_challenge_resolved",
+                "roll_details": roll_result_obj,  # Optional: for debugging or more detailed AI prompt
+            }
+
         return self.ai_response("custom", details, character, game_state)
 
 
@@ -1397,6 +1439,26 @@ class CraftActionHandler(ActionHandler):
         }
 
 
+class InterpretActionHandler(ActionHandler):
+    """
+    A simple handler for 'interpret' actions.
+    Its main purpose is to pass the raw details to the AI for interpretation.
+    """
+
+    def handle(
+        self, details: str, character: "Character", game_state: Any
+    ) -> Dict[str, Any]:
+        """
+        Passes details through for AI interpretation.
+        The 'message' field will be used as 'details' for the AI prompt.
+        """
+        return {
+            "success": True,  # Indicates the handler itself didn't fail
+            "message": details,  # This will become the 'details' for the AI
+            "skip_ai_narration": False,  # We definitely want AI narration
+        }
+
+
 # Action handler factory
 def get_action_handler(action: str) -> ActionHandler:
     """
@@ -1420,5 +1482,6 @@ def get_action_handler(action: str) -> ActionHandler:
         "custom": CustomActionHandler(),
         "skill": SkillActionHandler(),
         "craft": CraftActionHandler(),
+        "interpret": InterpretActionHandler(),
     }
     return action_handlers.get(action, UnknownActionHandler())

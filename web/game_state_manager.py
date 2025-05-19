@@ -48,9 +48,12 @@ class GameStateManager:
             "Um gerador falha e a luz pisca antes de voltar.",
         ]
 
-        # Set welcome message and language
+        # Set welcome message in the new format
         game_state.messages = [
-            "Você acorda no abrigo. O mundo lá fora mudou. Sobreviva."
+            {
+                "role": "assistant",
+                "content": "Você acorda no abrigo. O mundo lá fora mudou. Sobreviva.",
+            }
         ]
 
         # Initialize world map with the starting location

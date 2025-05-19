@@ -8,6 +8,7 @@ class GameUIManager {
         this.initializeEventListeners();
         this.updateProgressBars();
         this.isProcessing = false;
+        this.thinkingInterval = null; // Initialize thinkingInterval
     }
 
     /**
@@ -104,12 +105,6 @@ class GameUIManager {
             e.preventDefault();
             if (this.isProcessing) return; // Prevent multiple submissions
 
-            const actionTypeElement = document.querySelector('#actionType');
-            // if (!actionTypeElement) { // Comentado pois actionType foi removido do HTML
-            //     this.displayErrorMessage('Action type element not found');
-            //     return;
-            // }
-
             const actionType = "interpret"; // Ação agora é sempre "interpret"
             const actionDetailsElement = document.getElementById('actionDetails');
             const actionDetails = actionDetailsElement ? actionDetailsElement.value : '';
@@ -174,8 +169,8 @@ class GameUIManager {
         if (!messagesContainer) return;
 
         const messageDiv = document.createElement('div');
-        messageDiv.className = 'message player-message';
-        messageDiv.innerHTML = `<strong>You:</strong> ${message}`;
+        messageDiv.className = 'message message-user'; // Changed from player-message for consistency
+        messageDiv.innerHTML = `<strong>Você:</strong> ${message}`; // Changed from You:
         messagesContainer.appendChild(messageDiv);
 
         // Scroll to the bottom of the messages container
@@ -191,7 +186,7 @@ class GameUIManager {
 
         const thinkingDiv = document.createElement('div');
         thinkingDiv.className = 'message thinking-indicator';
-        thinkingDiv.innerHTML = '<strong>Game Master:</strong> <span class="thinking-dots">...</span>';
+        thinkingDiv.innerHTML = '<strong>Mestre:</strong> <span class="thinking-dots">...</span>'; // Changed from Game Master:
         thinkingDiv.id = 'thinkingIndicator';
         messagesContainer.appendChild(thinkingDiv);
 
@@ -251,14 +246,21 @@ class GameUIManager {
      * Set up use item button event listeners
      */
     setupUseItemButtons() {
-        const useItemButtons = document.querySelectorAll('.use-item-btn');
-        useItemButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const item = button.getAttribute('data-item');
-                this.handleButtonAction('use_item', item, useItemButtons);
+        // Use event delegation for dynamically added items
+        const inventoryList = document.getElementById('inventoryList');
+        if (inventoryList) {
+            inventoryList.addEventListener('click', (event) => {
+                if (event.target && event.target.classList.contains('use-item-btn')) {
+                    const button = event.target;
+                    const itemName = button.dataset.itemName; // Corrected: was getAttribute('data-item')
+                    if (itemName) {
+                        this.handleButtonAction('use_item', itemName, [button]); // Pass button as an array
+                    }
+                }
             });
-        });
+        }
     }
+
 
     /**
      * Helper method to handle common button action flow
@@ -338,12 +340,17 @@ class GameUIManager {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    // Add CSRF token if you implement Flask-WTF
+                    // 'X-CSRFToken': csrfToken 
                 }
             })
                 .then(response => response.json())
-                .then(() => {
-                    // Redirect to character creation
-                    window.location.href = '/character';
+                .then(data => { // Changed from () to data
+                    if (data.redirect_url) { // Check for redirect_url
+                        window.location.href = data.redirect_url;
+                    } else {
+                        window.location.href = '/character'; // Fallback
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -369,6 +376,8 @@ class GameUIManager {
             headers: {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
+                // Add CSRF token if you implement Flask-WTF
+                // 'X-CSRFToken': csrfToken 
             },
             body: JSON.stringify({ action, details })
         };
@@ -396,22 +405,30 @@ class GameUIManager {
     handleActionResponse(data) {
         if (data.success) {
             // Add the message to the messages container
-            if (data.message) {
-                this.addMessage(data.message);
-            }
+            // Check if data.message is not null or undefined before passing
+            this.addMessage(data.message || "", false, data.interactable_elements);
+
 
             // Update scene description if it changed
-            if (data.description) {
+            if (data.scene_description_update) { // Prefer the new field
+                this.updateSceneDescription(data.scene_description_update);
+            } else if (data.description) { // Fallback to old field
                 this.updateSceneDescription(data.description);
             }
 
+
             // Update location if it changed
-            if (data.new_location) {
+            if (data.current_detailed_location) { // Prefer the new field
+                this.updateLocation(data.current_detailed_location);
+            } else if (data.new_location) { // Fallback to old field
                 this.updateLocation(data.new_location);
             }
 
+
             // Update NPCs if they changed
-            if (data.npcs) {
+            if (data.npcs_present) { // Prefer the new field (assuming it's an array of strings)
+                this.updateNPCs(data.npcs_present);
+            } else if (data.npcs) { // Fallback to old field
                 this.updateNPCs(data.npcs);
             }
 
@@ -420,10 +437,18 @@ class GameUIManager {
                 this.updateEvents(data.events);
             }
 
-            // Update interactable elements
-            if (data.interactable_elements) {
-                this.updateInteractableElements(data.interactable_elements);
+            // Update inventory if present in response (more robust than full reload)
+            if (data.inventory) {
+                this.updateInventory(data.inventory);
             }
+            if (data.gold !== undefined) {
+                this.updateGold(data.gold);
+            }
+            if (data.character_stats) { // For HP, Stamina, etc.
+                this.updateCharacterStats(data.character_stats);
+            }
+
+
         } else {
             // Display error message
             if (data.message) {
@@ -436,14 +461,39 @@ class GameUIManager {
      * Add a message to the messages container
      * @param {string} message - The message to add
      * @param {boolean} isError - Whether this is an error message
+     * @param {Array<string>} [interactableElements=null] - Optional array of interactable element names
      */
-    addMessage(message, isError = false) {
+    addMessage(message, isError = false, interactableElements = null) {
         const messagesContainer = document.getElementById('messagesContainer');
         if (!messagesContainer) return;
 
-        // Highlight dice rolls with regex pattern
+        // If the message is effectively empty and not an error, and no interactable elements, don't add an empty bubble
+        if (!message && !isError && (!interactableElements || interactableElements.length === 0)) {
+            return;
+        }
+
+        let displayMessage = message;
+        let interactableElementsForDisplay = interactableElements;
+
+        // Tenta analisar a mensagem como JSON, se não for um erro
+        if (!isError && typeof message === 'string') {
+            try {
+                const parsedJson = JSON.parse(message);
+                if (parsedJson && typeof parsedJson === 'object') {
+                    displayMessage = parsedJson.message || displayMessage; // Usa a mensagem do JSON ou o original
+                    // Se o JSON contiver interactable_elements, use-os (pode sobrescrever os passados)
+                    if (parsedJson.interactable_elements) {
+                        interactableElementsForDisplay = parsedJson.interactable_elements;
+                    }
+                }
+            } catch (e) {
+                // Não é um JSON válido, continue com a mensagem original
+            }
+        }
+
         const diceRollPattern = /rolagem (de \w+\s)?foi de (\d+)|roll(ed)? (a )?(\d+)|rolled (\d+)|rolagem: (\d+)|roll: (\d+)|rolou (\d+)/gi;
-        const highlightedMessage = message.replace(diceRollPattern, match => {
+        // Ensure message is a string before calling replace
+        const highlightedMessage = (typeof displayMessage === 'string' ? displayMessage : '').replace(diceRollPattern, match => {
             // Extract the number from the match
             const numberMatch = match.match(/\d+/);
             if (numberMatch) {
@@ -454,8 +504,34 @@ class GameUIManager {
         });
 
         const messageDiv = document.createElement('div');
-        messageDiv.className = isError ? 'message text-danger' : 'message';
-        messageDiv.innerHTML = `<strong>Game Master:</strong> ${highlightedMessage}`;
+        messageDiv.className = isError ? 'message text-danger' : 'message message-assistant';
+
+        let fullMessageHTML = `<strong>${isError ? "Erro:" : "Mestre:"}</strong> ${highlightedMessage}`;
+
+        if (interactableElementsForDisplay && interactableElementsForDisplay.length > 0) {
+            fullMessageHTML += `<div class="interactable-elements-inline mt-2"><strong>Você percebe:</strong>`;
+            const listGroup = document.createElement('div');
+            listGroup.className = 'list-group list-group-flush mt-1';
+
+            interactableElementsForDisplay.forEach(elementName => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'list-group-item list-group-item-action list-group-item-secondary p-2';
+                button.textContent = elementName;
+                button.addEventListener('click', () => {
+                    const actionDetailsInput = document.getElementById('actionDetails');
+                    if (actionDetailsInput) {
+                        actionDetailsInput.value = `Examinar ${elementName}`;
+                        // Consider if you want to auto-submit or just fill the input
+                        // document.getElementById('actionForm').requestSubmit(); 
+                    }
+                });
+                listGroup.appendChild(button);
+            });
+            fullMessageHTML += listGroup.outerHTML + '</div>';
+        }
+
+        messageDiv.innerHTML = fullMessageHTML;
         messagesContainer.appendChild(messageDiv);
 
         // Scroll to the bottom of the messages container
@@ -475,7 +551,7 @@ class GameUIManager {
      * @param {string} description - The new scene description
      */
     updateSceneDescription(description) {
-        const sceneDescription = document.querySelector('.scene-description');
+        const sceneDescription = document.getElementById('sceneDescription'); // Changed from querySelector
         if (sceneDescription) {
             sceneDescription.textContent = description;
         }
@@ -486,7 +562,7 @@ class GameUIManager {
      * @param {string} location - The new location name
      */
     updateLocation(location) {
-        const locationElement = document.querySelector('.card-header h5');
+        const locationElement = document.getElementById('currentLocationDisplay'); // Changed from querySelector
         if (locationElement) {
             locationElement.innerHTML = `<i class="bi bi-compass me-2"></i>${location}`;
         }
@@ -497,22 +573,16 @@ class GameUIManager {
      * @param {Array} npcs - Array of NPC names
      */
     updateNPCs(npcs) {
-        let npcsElement = document.querySelector('.npcs-present');
-        if (npcs.length > 0) {
-            if (npcsElement) {
-                npcsElement.innerHTML = `<strong>NPCs Present:</strong> ${npcs.join(', ')}`;
-                npcsElement.style.display = 'block';
+        const npcsContainer = document.getElementById('npcsPresent'); // The container div
+        const npcListSpan = document.getElementById('npcList'); // The span for the list
+        if (npcsContainer && npcListSpan) {
+            if (npcs && npcs.length > 0) {
+                npcListSpan.textContent = npcs.join(', ');
+                npcsContainer.style.display = 'block'; // Or remove d-none if using Bootstrap visibility
             } else {
-                const gameOutput = document.getElementById('gameOutput');
-                if (gameOutput) {
-                    npcsElement = document.createElement('div');
-                    npcsElement.className = 'npcs-present mb-3';
-                    npcsElement.innerHTML = `<strong>NPCs Present:</strong> ${npcs.join(', ')}`;
-                    gameOutput.insertBefore(npcsElement, document.getElementById('messagesContainer'));
-                }
+                npcListSpan.textContent = '';
+                npcsContainer.style.display = 'none'; // Or add d-none
             }
-        } else if (npcsElement) {
-            npcsElement.style.display = 'none';
         }
     }
 
@@ -521,62 +591,152 @@ class GameUIManager {
      * @param {Array} events - Array of event descriptions
      */
     updateEvents(events) {
-        let eventsElement = document.querySelector('.events');
-        if (events.length > 0) {
-            if (eventsElement) {
-                eventsElement.innerHTML = `<strong>Events:</strong> ${events.join(', ')}`;
-                eventsElement.style.display = 'block';
+        const eventsContainer = document.getElementById('currentEvents'); // The container div
+        const eventListSpan = document.getElementById('eventList'); // The span for the list
+        if (eventsContainer && eventListSpan) {
+            if (events && events.length > 0) {
+                eventListSpan.textContent = events.join(', ');
+                eventsContainer.style.display = 'block';
             } else {
-                const gameOutput = document.getElementById('gameOutput');
-                if (gameOutput) {
-                    eventsElement = document.createElement('div');
-                    eventsElement.className = 'events mb-3';
-                    eventsElement.innerHTML = `<strong>Events:</strong> ${events.join(', ')}`;
-                    gameOutput.insertBefore(eventsElement, document.getElementById('messagesContainer'));
-                }
+                eventListSpan.textContent = '';
+                eventsContainer.style.display = 'none';
             }
-        } else if (eventsElement) {
-            eventsElement.style.display = 'none';
         }
     }
 
     /**
-     * Update the interactable elements display
-     * @param {Array<string>} elements - Array of interactable element names
+     * Update the inventory display
+     * @param {Array<Object|string>} inventoryItems - Array of inventory items
      */
-    updateInteractableElements(elements) {
-        const container = document.getElementById('interactableElementsContainer');
-        if (!container) return;
+    updateInventory(inventoryItems) {
+        const inventoryList = document.getElementById('inventoryList');
+        const emptyMessage = document.getElementById('emptyInventoryMessage');
 
-        container.innerHTML = ''; // Limpa elementos anteriores
+        if (!inventoryList) return;
+        inventoryList.innerHTML = ''; // Clear existing items
 
-        if (elements && elements.length > 0) {
-            const title = document.createElement('strong');
-            title.textContent = 'Você percebe:'; // Ou "Pontos de Interesse:"
-            container.appendChild(title);
+        if (inventoryItems && inventoryItems.length > 0) {
+            if (emptyMessage) emptyMessage.style.display = 'none';
+            inventoryItems.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'list-group-item d-flex justify-content-between align-items-center';
 
-            const listGroup = document.createElement('div');
-            listGroup.className = 'list-group list-group-flush mt-1';
+                let itemName = '';
+                let isEquipped = false; // You'll need logic to determine this from character.equipment
+                let durability = null;
+                let quantity = null;
 
-            elements.forEach(elementName => {
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'list-group-item list-group-item-action list-group-item-secondary p-2'; // Estilo sutil
-                button.textContent = elementName;
-                button.addEventListener('click', () => {
-                    const actionDetailsInput = document.getElementById('actionDetails');
-                    if (actionDetailsInput) {
-                        actionDetailsInput.value = `Examinar ${elementName}`; // Ou "Interagir com ${elementName}"
-                        // Opcionalmente, submeter o formulário automaticamente:
-                        // document.getElementById('actionForm').requestSubmit();
-                        // Ou chamar sendGameAction diretamente se preferir não depender do input visível
-                        // this.handleButtonAction("interpret", `Examinar ${elementName}`, document.getElementById('actionForm').querySelector('button[type="submit"]'));
-                    }
-                });
-                listGroup.appendChild(button);
+                if (typeof item === 'string') {
+                    itemName = item;
+                } else if (typeof item === 'object' && item !== null && item.name) {
+                    itemName = item.name;
+                    durability = item.durability;
+                    quantity = item.quantity;
+                    // TODO: Check if item is equipped by comparing with initialCharacterData.equipment
+                    // This requires initialCharacterData to be updated or a new field from backend
+                } else {
+                    itemName = 'Item Desconhecido';
+                }
+
+                let itemHTML = `<span>`;
+                if (isEquipped) {
+                    itemHTML += `<strong>${itemName}*</strong> <span class="badge bg-success ms-2">Equipado</span>`;
+                } else {
+                    itemHTML += itemName;
+                }
+                if (durability !== null && durability !== undefined) {
+                    itemHTML += ` <span class="badge bg-secondary ms-2">Durabilidade: ${durability}</span>`;
+                }
+                if (quantity !== null && quantity !== undefined && quantity > 1) {
+                    itemHTML += ` <span class="badge bg-info ms-2">x${quantity}</span>`;
+                }
+                itemHTML += `</span>`;
+                itemHTML += `<button class="btn btn-sm btn-outline-primary use-item-btn" data-item-name="${itemName}">Usar</button>`;
+                itemDiv.innerHTML = itemHTML;
+                inventoryList.appendChild(itemDiv);
             });
-            container.appendChild(listGroup);
+        } else {
+            if (emptyMessage) emptyMessage.style.display = 'block';
         }
+    }
+
+    /**
+     * Update character gold display
+     * @param {number} goldAmount 
+     */
+    updateGold(goldAmount) {
+        const goldDisplay = document.getElementById('characterGold');
+        if (goldDisplay) {
+            goldDisplay.textContent = goldAmount;
+        }
+    }
+
+    /**
+     * Update character stats (HP, Stamina, etc.) and their bars
+     * @param {Object} statsData - Object containing character stats like current_hp, max_hp, etc.
+     */
+    updateCharacterStats(statsData) {
+        // HP
+        const hpDisplay = document.getElementById('hpDisplay');
+        const hpBar = document.getElementById('hpBar');
+        if (hpDisplay && hpBar && statsData.current_hp !== undefined && statsData.max_hp !== undefined) {
+            hpDisplay.textContent = `${statsData.current_hp} / ${statsData.max_hp}`;
+            const hpPercent = statsData.max_hp > 0 ? (statsData.current_hp / statsData.max_hp * 100) : 0;
+            hpBar.style.width = `${hpPercent.toFixed(1)}%`;
+            hpBar.setAttribute('aria-valuenow', statsData.current_hp);
+            hpBar.setAttribute('aria-valuemax', statsData.max_hp);
+        }
+
+        // Stamina
+        const staminaDisplay = document.getElementById('staminaDisplay');
+        const staminaBar = document.getElementById('staminaBar');
+        if (staminaDisplay && staminaBar && statsData.current_stamina !== undefined && statsData.max_stamina !== undefined) {
+            staminaDisplay.textContent = `${statsData.current_stamina} / ${statsData.max_stamina}`;
+            const staminaPercent = statsData.max_stamina > 0 ? (statsData.current_stamina / statsData.max_stamina * 100) : 0;
+            staminaBar.style.width = `${staminaPercent.toFixed(1)}%`;
+            staminaBar.setAttribute('aria-valuenow', statsData.current_stamina);
+            staminaBar.setAttribute('aria-valuemax', statsData.max_stamina);
+        }
+
+        // Hunger (assuming statsData might contain survival_stats directly or nested)
+        const hungerData = statsData.survival_stats || statsData; // Adjust if survival_stats is nested
+        const hungerDisplay = document.getElementById('hungerDisplay');
+        const hungerBar = document.getElementById('hungerBar');
+        if (hungerDisplay && hungerBar && hungerData.current_hunger !== undefined && hungerData.max_hunger !== undefined) {
+            hungerDisplay.textContent = `${hungerData.current_hunger} / ${hungerData.max_hunger}`;
+            const hungerPercent = hungerData.max_hunger > 0 ? (hungerData.current_hunger / hungerData.max_hunger * 100) : 0;
+            hungerBar.style.width = `${hungerPercent.toFixed(1)}%`;
+            hungerBar.setAttribute('aria-valuenow', hungerData.current_hunger);
+            hungerBar.setAttribute('aria-valuemax', hungerData.max_hunger);
+        }
+
+        // Thirst
+        const thirstData = statsData.survival_stats || statsData; // Adjust if survival_stats is nested
+        const thirstDisplay = document.getElementById('thirstDisplay');
+        const thirstBar = document.getElementById('thirstBar');
+        if (thirstDisplay && thirstBar && thirstData.current_thirst !== undefined && thirstData.max_thirst !== undefined) {
+            thirstDisplay.textContent = `${thirstData.current_thirst} / ${thirstData.max_thirst}`;
+            const thirstPercent = thirstData.max_thirst > 0 ? (thirstData.current_thirst / thirstData.max_thirst * 100) : 0;
+            thirstBar.style.width = `${thirstPercent.toFixed(1)}%`;
+            thirstBar.setAttribute('aria-valuenow', thirstData.current_thirst);
+            thirstBar.setAttribute('aria-valuemax', thirstData.max_thirst);
+        }
+
+        // Update attributes if they are part of statsData
+        if (statsData.attributes) {
+            for (const [attr, value] of Object.entries(statsData.attributes)) {
+                const valueElement = document.getElementById(`${attr}Value`);
+                if (valueElement) {
+                    valueElement.textContent = value;
+                }
+            }
+        }
+        // Update navbar character info
+        const navbarName = document.getElementById('navbarCharacterName');
+        const navbarLevel = document.getElementById('navbarCharacterLevel');
+        if (navbarName && statsData.name) navbarName.textContent = statsData.name;
+        if (navbarLevel && statsData.level) navbarLevel.textContent = statsData.level;
+
     }
 }
 

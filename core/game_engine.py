@@ -13,12 +13,15 @@ from ai.game_ai_client import GameAIClient, AIResponse  # Import AIResponse
 
 # Assume ActionHandler is in core.actions, adjust if necessary
 from core.actions import (
+    CustomActionHandler,  # Importar para verificar se é uma instância
     ActionHandler,
     get_action_handler,
 )
 from core.models import Character
 
 from .game_state_model import GameState, LocationCoords, LocationData
+
+from utils.dice import roll_dice, calculate_attribute_modifier  # Importar para rolagens
 
 logger = logging.getLogger(__name__)  # Configurar logger para este módulo
 
@@ -155,6 +158,11 @@ class GameEngine:
         ai_client: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """Process a player action."""
+
+        # Add player's raw input to message history before any processing
+        if details and details.strip():
+            game_state.add_message(role="user", content=details)
+
         game_state.current_action = action
 
         actual_handler = action_handler or get_action_handler(action)
@@ -164,14 +172,31 @@ class GameEngine:
         action_succeeded_mechanically = result_from_handler.get("success", False)
         skip_ai_narration = result_from_handler.get("skip_ai_narration", False)
 
+        # Determine the action type to send to the AI
+        # If the handler performed a specific resolved action (e.g., dice roll), use that.
+        # If the original action was 'custom' or 'interpret' and it did NOT resolve to something specific,
+        # then GameEngine should send "interpret" to the AI with the original details.
+        action_for_ai = result_from_handler.get("action_performed", action)
+
+        if (
+            action.lower() == "custom" or action.lower() == "interpret"
+        ) and not result_from_handler.get("action_performed"):
+            # If it was a custom/interpret action that didn't trigger specific handler logic (like social or physical)
+            # then we want the AI to interpret the raw 'details' (which is the player's input).
+            action_for_ai = "interpret"
+            # message_for_ai_narration should be the original player input for the AI to interpret.
+            message_for_ai_narration = details
+
         try:
             from core.survival_system import SurvivalSystem
 
             survival = SurvivalSystem()
             survival_result = survival.update_stats(character, action)
             if survival_result.get("messages"):
-                for msg in survival_result["messages"]:
-                    game_state.add_message(msg)
+                for msg in survival_result[
+                    "messages"
+                ]:  # These are system/event messages
+                    game_state.add_message(role="system", content=msg)
                 if survival_result["messages"]:
                     message_for_ai_narration += f" ({survival_result['messages'][0]})"
 
@@ -182,6 +207,9 @@ class GameEngine:
         except Exception as e:
             logger.error(f"Erro ao processar SurvivalSystem: {e}", exc_info=True)
 
+        # Add the player's action/narration cue to the message history
+        # before calling the AI.
+        # message_for_ai_narration is the effective player input for this turn's AI interaction.
         # Determina se a IA deve ser chamada
         should_call_ai = (
             ai_client is not None
@@ -198,6 +226,7 @@ class GameEngine:
                     "use_item",
                     "flee",
                     "rest",
+                    "interpret",  # Garante que a IA seja chamada para interpretação
                 ]
             )
         )
@@ -205,52 +234,151 @@ class GameEngine:
         if should_call_ai:
             try:
                 game_ai = GameAIClient(ai_client)
-                # A resposta da IA já é um dicionário (AIResponse)
-                ai_response: AIResponse = game_ai.process_action(
-                    action=action,
+                # GameAIClient's process_action will now internally use game_state.messages
+                # (which includes the latest user message) to pass to the LLM.
+                # The 'details' parameter here is the user's current input content.
+                current_ai_response: AIResponse = game_ai.process_action(
+                    action=action_for_ai,  # Usar action_for_ai que foi determinada anteriormente
                     details=message_for_ai_narration,
                     character=character,
                     game_state=game_state,
+                    # generation_params can be passed here if needed
                 )
 
+                if current_ai_response is None:
+                    logger.critical(
+                        "CRITICAL: game_ai.process_action (initial call) returned None. This should not happen."
+                    )
+                    result_from_handler["message"] = (
+                        "Erro crítico de comunicação com a IA."
+                    )
+                    result_from_handler["success"] = False
+                    return result_from_handler
+
                 # Verifica se a resposta da IA foi bem-sucedida
-                if ai_response.get("success"):
+                if current_ai_response.get("success"):
+                    # >>> NOVO: Processar suggested_roll
+                    if current_ai_response.get("suggested_roll") and isinstance(
+                        actual_handler, CustomActionHandler
+                    ):
+                        # Usar .get() para roll_suggestion e verificar se é um dicionário válido
+                        roll_suggestion_data = current_ai_response.get("suggested_roll")
+                        if (
+                            isinstance(roll_suggestion_data, dict)
+                            and roll_suggestion_data
+                        ):  # Garante que não é None e não é um dict vazio
+                            attribute_to_check = roll_suggestion_data.get(
+                                "attribute", "intelligence"
+                            )
+                            dc = roll_suggestion_data.get("dc", 15)
+                            roll_description = roll_suggestion_data.get(
+                                "description", "uma ação desafiadora"
+                            )
+
+                            attribute_score = character.attributes.get(
+                                attribute_to_check, 10
+                            )
+                            modifier = calculate_attribute_modifier(attribute_score)
+
+                            roll_result_obj = roll_dice(1, 20, modifier)
+                            roll_total = roll_result_obj["total"]
+                            roll_succeeded = roll_total >= dc
+
+                            mechanical_roll_outcome_msg = (
+                                f"Tentativa de '{roll_description}'. "
+                                f"Teste de {attribute_to_check.capitalize()} (Rolagem: {roll_total} vs DC {dc}). "
+                                f"{'Sucesso!' if roll_succeeded else 'Falha!'}"
+                                f" Detalhes da rolagem: {roll_result_obj.get('result_string', '')}"
+                            )
+
+                            game_state.add_message(
+                                role="system", content=mechanical_roll_outcome_msg
+                            )
+
+                            ai_response_narrated_roll: AIResponse = (
+                                game_ai.process_action(
+                                    action="narrate_roll_outcome",
+                                    details=mechanical_roll_outcome_msg,
+                                    character=character,
+                                    game_state=game_state,
+                                )
+                            )
+
+                            if ai_response_narrated_roll is None:
+                                logger.error(
+                                    "CRITICAL: game_ai.process_action (narrate_roll_outcome) returned None. "
+                                    "A narração da rolagem falhou. Usando a mensagem da IA pré-rolagem."
+                                )
+                            elif not ai_response_narrated_roll.get("success"):
+                                logger.warning(
+                                    f"AI failed to narrate roll outcome successfully: {ai_response_narrated_roll.get('message')}. "
+                                    "Usando a mensagem da IA pré-rolagem."
+                                )
+                                if ai_response_narrated_roll.get("message"):
+                                    game_state.add_message(
+                                        role="system",
+                                        content=f"Erro na narração da IA para a rolagem: {ai_response_narrated_roll.get('message')}",
+                                    )
+                            else:
+                                current_ai_response = ai_response_narrated_roll
+                        else:  # roll_suggestion_data não era um dicionário válido ou estava vazio
+                            logger.warning(
+                                "current_ai_response continha 'suggested_roll', mas não era um dicionário válido ou estava vazio."
+                            )
+                    # <<< FIM NOVO: Processar suggested_roll
+
                     # Atualiza o game_state com os novos dados da IA
-                    new_detailed_location = ai_response.get("current_detailed_location")
+                    new_detailed_location = current_ai_response.get(
+                        "current_detailed_location"
+                    )
                     if new_detailed_location:
                         game_state.current_location = new_detailed_location
 
-                    new_scene_description = ai_response.get("scene_description_update")
+                    new_scene_description = current_ai_response.get(
+                        "scene_description_update"
+                    )
                     if new_scene_description:
                         game_state.scene_description = new_scene_description
 
-                    # A mensagem principal para o usuário já está em ai_response["message"]
-                    # Se a IA não fornecer uma mensagem, usamos a do handler como fallback.
-                    if not ai_response.get("message") and message_for_ai_narration:
-                        ai_response["message"] = message_for_ai_narration
+                    # Add AI's response to message history
+                    ai_message_content = current_ai_response.get("message")
+                    if ai_message_content:
+                        game_state.add_message(
+                            role="assistant", content=ai_message_content
+                        )
+                    else:
+                        logger.warning(
+                            "AI response was successful but no message content found."
+                        )
+
+                    if (
+                        not current_ai_response.get("message")
+                        and message_for_ai_narration
+                    ):
+                        current_ai_response["message"] = message_for_ai_narration
 
                     # Adicionar outros campos do result_from_handler se não estiverem na resposta da IA
                     # e se forem relevantes para o frontend.
                     # Garantir que 'success' e 'message' da IA tenham precedência.
                     final_result = cast(
-                        Dict[str, Any], ai_response.copy()
+                        Dict[str, Any], current_ai_response.copy()
                     )  # Começa com a resposta da IA
                     for key, value in result_from_handler.items():
                         if (
                             key not in final_result
                         ):  # Adiciona apenas se não existir na resposta da IA
                             final_result[key] = value
-                    final_result["success"] = ai_response.get(
+                    final_result["success"] = current_ai_response.get(
                         "success", False
                     )  # Garante que o success da IA prevaleça
 
                     return final_result
                 else:  # Falha da IA ou do processador de resposta da IA
                     logger.warning(
-                        f"AI processing failed or returned success=false. AI Response: {ai_response}"
+                        f"AI processing failed or returned success=false. AI Response: {current_ai_response}"
                     )
                     # Usar a mensagem de erro da IA se disponível, senão a do handler
-                    fallback_message = ai_response.get(
+                    fallback_message = current_ai_response.get(
                         "message"
                     ) or result_from_handler.get(
                         "message", "Erro ao processar com a IA."
@@ -258,6 +386,17 @@ class GameEngine:
                     result_from_handler["message"] = fallback_message
                     result_from_handler["success"] = False
                     return result_from_handler
+            except ImportError:
+                logger.error(
+                    "GameAIClient não pôde ser importado. Verifique a instalação e o caminho.",
+                    exc_info=True,
+                )
+                result_from_handler["message"] = (
+                    result_from_handler.get("message", "")
+                    + " (Erro: Componente de IA indisponível)"
+                )
+                result_from_handler["success"] = False
+                return result_from_handler
 
             except Exception as e:
                 logger.error(f"Erro ao processar com GameAIClient: {e}", exc_info=True)
@@ -268,6 +407,13 @@ class GameEngine:
                 return result_from_handler
 
         return result_from_handler
+
+    # Note: The GameAIClient class (in ai/game_ai_client.py) will need to be adapted
+    # to use game_state.messages as the 'messages' argument for
+    # self.ai_client.generate_response (where self.ai_client is an OpenRouterClient instance).
+    # Example snippet for GameAIClient.process_action:
+    #   messages_for_llm = game_state.messages.copy() # This now includes the latest user message
+    #   raw_llm_response_str = self.ai_client.generate_response(messages=messages_for_llm, generation_params=...)
 
     def _update_location(self, game_state: GameState, new_location: str) -> None:
         if new_location in game_state.discovered_locations:

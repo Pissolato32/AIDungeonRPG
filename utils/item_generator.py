@@ -13,7 +13,7 @@ from typing import Any, Dict, Optional
 # Assuming GroqClient is in a top-level 'ai' directory or 'core.ai'
 # Adjust the import path based on your project structure.
 # Or from core.ai.groq_client import GroqClient
-from ai.groq_client import GroqClient
+from ai.openrouter import OpenRouterClient  # Corrigido o caminho e nome da classe
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +221,7 @@ class ItemGenerator:
         """
         self.data_dir = data_dir
         self.items_file = os.path.join(data_dir, "items_database.json")
-        self.ai_client = GroqClient()
+        self.ai_client = OpenRouterClient()  # Corrigida a instanciação da classe
         self.items_db = self.load_items_database()
 
     @staticmethod

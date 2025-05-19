@@ -101,39 +101,46 @@
 
             <div class="card-body p-0">
               <!-- Story Output -->
-              <div class="game-output p-3">
-                <div id="sceneDescription" class="scene-description mb-3">
-                  {{ game_state.scene_description if game_state else 'Carregando
-                  cena...' }}
-                </div>
+              <div class="game-output">
+                <div id="game-static-info" class="p-3">
+                  <div id="sceneDescription" class="scene-description mb-3">
+                    {{ game_state.scene_description if game_state else
+                    'Carregando cena...' }}
+                  </div>
 
-                {% if game_state.npcs_present %}
-                <div id="npcsPresent" class="npcs-present mb-3">
-                  <strong>NPCs Presentes:</strong>
-                  <span id="npcList"
-                    >{{ ', '.join(game_state.npcs_present) }}</span
-                  >
-                </div>
-                {% endif %} {% if game_state.events %}
-                <div id="currentEvents" class="events mb-3">
-                  <strong>Eventos:</strong>
-                  <span id="eventList">{{ ', '.join(game_state.events) }}</span>
-                </div>
-                {% endif %}
-
-                <!-- Container para Elementos Interativos -->
-                <div
-                  id="interactableElementsContainer"
-                  class="interactable-elements mb-3"
-                >
-                  <!-- Elementos serão populados por JavaScript -->
+                  {% if game_state.npcs_present %}
+                  <div id="npcsPresent" class="npcs-present mb-3">
+                    <strong>NPCs Presentes:</strong>
+                    <span id="npcList"
+                      >{{ ', '.join(game_state.npcs_present) }}</span
+                    >
+                  </div>
+                  {% endif %} {% if game_state.events %}
+                  <div id="currentEvents" class="events mb-3">
+                    <strong>Eventos:</strong>
+                    <span id="eventList"
+                      >{{ ', '.join(game_state.events) }}</span
+                    >
+                  </div>
+                  {% endif %}
                 </div>
 
                 <div id="messagesContainer" class="messages-container">
                   {% for message in game_state.messages if game_state and
-                  game_state.messages %}
-                  <div class="message">{{ message }}</div>
-                  {% endfor %}
+                  game_state.messages %} {% if message.role == 'user' %}
+                  <div class="message message-user">
+                    <strong>Você:</strong> {{ message.content }}
+                  </div>
+                  {% elif message.role == 'assistant' %}
+                  <div class="message message-assistant">
+                    <strong>Mestre:</strong> {{ message.content }}
+                  </div>
+                  {% else %} {# Para 'system' ou outros roles não especificados
+                  #}
+                  <div class="message message-system">
+                    <em>{{ message.content }}</em>
+                  </div>
+                  {% endif %} {% endfor %}
                 </div>
               </div>
 
@@ -387,11 +394,8 @@
                   <h4 id="characterNameStats">
                     {{ character.name if character else 'N/A' }}
                   </h4>
-                  <div id="characterClassRaceLevelStats">
-                    Nv. {{ character.level if character else 1 }} {{
-                    character.race if character else 'Desconhecido' }} {{
-                    character.character_class if character else 'Desconhecido'
-                    }}
+                  <div id="characterClassLevelStats">
+                    Nv. {{ character.level if character else 1 }}
                   </div>
                   <div id="experienceDisplayStats" class="text-secondary">
                     Experiência: {{ character.experience if character else 0 }}
