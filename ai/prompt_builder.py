@@ -2,10 +2,11 @@
 """
 Module for constructing prompts for the AI model.
 """
+
 from typing import Any, Dict, List
 
-from core.models import CharacterType  # Importar CharacterType do models
 from core.game_state_model import GameState, MessageDict
+from core.models import CharacterType  # Importar CharacterType do models
 
 
 class PromptBuilder:

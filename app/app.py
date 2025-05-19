@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import traceback
+import uuid  # Import uuid at the top level
 from typing import Any, Dict, Optional, Tuple
 
 from flask import (
@@ -16,7 +17,6 @@ from flask import (
     session,
     url_for,
 )
-import uuid  # Import uuid at the top level
 
 from ai.openrouter import OpenRouterClient  # Corrigido o caminho de importação
 from app.routes import bp as routes_bp

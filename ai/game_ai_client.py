@@ -6,18 +6,20 @@ and responses."""
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, TypedDict, cast, Protocol
+from typing import Any, Dict, List, Optional, Protocol, TypedDict, cast
+
 from core.models import CharacterType  # Import CharacterType from core.models
-from .prompt_builder import PromptBuilder  # Importar o novo PromptBuilder
+
 from .fallback_handler import (
-    generate_fallback_response,
     FallbackResponse as FallbackResponseType,  # Importar fallback
-)  # Importar fallback
+)
+from .fallback_handler import generate_fallback_response
+from .prompt_builder import PromptBuilder  # Importar o novo PromptBuilder
 
 logger = logging.getLogger(__name__)
-from core.game_state_model import (
+from core.game_state_model import (  # Mover importação para evitar potencial ciclo
     GameState,
-)  # Mover importação para evitar potencial ciclo
+)
 
 
 class AIPrompt(TypedDict):
