@@ -86,7 +86,7 @@ class GameAIClient:
     @staticmethod
     def _create_action_prompt(
         action: str, details: str, character: CharacterType, game_state: GameState
-    ) -> AIPrompt:
+    ) -> List[AIPrompt]:
         """Create a formatted prompt for the AI model.
 
         Args:
@@ -96,9 +96,20 @@ class GameAIClient:
             game_state: Current game state
 
         Returns:
-            Formatted prompt for the AI model
+            A list of prompt messages for the AI model, starting with the system prompt.
         """
         location = game_state.current_location or "Desconhecido"  # Traduzido
+
+        system_prompt_content = (
+            "Você é o Mestre do Jogo em um RPG pós-apocalíptico.\n"
+            "Regras:\n"
+            "1. Nunca repita exatamente falas ou descrições anteriores.\n"
+            "2. Se o jogador fizer a mesma pergunta, aprofunde ou forneça novas informações.\n"
+            "3. Mantenha-se coerente com o histórico recente (últimos 3 turnos).\n"
+            "4. Use vocabulário variado para enriquecer a narrativa."
+        )
+
+        user_prompt_content = ""  # Inicializa o conteúdo do prompt do usuário
         recent_messages = game_state.messages[-5:] if game_state.messages else []
 
         # Tenta obter dados da localização atual de discovered_locations
@@ -120,27 +131,27 @@ class GameAIClient:
             "messages": recent_messages,
         }
 
-        prompt = (
+        user_prompt_content += (
             "Você é o Mestre de um RPG de apocalipse zumbi. "
             "Mantenha o tom narrativo e imersivo em suas respostas. "
             "Os NPCs devem agir de forma lógica e consistente com suas profissões e o bom senso no contexto de sobrevivência. "
             "RESPONDA SEMPRE EM PORTUGUÊS DO BRASIL (pt-br).\n\n"
         )
 
-        prompt += (
+        user_prompt_content += (
             f"Local atual: {state_dict['current_location']}\n"
             f"Descrição da cena: {state_dict['scene_description']}\n"
         )
 
         npcs = state_dict["npcs_present"]
         npcs_text = ", ".join(npcs) if npcs else "Nenhum"
-        prompt += f"NPCs presentes: {npcs_text}\n"
+        user_prompt_content += f"NPCs presentes: {npcs_text}\n"
 
         events = state_dict["events"]
         events_text = ", ".join(events) if events else "Nenhum"
-        prompt += f"Eventos ativos: {events_text}\n\n"
+        user_prompt_content += f"Eventos ativos: {events_text}\n\n"
 
-        prompt += (
+        user_prompt_content += (
             "Personagem do jogador:\n"
             f"- Nome: {character.name}\n"
             f"- Nível: {character.level}\n"
@@ -164,13 +175,14 @@ class GameAIClient:
                 enemy_max_health = enemy_data.get(
                     "max_health", enemy_data.get("health", 0)
                 )
-                prompt += (
+                user_prompt_content += (
                     "Informações do Combate Atual:\n"
                     f"- Inimigo: {enemy_name}\n"
                     f"- HP do Inimigo: {enemy_health}/{enemy_max_health}\n"
                 )
                 if (  # Se a ação é 'attack' e 'details' contém um resultado de ataque
-                    action.lower() == "attack"
+                    action.lower()
+                    == "attack"  # Esta 'action' é a 'action_for_ai' do GameEngine
                     and details
                     and (
                         "acertou" in details.lower()
@@ -178,9 +190,11 @@ class GameAIClient:
                         or "derrotou" in details.lower()
                     )
                 ):  # Adiciona o resultado do último ataque do jogador ao prompt
-                    prompt += f"- Resultado do último ataque do jogador: {details}\n\n"
+                    user_prompt_content += (
+                        f"- Resultado do último ataque do jogador: {details}\n\n"
+                    )
                 else:  # Adiciona uma nova linha se não houver resultado de ataque para adicionar
-                    prompt += "\n"
+                    user_prompt_content += "\n"
 
         if recent_messages:
             messages_text = "\n".join(
@@ -189,7 +203,7 @@ class GameAIClient:
                     for msg in recent_messages
                 ]
             )
-            prompt += (
+            user_prompt_content += (
                 f"Histórico recente da conversa (para contexto):\n{messages_text}\n\n"
             )
         # Lógica principal para interpretação de ação ou ação direta
@@ -221,7 +235,7 @@ class GameAIClient:
                 is_movement_intent = True
 
             if is_movement_intent:
-                prompt += (
+                user_prompt_content += (
                     f"Ação de Movimento do Jogador (interprete e execute): {details}\n"
                     f"Localização Atual do Jogador (antes do movimento): {state_dict['current_location']}\n\n"
                     "SUA TAREFA (para movimento interpretado):\n"
@@ -234,7 +248,7 @@ class GameAIClient:
                     "   - `interpreted_action_details` deve conter informações sobre o movimento (ex: {'direction': 'saindo do abrigo', 'target_location_name': 'Corredor Externo'}).\n\n"
                 )
             else:  # Default 'interpret' prompt for non-movement actions
-                prompt += (
+                user_prompt_content += (
                     f"Ação textual do jogador (interprete a intenção): {details}\n\n"
                     "SUA TAREFA PRINCIPAL (quando a ação é 'interpret' e NÃO é explicitamente movimento):\n"
                     "1. INTERPRETE A INTENÇÃO: Analise a 'Ação textual do jogador' para determinar a intenção principal. Categorize-a como uma das seguintes: 'look', 'talk', 'vocal_action', 'search', 'use_item', 'attack', 'flee', 'rest', 'skill', 'craft', 'custom_complex'.\n"
@@ -250,7 +264,7 @@ class GameAIClient:
             # This means an ActionHandler likely resolved a mechanic (e.g., dice roll).
             # 'details' (message_for_ai_narration) contains the description of this mechanical outcome.
             # Example: "Você tentou forçar a porta e conseguiu! (Rolagem: 18 vs DC: 15)."
-            prompt += (
+            user_prompt_content += (
                 f"Resultado da Ação Mecânica do Jogador (baseado em regras/dados): {details}\n\n"
                 "SUA TAREFA PRINCIPAL (quando um resultado mecânico é fornecido):\n"
                 "1. NARRE O RESULTADO: Use o 'Resultado da Ação Mecânica do Jogador' como base para sua narrativa. Descreva vividamente o que aconteceu no mundo do jogo.\n"
@@ -262,7 +276,7 @@ class GameAIClient:
         else:
             # Se a ação for "narrate_roll_outcome", 'details' conterá a string do resultado mecânico da rolagem.
             if action.lower() == "narrate_roll_outcome":
-                prompt += (
+                user_prompt_content += (
                     f"Resultado Mecânico de um Teste Recente: {details}\n\n"
                     "SUA TAREFA: Narre vividamente o que aconteceu no mundo do jogo com base neste resultado de teste. Descreva as consequências e reações. Siga as 'Diretrizes Gerais para Resposta'.\n\n"
                 )
@@ -270,35 +284,35 @@ class GameAIClient:
             # This handles direct, non-interpretive actions that might not have had a specific
             # mechanical resolution message yet (e.g., simple "look", "move" if not handled by specific logic above).
             # 'action' is the command type (e.g., "look"), 'details' is the target/specification.
-            prompt += f"Ação atual do jogador (direta): {action}"
+            user_prompt_content += f"Ação atual do jogador (direta): {action}"
             if details:
-                prompt += f" (Detalhes: {details})"
-            prompt += "\n\n"
+                user_prompt_content += f" (Detalhes: {details})"
+            user_prompt_content += "\n\n"
 
-        prompt += "SUB-DIRETRIZES PARA INTENÇÕES ESPECÍFICAS (aplique se relevante para a intenção que você interpretou ou para a ação direta fornecida):\n"
+        user_prompt_content += "SUB-DIRETRIZES PARA INTENÇÕES ESPECÍFICAS (aplique se relevante para a intenção que você interpretou ou para a ação direta fornecida):\n"
         # ... (o restante das sub-diretrizes permanece o mesmo) ...
 
-        prompt += (
+        user_prompt_content += (
             "Diretrizes Gerais para Resposta (aplique sempre, independentemente da intenção interpretada):\n"
             # ... (as diretrizes gerais permanecem as mesmas) ...
         )
         # ... (o restante do prompt, incluindo a instrução de formatação JSON, permanece o mesmo) ...
 
-        prompt += (
+        user_prompt_content += (
             "INTENÇÃO 'search': Descreva o que o personagem encontra (ou não encontra) com base no ambiente e nos detalhes da busca. "
             "Seja criativo e considere o que faria sentido encontrar em um local como este. "
             "Pode ser algo útil, inútil, perigoso, ou apenas pistas sobre o que aconteceu.\n\n"
         )
-        prompt += (
+        user_prompt_content += (
             "INTENÇÃO 'look': Se houver um alvo específico nos detalhes da ação do jogador, descreva em detalhes o que o personagem observa sobre esse alvo. "
             "Forneça informações visuais, pistas ou qualquer coisa relevante. Se for um olhar geral ao ambiente, reitere ou atualize a descrição da cena.\n\n"
         )
-        prompt += (
+        user_prompt_content += (
             "INTENÇÃO 'move': Descreva a transição para o novo local ou a tentativa de movimento. "
             "Se o movimento for para um local conhecido, reforce a descrição com novos detalhes ou mudanças. "
             "Se for uma tentativa de ir a um local desconhecido ou bloqueado, descreva o obstáculo ou a razão pela qual o movimento não é simples.\n\n"
         )
-        prompt += (
+        user_prompt_content += (
             "INTENÇÕES 'talk' (diálogo) ou 'vocal_action' (ação vocal genérica):\n"
             # Prioriza o tratamento de perguntas se a intenção for 'talk' e a entrada for uma pergunta.
             "   Se a 'Ação textual do jogador' for uma PERGUNTA (ex: 'Ele vai sobreviver?', 'O que aconteceu aqui?', 'Você tem comida?') E a intenção interpretada for 'talk':\n"
@@ -317,29 +331,29 @@ class GameAIClient:
             "     Descreva se algum NPC próximo toma a iniciativa de falar com o jogador, ou se o ambiente permanece em silêncio aguardando uma ação mais específica. Se houver NPCs, um deles pode perguntar 'Você disse alguma coisa?' ou 'Precisa de algo?'.\n"
             "   Se os detalhes para 'talk' ou 'vocal_action' forem vagos ou sem sentido, aplique a diretriz geral '9. AÇÕES OU DETALHES IMPRECISOS/IRRELEVANTES'.\n\n"
         )
-        prompt += (
+        user_prompt_content += (
             "INTENÇÃO 'use_item': Descreva o resultado de usar o item especificado. Se for um consumível, descreva a sensação ou efeito. "
             "Se for uma ferramenta, descreva a ação e seu sucesso ou falha. "
             "Se for um item de quest, revele alguma informação ou consequência.\n\n"
         )
-        prompt += "INTENÇÃO 'attack': Se não houver combate ativo, descreva o jogador se preparando para o combate ou atacando o alvo especificado (ou o mais óbvio), iniciando a confrontação. Se o combate já estiver ativo, descreva o resultado do ataque contra o inimigo atual.\n\n"
-        prompt += (
+        user_prompt_content += "INTENÇÃO 'attack': Se não houver combate ativo, descreva o jogador se preparando para o combate ou atacando o alvo especificado (ou o mais óbvio), iniciando a confrontação. Se o combate já estiver ativo, descreva o resultado do ataque contra o inimigo atual.\n\n"
+        user_prompt_content += (
             "INTENÇÃO 'flee': Descreva a tentativa de fuga. Foi bem-sucedida? Houve perigos ou obstáculos? "
             "A fuga levou o personagem a uma situação melhor ou pior? "
             "Mantenha a tensão e o realismo do apocalipse zumbi.\n\n"
         )
-        prompt += (
+        user_prompt_content += (
             "INTENÇÃO 'rest': Descreva a tentativa de descanso. O local é seguro o suficiente? "
             "O personagem consegue realmente descansar ou é interrompido? Quais são os riscos? "
             "Descreva quaisquer efeitos de recuperação ou, ao contrário, a impossibilidade de descansar devido ao perigo.\n\n"
         )
-        prompt += (
+        user_prompt_content += (
             "INTENÇÃO 'custom_complex' ou outras não listadas: Interprete esta ação no contexto do jogo de apocalipse zumbi. "
             "Descreva o resultado da ação do jogador de forma criativa e coerente com o ambiente e a situação. "
             "Considere as possíveis consequências, sucessos ou falhas.\n\n"
         )
 
-        prompt += (
+        user_prompt_content += (
             "Diretrizes Gerais para Resposta (aplique sempre, independentemente da intenção interpretada):\n"
             "1. **FOCO NA AÇÃO:** Sua resposta deve focar PRIMARIAMENTE no resultado direto e nas consequências imediatas da ação do jogador ('Ação atual do jogador').\n"
             "2. **CONTEXTO DO HISTÓRICO:** Use o 'Histórico recente da conversa' para entender o foco atual do jogador e dar continuidade aos eventos recentes, especialmente para ações ambíguas (ex: 'consertar', 'investigar mais', 'usar item' sem especificar alvo).\n"
@@ -387,7 +401,10 @@ class GameAIClient:
             "```\n"
         )
 
-        return AIPrompt(role="user", content=prompt)
+        return [
+            AIPrompt(role="system", content=system_prompt_content),
+            AIPrompt(role="user", content=user_prompt_content),
+        ]
 
     def process_action(
         self, action: str, details: str, character: CharacterType, game_state: GameState
@@ -425,17 +442,17 @@ class GameAIClient:
             )
 
         try:
-            prompt_data = self._create_action_prompt(
+            # _create_action_prompt agora retorna uma lista de prompts
+            list_of_prompts_for_ai: List[AIPrompt] = self._create_action_prompt(
                 action, details, character, game_state
             )
             logger.debug(
-                f"Generated AI Prompt (first 500 chars): {prompt_data['content'][:500]}"
+                f"Generated AI User Prompt (first 500 chars): {list_of_prompts_for_ai[-1]['content'][:500]}"
             )
 
-            # Wrap the single prompt_data dictionary in a list for the client
-            # Also, pass generation_params if you intend to use them here.
+            # Passa a lista de prompts diretamente para o cliente
             response_from_ai_service = self.ai_client.generate_response(
-                messages=[prompt_data]
+                messages=list_of_prompts_for_ai
             )
             logger.debug(
                 f"Raw response from AI service type: {type(response_from_ai_service)}, content: {str(response_from_ai_service)[:500]}"
