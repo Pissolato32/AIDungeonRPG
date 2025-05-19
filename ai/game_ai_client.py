@@ -6,15 +6,17 @@ and responses."""
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, TypedDict, cast, Protocol
+from typing import Any, Dict, List, Optional, Protocol, TypedDict, cast
 
 from core.game_state_model import GameState
 from core.models import Character
-from .prompt_builder import PromptBuilder  # Importar o novo PromptBuilder
+
 from .fallback_handler import (
-    generate_fallback_response,
-    FallbackResponse as FallbackResponseType,
-)  # Importar fallback
+    FallbackResponse as FallbackResponseType,  # Importar fallback
+)
+from .fallback_handler import generate_fallback_response
+from .prompt_builder import PromptBuilder  # Importar o novo PromptBuilder
+
 )  # Importar fallback
 
 logger = logging.getLogger(__name__)

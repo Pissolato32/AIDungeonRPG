@@ -7,13 +7,14 @@ from typing import Any, Dict, List
 from core.game_state_model import GameState, MessageDict  # Assuming MessageDict is here
 from core.models import Character  # Will use CharacterType where appropriate
 
+from .game_ai_client import CharacterType  # Import the protocol
+
 # Se CharacterType for um Protocolo, você pode importá-lo ou redefini-lo aqui
 # from .game_ai_client import CharacterType # Se estiver definido em game_ai_client
 
 # Para simplificar, vamos assumir que Character é a classe concreta por enquanto.
 # Se você tiver um CharacterType Protocol, use-o.
 
-from .game_ai_client import CharacterType  # Import the protocol
 
 
 class PromptBuilder:
