@@ -3,25 +3,23 @@
 Game engine module for handling game state and actions."""
 
 import json
+import logging  # Adicionado logging
 import os
 import random
-import logging  # Adicionado logging
 from typing import Any, Dict, List, Optional, cast
 
 # Assume GameAIClient is in ai.game_ai_client, adjust if necessary
-from ai.game_ai_client import GameAIClient, AIResponse  # Import AIResponse
+from ai.game_ai_client import AIResponse, GameAIClient  # Import AIResponse
 
 # Assume ActionHandler is in core.actions, adjust if necessary
 from core.actions import (
     CustomActionHandler,  # Importar para verificar se é uma instância
-    ActionHandler,
-    get_action_handler,
 )
+from core.actions import ActionHandler, get_action_handler
 from core.models import Character
+from utils.dice import calculate_attribute_modifier, roll_dice  # Importar para rolagens
 
 from .game_state_model import GameState, LocationCoords, LocationData
-
-from utils.dice import roll_dice, calculate_attribute_modifier  # Importar para rolagens
 
 logger = logging.getLogger(__name__)  # Configurar logger para este módulo
 
@@ -188,9 +186,7 @@ class GameEngine:
                 msg["content"].lower()
                 for msg in game_state.messages[-6:]
                 if msg["role"] == "user"
-            ][
-                -3:
-            ]  # Pega as últimas 3 entradas do usuário
+            ][-3:]  # Pega as últimas 3 entradas do usuário
             if player_input_lower in recent_user_inputs:
                 game_state.add_message(
                     role="system",
@@ -629,15 +625,15 @@ class GameEngine:
                 if direction_from_existing_to_new:
                     if "connections" not in existing_loc_data:
                         existing_loc_data["connections"] = {}
-                    existing_loc_data["connections"][
-                        new_location_id
-                    ] = direction_from_existing_to_new
+                    existing_loc_data["connections"][new_location_id] = (
+                        direction_from_existing_to_new
+                    )
                     direction_from_new_to_existing = self._opposite_direction(
                         direction_from_existing_to_new
                     )
-                    new_location_data["connections"][
-                        existing_id
-                    ] = direction_from_new_to_existing
+                    new_location_data["connections"][existing_id] = (
+                        direction_from_new_to_existing
+                    )
 
     @staticmethod
     def _generate_location_name(location_type: str) -> str:

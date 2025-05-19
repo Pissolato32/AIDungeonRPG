@@ -2,8 +2,9 @@
 """NPC module for managing non-player characters in the game world."""
 
 import random
+import uuid  # Ensure uuid is imported if generating IDs
 from dataclasses import dataclass, field
-from typing import (
+from typing import (  # Ensure these are imported
     Any,
     Dict,
     List,
@@ -11,8 +12,7 @@ from typing import (
     Optional,
     TypedDict,
     cast,
-)  # Ensure these are imported
-import uuid  # Ensure uuid is imported if generating IDs
+)
 
 from .models import NPCBase
 
@@ -139,7 +139,9 @@ class NPC:
             (
                 "hostile"
                 if self.relationship_level < -30
-                else "friendly" if self.relationship_level > 30 else "neutral"
+                else "friendly"
+                if self.relationship_level > 30
+                else "neutral"
             ),
         )
 
