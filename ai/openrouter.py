@@ -4,11 +4,12 @@ OpenRouter API client module.
 This module provides a client to interact with models via the OpenRouter.ai API.
 """
 
-import os
 import json
 import logging
+import os
+from typing import Any, Dict, List, Optional
+
 import requests  # Você precisará instalar esta biblioteca: pip install requests
-from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger(__name__)
 
