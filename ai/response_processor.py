@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 class JsonExtractionResult:
     """Result of JSON extraction attempt."""
 
-    data: Optional[Dict[str, str]]
+    data: Optional[Dict[str, Any]]  # Changed from Dict[str, str] to Dict[str, Any]
     error: Optional[str]
     source: str = "none"
 
@@ -57,22 +57,51 @@ def process_ai_response(
         result = extract_json_from_text(response_text)
 
         if result.data:
-            # Assume result.data is a Dict[str, Any] that should conform to AIResponse
-            response_data: Dict[str, Any] = result.data
-            if (
-                "success" not in response_data
-            ):  # Changed from 'response' to 'response_data'
-                response_data["success"] = True  # Default to success if not specified
-            # Ensure all required fields for AIResponse are present, even if with default values
-            # This makes the cast to AIResponse safer.
-            # The GameAIClient's AIResponse definition is the source of truth for required fields.
-            # For now, we'll assume the essential ones are message, current_detailed_location, scene_description_update
-            response_data.setdefault("message", "Resposta processada.")
-            response_data.setdefault("current_detailed_location", "Desconhecido")
-            response_data.setdefault("scene_description_update", "Cena inalterada.")
-            response_data.setdefault("details", {})
-            response_data.setdefault("error", None)
-            return cast("AIResponse", response_data)
+            response_data_raw: Dict[str, Any] = result.data
+
+            # Ensure required string fields are strings, not None, providing defaults.
+            message_val = response_data_raw.get("message")
+            current_loc_val = response_data_raw.get("current_detailed_location")
+            scene_update_val = response_data_raw.get("scene_description_update")
+
+            # Construct the AIResponse-compatible dictionary
+            final_response_data: Dict[str, Any] = {
+                "success": response_data_raw.get("success", True),
+                "message": (
+                    message_val
+                    if isinstance(message_val, str)
+                    else "Resposta da IA inválida ou ausente."
+                ),
+                "current_detailed_location": (
+                    current_loc_val
+                    if isinstance(current_loc_val, str)
+                    else "Localização não fornecida pela IA."
+                ),
+                "scene_description_update": (
+                    scene_update_val
+                    if isinstance(scene_update_val, str)
+                    else "Atualização de cena não fornecida pela IA."
+                ),
+                "details": response_data_raw.get("details", {}),
+                "error": response_data_raw.get(
+                    "error"
+                ),  # Optional, so None is fine if missing
+                "interpreted_action_type": response_data_raw.get(
+                    "interpreted_action_type"
+                ),  # Optional
+                "interpreted_action_details": response_data_raw.get(
+                    "interpreted_action_details"
+                ),  # Optional
+                "suggested_roll": response_data_raw.get("suggested_roll"),  # Optional
+                "interactable_elements": response_data_raw.get(
+                    "interactable_elements"
+                ),  # Optional
+            }
+            # Ensure 'details' is a dict
+            if not isinstance(final_response_data["details"], dict):
+                final_response_data["details"] = {}
+
+            return cast("AIResponse", final_response_data)
 
         # If no JSON found, return as message
         return cast(

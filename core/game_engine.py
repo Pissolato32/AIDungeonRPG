@@ -5,8 +5,8 @@ Game engine module for handling game state and actions."""
 import json
 import os
 import random
-import logging  # Adicionado logging
-from typing import Any, Dict, List, Optional, cast
+import logging
+from typing import Any, Dict, List, Optional, Tuple, cast  # Added Tuple
 
 # Assume GameAIClient is in ai.game_ai_client, adjust if necessary
 from ai.game_ai_client import GameAIClient, AIResponse  # Import AIResponse
@@ -24,6 +24,10 @@ from .game_state_model import GameState, LocationCoords, LocationData
 from utils.dice import roll_dice, calculate_attribute_modifier  # Importar para rolagens
 
 logger = logging.getLogger(__name__)  # Configurar logger para este módulo
+
+MAX_NPC_HISTORY = (
+    3  # Número de mensagens recentes do NPC a serem lembradas para evitar repetição
+)
 
 
 class GameEngine:
@@ -167,6 +171,50 @@ class GameEngine:
                 logger.error(
                     f"Error deleting game state file for character {character_id}: {e}"
                 )
+
+    def _process_npc_repetition(
+        self,
+        ai_message_content: Optional[str],
+        npc_name: Optional[str],
+        game_state: GameState,
+    ) -> Tuple[Optional[str], bool]:
+        """
+        Checks for NPC message repetition and updates NPC message history.
+        Returns the (potentially modified) message and a boolean indicating if it was a repetition.
+        """
+        if not ai_message_content or not npc_name:
+            return ai_message_content, False
+
+        is_repetition = False
+        history = game_state.npc_message_history.get(npc_name, [])
+
+        # Normalize messages for comparison (simple strip and lower for now)
+        normalized_ai_message = ai_message_content.strip().lower()
+
+        # Check for exact or very similar repetition (can be made more sophisticated)
+        # For now, we check if the stripped message is in the stripped history.
+        if any(normalized_ai_message == msg.strip().lower() for msg in history):
+            is_repetition = True
+            logger.warning(
+                f"[Repetição Detectada] NPC '{npc_name}' tentou repetir: {ai_message_content}"
+            )
+            # Modify message to indicate repetition
+            # ai_message_content = f"{npc_name} parece se repetir, reafirmando o que já disse."
+            # Ou, para um efeito mais sutil, podemos apenas logar e deixar o prompt da IA tentar lidar com isso.
+            # Por enquanto, vamos apenas logar e retornar a mensagem original, confiando no prompt.
+            # Se a repetição persistir, podemos ativar a modificação da mensagem aqui.
+
+        # Update history
+        if npc_name not in game_state.npc_message_history:
+            game_state.npc_message_history[npc_name] = []
+
+        game_state.npc_message_history[npc_name].append(
+            ai_message_content
+        )  # Store original for more accurate future checks
+        if len(game_state.npc_message_history[npc_name]) > MAX_NPC_HISTORY:
+            game_state.npc_message_history[npc_name].pop(0)
+
+        return ai_message_content, is_repetition
 
     def process_action(
         self,
@@ -383,12 +431,48 @@ class GameEngine:
                     # <<< FIM NOVO: Processar suggested_roll
 
                     # Add AI's response to message history
-                    ai_message_content = current_ai_response.get("message")
-                    if ai_message_content:
-                        game_state.add_message(
-                            role="assistant", content=ai_message_content
-                        )
+                    original_ai_message_content = current_ai_response.get("message")
+
+                    # Determinar o nome do NPC para o histórico de repetição
+                    # Isso é uma heurística. Se a ação foi 'talk' e 'details' (message_for_ai_narration)
+                    # era o nome de um NPC, assumimos que a IA está respondendo como esse NPC.
+                    npc_name_for_history: Optional[str] = None
+                    if action_for_ai.lower() == "talk":
+                        # message_for_ai_narration contém o nome do NPC alvo da conversa
+                        potential_npc_name = message_for_ai_narration.strip()
+                        if (
+                            potential_npc_name in game_state.known_npcs
+                            or potential_npc_name in game_state.npcs_present
+                        ):
+                            npc_name_for_history = potential_npc_name
+
+                    processed_message_content, _ = self._process_npc_repetition(
+                        original_ai_message_content, npc_name_for_history, game_state
+                    )
+
+                    # current_ai_response["message"] deve ser str.
+                    # original_ai_message_content é garantidamente str.
+                    # _process_npc_repetition atualmente retorna o conteúdo da mensagem original.
+                    # No entanto, seu tipo declarado é Optional[str].
+                    # Se processed_message_content for None (o que não deveria acontecer se
+                    # original_ai_message_content for str), usamos o original_ai_message_content como fallback.
+                    if processed_message_content is not None:
+                        current_ai_response["message"] = processed_message_content
                     else:
+                        logger.error(
+                            "Message became None after _process_npc_repetition. This is unexpected. Using original message."
+                        )
+                        current_ai_response["message"] = original_ai_message_content
+
+                    if current_ai_response[
+                        "message"
+                    ]:  # Agora current_ai_response["message"] é sempre str
+                        game_state.add_message(
+                            role="assistant", content=current_ai_response["message"]
+                        )
+                    elif (
+                        original_ai_message_content is None
+                    ):  # Só loga se a msg original já era None
                         logger.warning(
                             "AI response was successful but no message content found."
                         )

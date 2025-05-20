@@ -44,6 +44,10 @@ class GameStateManager:
             "Médica de Campo Apavorada",
         ]
         game_state.events = [
+            # Estes eventos são definidos aqui para a cena inicial.
+            # O GameEngine os usará ao carregar esta localização.
+            # Se a IA retornar novos eventos, o GameEngine os atualizará.
+            # A IA também pode narrar sobre estes eventos iniciais.
             "Ouve-se o gotejar constante de água em algum lugar próximo.",
             "Um gerador falha e a luz pisca antes de voltar.",
         ]

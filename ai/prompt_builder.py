@@ -34,12 +34,13 @@ class PromptBuilder:
     def build_system_prompt() -> str:
         """Builds the static system prompt."""
         return (
-            "Você é o Mestre do Jogo em um RPG pós-apocalíptico.\n"
-            "Regras:\n"
-            "1. Nunca repita exatamente falas ou descrições anteriores.\n"
-            "2. Se o jogador fizer a mesma pergunta, aprofunde ou forneça novas informações.\n"
-            "3. Mantenha-se coerente com o histórico recente (últimos 3 turnos).\n"
-            "4. Use vocabulário variado para enriquecer a narrativa."
+            "Você é o Mestre do Jogo (MJ) em um RPG pós-apocalíptico. Seu objetivo é criar uma narrativa imersiva e reativa.\n"
+            "REGRAS CRÍTICAS PARA SUAS RESPOSTAS:\n"
+            "1. **EVITE REPETIÇÃO:** NUNCA repita frases ou respostas que você (como MJ ou como um NPC) já forneceu recentemente. Se o jogador fizer a mesma pergunta ou uma ação similar, encontre uma NOVA maneira de responder, adicione detalhes, mude a perspectiva do NPC, ou indique que o assunto já foi coberto.\n"
+            "2. **PROGRESSÃO:** Sempre tente fazer a conversa ou a situação progredir. Não fique preso em loops.\n"
+            "3. **COERÊNCIA COM HISTÓRICO:** Mantenha-se coerente com o histórico recente da conversa (últimos 3-5 turnos são cruciais).\n"
+            "4. **VARIEDADE:** Use vocabulário variado e diferentes formas de expressar ideias para enriquecer a narrativa.\n"
+            "5. **FOCO NO JOGADOR:** A ação do jogador é o gatilho. Sua narrativa deve ser uma consequência direta e lógica dessa ação."
         )
 
     @staticmethod
@@ -378,10 +379,10 @@ class InstructionsBuilder:
             "   Se a 'Ação textual do jogador' contiver um ponto de interrogação (?) OU começar com palavras como 'Quem', 'O quê', 'Onde', 'Quando', 'Por que', 'Como', 'Será que', 'Você acha que' E a intenção interpretada for 'talk':\n"
         )
         talk_prompt_parts.append(
-            "     - Identifique o NPC mais apropriado para responder à pergunta com base no contexto da conversa, no histórico recente e no conhecimento esperado do NPC (ex: uma médica sobre questões médicas, um engenheiro sobre reparos, um líder sobre planos).\n"
+            "     - Identifique o NPC mais apropriado para responder à pergunta com base no contexto da conversa, no histórico recente (especialmente as últimas falas) e no conhecimento esperado do NPC.\n"
         )
         talk_prompt_parts.append(
-            "     - A resposta do NPC DEVE ser uma tentativa direta e FOCADA de responder à pergunta do jogador, considerando o TÓPICO IMEDIATAMENTE ANTERIOR da conversa. Se a pergunta do jogador for uma continuação de um diálogo (ex: 'Do que precisam exatamente?' após discutir um problema específico), a resposta DEVE ser sobre esse problema específico. **EVITE REPETIR informações que o NPC já forneceu sobre esse tópico nas últimas interações.** Se o jogador perguntar novamente sobre algo já dito, o NPC pode adicionar um novo detalhe, expressar impaciência (se condizente com a personalidade) ou perguntar por que o jogador está perguntando de novo, em vez de simplesmente repetir a informação. EVITE que o NPC mude de assunto abruptamente ou responda de forma genérica se a pergunta for específica e contextualizada pela conversa anterior. EVITE que o NPC faça a mesma pergunta de volta ao jogador ou a outros NPCs, a menos que seja uma pergunta retórica clara e intencional para provocar reflexão (e isso deve ser raro e justificado pela personalidade do NPC).\n"
+            "     - A resposta do NPC DEVE ser uma tentativa direta e FOCADA de responder à pergunta do jogador, considerando o TÓPICO IMEDIATAMENTE ANTERIOR da conversa. Se a pergunta do jogador for uma continuação de um diálogo, a resposta DEVE ser sobre esse problema específico. **CRÍTICO: EVITE REPETIR informações que o NPC já forneceu sobre esse tópico nas últimas interações.** Se o jogador perguntar novamente sobre algo já dito, o NPC deve adicionar um novo detalhe, expressar impaciência (se condizente com a personalidade), perguntar por que o jogador está perguntando de novo, ou sutilmente indicar que já respondeu, em vez de simplesmente repetir a informação palavra por palavra. EVITE que o NPC mude de assunto abruptamente ou responda de forma genérica se a pergunta for específica e contextualizada pela conversa anterior. EVITE que o NPC faça a mesma pergunta de volta ao jogador ou a outros NPCs, a menos que seja uma pergunta retórica clara e intencional para provocar reflexão (e isso deve ser raro e justificado pela personalidade do NPC).\n"
         )
         talk_prompt_parts.append(
             "     - Se nenhum NPC presente puder responder, a narrativa pode indicar isso (ex: 'Ninguém parece saber a resposta.' ou 'A Médica de Campo balança a cabeça, incerta.' ou 'O Velho Sobrevivente dá de ombros, claramente sem saber.').\n"
@@ -405,7 +406,7 @@ class InstructionsBuilder:
             "     2. Use informações prévias se o jogador já interagiu com este NPC.\n"
         )
         talk_prompt_parts.append(  # MODIFICADO
-            "     3. Revele detalhes **NOVOS ou adicionais** sobre o mundo devastado, perigos imediatos, rumores, necessidades de sobrevivência ou possíveis missões/trocas. **EVITE REPETIR informações que este NPC já deu ao jogador nas últimas interações, a menos que o jogador peça explicitamente por um lembrete ou a repetição sirva a um propósito narrativo claro (ex: ênfase devido à gravidade).**\n"
+            "     3. Revele detalhes **NOVOS ou adicionais** sobre o mundo devastado, perigos imediatos, rumores, necessidades de sobrevivência ou possíveis missões/trocas. **CRÍTICO: EVITE REPETIR informações que este NPC já deu ao jogador nas últimas interações, a menos que o jogador peça explicitamente por um lembrete ou a repetição sirva a um propósito narrativo claro (ex: ênfase devido à gravidade, ou se o NPC for senil). Se o jogador insistir em um tópico já coberto, o NPC pode mostrar sinais de impaciência ou confusão.**\n"
         )
         talk_prompt_parts.append(
             "     4. Mantenha consistência com interações anteriores.\n"

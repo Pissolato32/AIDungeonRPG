@@ -2,8 +2,12 @@
 Module for game state data models.
 """
 
-from dataclasses import dataclass, field
-from typing import (  # Added Set for visited_locations previous type
+import logging
+
+logger = logging.getLogger(__name__)  # Define the logger
+
+from dataclasses import dataclass, field, asdict  # Import asdict
+from typing import (
     Any,
     Dict,
     List,
@@ -11,7 +15,7 @@ from typing import (  # Added Set for visited_locations previous type
     TypedDict,
 )
 
-# Import NPC here if it's a clean dependency (i.e., npc.py doesn't import GameState)
+# Import NPC here
 # If core.npc also imports GameState or related models, this might need further refactoring.
 # For now, we assume core.npc is independent or only depends on basic types.
 from core.npc import NPC
@@ -85,8 +89,12 @@ class GameState:
 
     current_location: str = ""
     scene_description: str = ""
-    npcs_present: List[str] = field(default_factory=list)
-    known_npcs: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    npcs_present: List[str] = field(
+        default_factory=list
+    )  # Lista de nomes/IDs de NPCs presentes
+    known_npcs: Dict[str, NPC] = field(
+        default_factory=dict
+    )  # Agora armazena objetos NPC
     messages: List[MessageDict] = field(default_factory=list)  # Changed from List[str]
     coordinates: LocationCoords = field(
         default_factory=lambda: {"x": 0, "y": 0, "z": 0}
@@ -103,26 +111,19 @@ class GameState:
     combat: Optional[CombatState] = field(
         default=None
     )  # Novo atributo para estado de combate
+    npc_message_history: Dict[str, List[str]] = field(
+        default_factory=dict
+    )  # Histórico de mensagens por NPC para evitar repetição
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert game state to a dictionary."""
-        return {
-            "current_location": self.current_location,
-            "scene_description": self.scene_description,
-            "npcs_present": self.npcs_present,
-            "known_npcs": self.known_npcs,
-            "messages": self.messages,
-            "coordinates": self.coordinates,
-            "current_action": self.current_action,
-            "discovered_locations": self.discovered_locations,
-            "npcs_by_location": self.npcs_by_location,
-            "npc_relationships": self.npc_relationships,
-            "location_id": self.location_id,
-            "events": self.events,
-            "world_map": self.world_map,
-            "visited_locations": self.visited_locations,
-            "combat": self.combat,
+        # Manually handle known_npcs to serialize NPC objects
+        data = asdict(self)
+        data["known_npcs"] = {
+            npc_id: npc.to_dict() if hasattr(npc, "to_dict") else npc
+            for npc_id, npc in self.known_npcs.items()
         }
+        return data
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GameState":
@@ -131,7 +132,16 @@ class GameState:
             current_location=data.get("current_location", ""),
             scene_description=data.get("scene_description", ""),
             npcs_present=data.get("npcs_present", []),
-            known_npcs=data.get("known_npcs", {}),
+            # Attempt to load known_npcs as NPC objects, fallback to dicts
+            known_npcs={
+                npc_id: (
+                    NPC.from_dict(npc_data)  # NPC.from_dict deve retornar um objeto NPC
+                    if isinstance(npc_data, dict)
+                    else npc_data  # npc_data could already be an NPC instance if loaded from a previous state in memory
+                )  # Assuming NPC has a from_dict or can be instantiated from dict
+                for npc_id, npc_data in data.get("known_npcs", {}).items()
+            },
+            # known_npcs=data.get("known_npcs", {}), # Old line
             messages=data.get("messages", []),
             coordinates=data.get("coordinates", {"x": 0, "y": 0, "z": 0}),
             current_action=data.get("current_action", ""),
@@ -143,6 +153,7 @@ class GameState:
             world_map=data.get("world_map", {}),
             visited_locations=data.get("visited_locations", {}),
             combat=data.get("combat", None),
+            npc_message_history=data.get("npc_message_history", {}),
         )
 
     def add_message(self, role: str, content: str) -> None:
@@ -167,13 +178,26 @@ class GameState:
             content=f"Você descobriu: {location_data.get('name', 'um novo local desconhecido')}!",
         )
 
-    def add_npc(
-        self, npc_id: str, npc_data: Dict[str, Any]
-    ) -> None:  # Changed 'npc' to 'npc_data'
-        """Add or update an NPC in the game state."""
-        self.known_npcs[npc_id] = npc_data
+    def add_npc(self, npc_id: str, npc: NPC) -> None:
+        """Add or update an NPC object in the game state."""
+        if isinstance(npc, NPC):
+            self.known_npcs[npc_id] = npc
+        elif isinstance(
+            npc, dict
+        ):  # Fallback if a dict is passed (should ideally be an NPC object)
+            logger.warning(
+                f"Adding NPC '{npc_id}' from dict to known_npcs. Consider passing an NPC object."
+            )
+            self.known_npcs[npc_id] = NPC.from_dict(npc)  # type: ignore
+        # self.known_npcs[npc_id] = npc_data # Old line
 
-        if location := npc_data.get("location"):
+        # Assuming NPC object has a 'location' attribute or a way to get its current location
+        # For now, we'll assume the location is managed externally or set when NPC is placed in a scene.
+        # If NPC objects store their location, you'd use: location = npc.location
+        # This part might need adjustment based on how NPC locations are tracked.
+        if hasattr(npc, "current_location_id") and (
+            location := getattr(npc, "current_location_id", None)
+        ):  # Example if NPC stores its location ID
             if location not in self.npcs_by_location:
                 self.npcs_by_location[location] = []
             # Avoid duplicates
@@ -182,10 +206,21 @@ class GameState:
 
     def get_npc(self, npc_id: str) -> Optional[NPC]:
         """Get an NPC by ID."""
-        if npc_data := self.known_npcs.get(npc_id):
-            return NPC(
-                **npc_data
-            )  # Assumes NPC can be instantiated from its dict representation
+        npc_entry = self.known_npcs.get(npc_id)
+        if isinstance(npc_entry, NPC):
+            return npc_entry
+        elif isinstance(
+            npc_entry, dict
+        ):  # Should not happen if add_npc ensures NPC objects
+            # If already an NPC object, return it. If it's still a dict, try to load it.
+            logger.warning(
+                f"NPC '{npc_id}' in known_npcs was a dict. Attempting to convert."
+            )
+            return NPC.from_dict(npc_entry)  # type: ignore
+        elif npc_entry is not None:
+            logger.warning(
+                f"Data for NPC ID '{npc_id}' in known_npcs is not an NPC object or dict: {type(npc_entry)}"
+            )
         return None
 
     def get_npcs_in_location(self, location: str) -> List[NPC]:
@@ -193,8 +228,17 @@ class GameState:
         npc_ids = self.npcs_by_location.get(location, [])
         npcs_found = []
         for npc_id in npc_ids:
-            if npc_data := self.known_npcs.get(npc_id):
-                npcs_found.append(NPC(**npc_data))
+            npc_entry = self.known_npcs.get(npc_id)
+            if isinstance(npc_entry, NPC):
+                npcs_found.append(npc_entry)
+            elif isinstance(npc_entry, dict):  # Should not happen
+                # If already an NPC object, append it. If it's a dict, try to load it.
+                logger.warning(
+                    f"NPC '{npc_id}' in known_npcs (for location '{location}') was a dict. Attempting to convert."
+                )
+                npc_obj = NPC.from_dict(npc_entry)  # type: ignore
+                if npc_obj:
+                    npcs_found.append(npc_obj)
         return npcs_found
 
     def update_npc_relationship(

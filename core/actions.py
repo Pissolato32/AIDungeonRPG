@@ -1,8 +1,8 @@
 # filepath: c:\Users\rodri\Desktop\REPLIT RPG\core\actions.py
 import logging
 import os
+import re  # Importar re para regex
 import random
-import re
 from typing import Any, Dict, List, Optional, Tuple  # Added Tuple
 
 from core.enemy import Enemy  # Import Enemy class
@@ -11,11 +11,11 @@ from utils.dice import (
     roll_dice,
     calculate_attribute_modifier,
     calculate_damage,
-)  # Importar funções de dado
-from utils.quest_generator import generate_quest  # Direct import for generate_quest
+)
 
 from .world_generator import WorldGenerator
 from .skills import SkillManager  # For SkillActionHandler
+from utils.quest_generator import generate_quest  # Import generate_quest
 from .recipes import CRAFTING_RECIPES  # For CraftActionHandler
 
 logger = logging.getLogger(__name__)
@@ -24,55 +24,15 @@ logger.setLevel(logging.INFO)
 
 class ActionHandler:
     """
-    Default action handler that provides basic action handling.
-
-    This class provides a basic implementation of an action handler,
-    which can be used as a base for more specific action handlers.
+    Base class for action handlers.
+    Subclasses must implement the 'handle' method.
     """
 
-    VALID_ACTIONS = {"move", "look", "talk", "search", "attack"}
-
+    # Base class for action handlers. Subclasses must implement 'handle'.
     def handle(
         self, details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
-        """Handle an action with default behavior."""
-        logger.info(f"Handling action with details: {details}")
-
-        # Default response for unhandled actions
-        return {
-            "success": False,
-            "message": f"A ação '{details if details else 'desconhecida'}' não é reconhecida ou não foi implementada.",
-        }
-
-    def ai_response(
-        self, action: str, details: str, character: "Character", game_state: Any
-    ) -> Dict[str, Any]:
-        """Fallback AI response if a specific handler doesn't fully process."""
-        return {
-            "success": False,
-            "message": f"A ação '{details}' não é reconhecida ou não foi implementada.",
-        }
-
-    def log_action(self, action: str, character: "Character") -> None:
-        """Log the action performed by the character."""
-        logger.info(
-            f"{character.name} realizou a ação: {action} (handler: {self.__class__.__name__})"
-        )
-
-    def validate_action(self, action: str) -> bool:
-        """Validate the action before processing."""
-        return action in self.VALID_ACTIONS
-
-    def handle_action(
-        self, action: str, details: str, character: "Character", game_state: Any
-    ) -> Dict[str, Any]:
-        """Handle the action based on its type."""
-        if not self.validate_action(action):
-            logger.warning(f"Tentativa de ação inválida: {action}")
-            return {"success": False, "message": f"Ação inválida '{action}'."}
-
-        self.log_action(action, character)
-        return self.handle(details, character, game_state)
+        raise NotImplementedError("Subclasses must implement this method")
 
 
 class MoveActionHandler(ActionHandler):
@@ -106,7 +66,13 @@ class MoveActionHandler(ActionHandler):
                 "MoveActionHandler: game_state.world_map não está configurado corretamente ou não contém 'locations'. "
                 f"world_map atual: {getattr(game_state, 'world_map', 'Não definido')}"
             )
-            return self.ai_response("move", details, character, game_state)
+            # Se o mapa não está pronto, a IA deve narrar a falha ou a tentativa.
+            # Retornamos sucesso=True para que o GameEngine chame a IA com action="move"
+            return {
+                "success": True,
+                "message": f"Você tenta se mover para {details}, mas o mapa não está claro.",
+                "action_performed": "move_failed_map_error",  # Indica para a IA que a mecânica falhou
+            }
 
         current_location = game_state.world_map["locations"].get(
             current_location_id, {}
@@ -201,7 +167,12 @@ class MoveActionHandler(ActionHandler):
                 "events": game_state.events,
             }
 
-        return self.ai_response("move", details, character, game_state)
+        # Se o movimento falhou (direção inválida, etc.)
+        # Retornamos sucesso=True para que o GameEngine chame a IA com action="move"
+        return {
+            "success": True,
+            "action_performed": "move_failed_no_path",
+        }
 
 
 class LookActionHandler(ActionHandler):
@@ -212,59 +183,12 @@ class LookActionHandler(ActionHandler):
     ) -> Dict[str, Any]:
         """Handle the 'look' action, either observing an NPC or the environment."""
 
-        # Normaliza e valida o texto fornecido
-        target = details.strip().lower() if isinstance(details, str) else ""
-
-        # Se o jogador tentar olhar para algo específico
-        if target and hasattr(game_state, "npcs_present") and game_state.npcs_present:
-            # Verifica se o alvo está entre os NPCs presentes
-            npc_name = next(
-                (npc for npc in game_state.npcs_present if npc.lower() == target), None
-            )
-
-            if npc_name:  # Se o alvo é um NPC conhecido
-                npc_details = self.get_npc_details(npc_name, character, game_state)
-                return {
-                    "success": True,
-                    "message": (
-                        f"Você observa {npc_name} atentamente. "
-                        f"Um(a) {npc_details.get('race', 'Humanoide')} que trabalha como {npc_details.get('profession', 'desconhecido(a)')}. "
-                        f"{npc_name} parece {npc_details.get('personality', 'comum')}. "
-                        f"Pela aparência e postura, você estima que ele(a) seja nível {npc_details.get('level', '?')}."
-                    ),
-                }
-            else:  # Se o alvo foi especificado mas não é um NPC conhecido
-                if (
-                    not target.strip()
-                    or len(target.strip()) < 2
-                    or re.fullmatch(r"[^a-zA-Z\s]+", target.strip())
-                ):
-                    return {
-                        "success": False,
-                        "message": "Não entendi o que você quer olhar. Por favor, seja mais específico ou use palavras reconhecíveis.",
-                    }
-                return {
-                    "success": True,
-                    "message": f"Você olha atentamente, mas não vê nada específico chamado '{details.capitalize()}' por aqui.",
-                }
-        return self.ai_response("look", details, character, game_state)
-
-    def get_npc_details(
-        self, npc_name: str, character: "Character", game_state: Any
-    ) -> Dict[str, Any]:
-        """
-        Placeholder para obter os detalhes de um NPC.
-        Essa função deve ser implementada de acordo com seu sistema de NPCs.
-        """
+        # This handler signals to GameEngine to let the AI describe what the player sees.
+        # The 'details' (what the player wants to look at) will be passed to the AI.
         return {
-            "race": "Humano",
-            "profession": "catador",
-            "personality": "desconfiado",
-            "level": (
-                random.randint(character.level - 1, character.level + 2)
-                if character.level > 1
-                else 1
-            ),
+            "success": True,  # The action of "looking" is always mechanically possible
+            "action_performed": "look_attempt",
+            # No 'message' here, GameEngine will use original 'details' for AI prompt
         }
 
 
@@ -274,76 +198,48 @@ class TalkActionHandler(ActionHandler):
     def handle(
         self, details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
+        # A lógica mecânica do 'talk' é mínima. A IA fará a maior parte da interação.
+        # Retornamos sucesso=True para que o GameEngine chame a IA com action="talk"
+        # O 'details' (com quem o jogador quer falar) será passado para a IA.
         if details and details.strip():
             npc_query_name = details.strip()
             npc_query_name_lower = npc_query_name.lower()
 
+            # Verificar se o NPC está presente
             if game_state.npcs_present and any(
                 npc.lower() == npc_query_name_lower for npc in game_state.npcs_present
             ):
-                actual_npc_name: Optional[str] = None
-                try:
-                    actual_npc_name = next(
-                        npc
-                        for npc in game_state.npcs_present
-                        if npc.lower() == npc_query_name_lower
-                    )
-                except StopIteration:
-                    logger.error(
-                        f"Alvo da conversa '{npc_query_name_lower}' inconsistência: encontrado por 'any' mas não por 'next'."
-                    )
+                # Se o NPC está presente, a IA cuidará da interação.
+                # Podemos adicionar mecânicas aqui no futuro, como verificações de carisma,
+                # ou se o NPC está disposto a falar.
+                return {
+                    "success": True,
+                    "action_performed": "talk_attempt_npc_present",
+                    "target_npc_name": npc_query_name,  # Passa o nome do alvo para a IA
+                }
+            else:
+                # NPC não encontrado ou não especificado claramente
+                return {
+                    "success": True,  # A ação de tentar falar foi processada
+                    "action_performed": "talk_attempt_npc_not_found",
+                    "message": f"Você tenta falar com '{npc_query_name}', mas não parece haver ninguém com esse nome por perto, ou você não foi claro.",
+                }
 
-                if actual_npc_name:
-                    if (
-                        hasattr(game_state, "known_npcs")
-                        and actual_npc_name in game_state.known_npcs
-                    ):
-                        npc_details = game_state.known_npcs[actual_npc_name]
-                        npc_details["interactions"] = (
-                            npc_details.get("interactions", 0) + 1
-                        )
-                        result = self.ai_response(
-                            "talk", actual_npc_name, character, game_state
-                        )
-                        if "message" in result:
-                            if npc_details["interactions"] <= 2:
-                                result[
-                                    "message"
-                                ] += f"\n\nVocê reconhece {actual_npc_name}, um(a) {npc_details['race']} {npc_details['profession']}."
-                            else:
-                                result[
-                                    "message"
-                                ] += f"\n\n{actual_npc_name} sorri para um rosto familiar. Como um(a) experiente {npc_details['profession']}, {actual_npc_name} tem muitas histórias para contar."
-                                if npc_details.get("quests") and random.random() < 0.7:
-                                    result[
-                                        "message"
-                                    ] += f" {actual_npc_name} menciona precisar de ajuda com '{random.choice(npc_details['quests'])}'."
-                        game_state.known_npcs[actual_npc_name] = npc_details
-                        return result
+        # Se 'details' estiver vazio (ex: jogador digitou apenas "falar")
+        return {
+            "success": True,
+            "action_performed": "talk_attempt_generic",
+            "message": "Você olha ao redor, procurando alguém para conversar, mas não especifica quem.",
+        }
 
-                    npc_details = self.get_npc_details(
-                        actual_npc_name, character, game_state
-                    )
-                    result = self.ai_response(
-                        "talk", actual_npc_name, character, game_state
-                    )
-                    if "message" in result:
-                        result[
-                            "message"
-                        ] += f"\n\nVocê nota que {actual_npc_name} é um(a) {npc_details['race']} {npc_details['profession']}."
-                        if npc_details.get("knowledge"):
-                            result[
-                                "message"
-                            ] += f" Parece que {actual_npc_name} sabe sobre {', '.join(npc_details['knowledge'][:2])}."
-                        if npc_details.get("quests"):
-                            result[
-                                "message"
-                            ] += f" {actual_npc_name} menciona algo sobre '{npc_details['quests'][0]}'."
-                    if hasattr(game_state, "known_npcs"):
-                        npc_details["interactions"] = 1
-                        game_state.known_npcs[actual_npc_name] = npc_details
-                    return result
-        return self.ai_response("talk", details, character, game_state)
+    # O método get_npc_details e a lógica de interação com known_npcs
+    # foram removidos daqui. Essa lógica, se necessária,
+    # deve ser gerenciada pelo GameEngine ou pela IA com base no
+    # 'action_performed' e nos dados do game_state.
+    # A IA pode, por exemplo, acessar game_state.known_npcs para enriquecer a narrativa.
+
+    # def get_npc_details(...) e a lógica de interação anterior foram removidas
+    # para simplificar e delegar mais à IA e ao GameEngine.
 
     def get_npc_details(
         self, npc_name: str, character: "Character", game_state: Any
@@ -367,6 +263,7 @@ class SearchActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
+        # A lógica mecânica do 'search' é mínima. A IA fará a maior parte da descrição do que é encontrado.
         details_lower = details.lower() if isinstance(details, str) else ""
         if "missão" in details_lower or "tarefa" in details_lower:  # Traduzido "quest"
             if not hasattr(game_state, "npcs_present") or not game_state.npcs_present:
@@ -389,18 +286,11 @@ class SearchActionHandler(ActionHandler):
                 "message": f"{quest_giver} oferece uma nova missão: {new_quest['name']}. {new_quest['description']} Recompensa: {new_quest['reward_gold']} moedas de ouro.",
             }
 
-        result = self.ai_response("search", details, character, game_state)
-        if (
-            hasattr(game_state, "visited_locations")
-            and game_state.location_id in game_state.visited_locations
-        ):
-            location_info = game_state.visited_locations[game_state.location_id]
-            if "search_results" not in location_info:
-                location_info["search_results"] = []
-            location_info["search_results"].append(
-                {"query": details, "result": result.get("message", "")}
-            )
-        return result
+        # Retornamos sucesso=True para que o GameEngine chame a IA com action="search"
+        return {
+            "success": True,
+            "action_performed": "search_attempt",  # Indica para a IA que a mecânica foi processada
+        }
 
 
 class AttackActionHandler(ActionHandler):
@@ -409,160 +299,207 @@ class AttackActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
-        if details and details.strip():
-            target_npc_lower = (
-                details.strip().lower() if isinstance(details, str) else ""
+        # A lógica de combate é complexa e pode ser resolvida mecanicamente AQUI.
+        # A IA será chamada DEPOIS para narrar o resultado mecânico.
+
+        # Verificar se já está em combate
+        if (
+            game_state.combat
+            and game_state.combat.get("active")
+            and game_state.combat.get("enemy")
+        ):
+            enemy = game_state.combat.get(
+                "enemy"
+            )  # Assumindo que enemy é um objeto/dict com .name, .health, .defense
+            if not enemy:  # Fallback se o inimigo não estiver definido corretamente
+                return {
+                    "success": False,
+                    "message": "Erro no estado de combate: Inimigo não encontrado.",
+                }
+
+            # Lógica de ataque contra o inimigo atual
+            attacker_stats = (
+                character  # Usar o objeto Character diretamente para atributos
             )
-            if game_state.combat and game_state.combat.get("enemy"):
-                current_enemy_name = game_state.combat.get("enemy").name.lower()
-                if not details or target_npc_lower == current_enemy_name:
-                    enemy = game_state.combat.get("enemy")
-                    attacker_stats = character.attributes
-                    str_modifier = calculate_attribute_modifier(
-                        attacker_stats.get("strength", 10)
+            # Assumindo que Character tem um atributo 'strength'
+            str_modifier = calculate_attribute_modifier(attacker_stats.strength)
+            # DC para acertar o inimigo (exemplo simples: 10 + nível do inimigo)
+            # Assumindo que Enemy tem um atributo 'level'
+            to_hit_dc = 10 + getattr(enemy, "level", 1)
+
+            # Rolagem de ataque (d20 + modificador)
+            attack_roll_result = roll_dice(1, 20, str_modifier)
+            attack_roll = attack_roll_result["total"]
+            attack_roll_string = attack_roll_result["result_string"]
+
+            mechanical_outcome_message = ""
+            damage_dealt = 0
+            combat_log_entry = ""
+            action_performed_type = "attack_resolved"  # Default resolved type
+
+            if attack_roll >= to_hit_dc:
+                # Acertou! Calcular dano.
+                # Lógica de dano da arma equipada ou dano base
+                weapon_damage_dice_num = 1
+                weapon_damage_dice_sides = 6  # Dano base de uma arma simples (d6)
+                equipped_weapon_name = character.equipment.get("weapon")
+                weapon_data = None
+                if equipped_weapon_name:
+                    # Precisamos de uma forma de obter dados de itens aqui
+                    # Importar ItemGenerator ou ter um cache de itens
+                    try:
+                        from utils.item_generator import ItemGenerator
+
+                        item_gen = ItemGenerator(
+                            os.path.join(
+                                os.path.dirname(os.path.abspath(__file__)), "..", "data"
+                            )
+                        )  # Ajustar caminho se necessário
+                        weapon_data = item_gen.get_item_by_name(equipped_weapon_name)
+                    except ImportError:
+                        logger.error("ItemGenerator not found for AttackActionHandler.")
+                    except Exception as e:
+                        logger.error(f"Error loading weapon data: {e}")
+
+                if weapon_data and weapon_data.get("type") == "weapon":
+                    # Usar dados de dano da arma
+                    dmg_min = weapon_data.get("damage_min", 1)
+                    dmg_max = weapon_data.get(
+                        "damage_max", 4
+                    )  # Exemplo de dano de arma leve
+                    # Rola um dado com faces igual à diferença + 1, e adiciona o mínimo e o modificador
+                    damage_roll_result = roll_dice(
+                        1, (dmg_max - dmg_min + 1), dmg_min - 1 + str_modifier
                     )
-                    to_hit_dc = 10 + getattr(enemy, "level", 1)
-                    attack_roll_result = roll_dice(1, 20, str_modifier)
-                    attack_roll = attack_roll_result["total"]
+                else:
+                    # Dano base (ex: soco, arma genérica)
+                    damage_roll_result = roll_dice(
+                        1, 4, str_modifier
+                    )  # Exemplo: 1d4 + modificador de Força
 
-                    if attack_roll >= to_hit_dc:
-                        weapon_damage_dice_num = 1
-                        weapon_damage_dice_sides = 6
-                        equipped_weapon_name = character.equipment.get("weapon")
-                        if equipped_weapon_name:
-                            from utils.item_generator import ItemGenerator
+                damage_dealt = max(
+                    1,  # Dano mínimo de 1
+                    damage_roll_result["total"] - getattr(enemy, "defense", 0),
+                )
 
-                            item_gen = ItemGenerator(
-                                os.path.join(
-                                    os.path.dirname(os.path.abspath(__file__)), "data"
-                                )
-                            )
-                            weapon_data = item_gen.get_item_by_name(
-                                equipped_weapon_name
-                            )
-                            if weapon_data and weapon_data.get("type") == "weapon":
-                                dmg_min = weapon_data.get("damage_min", 1)
-                                dmg_max = weapon_data.get("damage_max", 4)
-                                damage_roll_result = roll_dice(
-                                    1,
-                                    (dmg_max - dmg_min + 1),
-                                    dmg_min - 1 + str_modifier,
-                                )
-                            else:
-                                damage_roll_result = roll_dice(
-                                    weapon_damage_dice_num,
-                                    weapon_damage_dice_sides,
-                                    str_modifier,
-                                )
-                        else:
-                            damage_roll_result = roll_dice(1, 4, str_modifier)
-                        damage_dealt = max(
-                            1,
-                            damage_roll_result["total"] - getattr(enemy, "defense", 0),
-                        )
-                        enemy.health = max(0, enemy.health - damage_dealt)
-                        game_state.combat["log"].append(
-                            f"Você atacou {enemy.name} e causou {damage_dealt} de dano! (Rolagem de ataque: {attack_roll} vs DC {to_hit_dc})"
-                        )
-                        if enemy.health <= 0:
-                            game_state.combat["log"].append(
-                                f"{enemy.name} foi derrotado!"
-                            )
-                            message_to_narrate = f"Você derrotou {enemy.name}!"
-                            game_state.combat = None
-                            return {
-                                "success": True,
-                                "message": message_to_narrate,
-                                "combat_ended": True,
-                                "action_performed": "attack_kill",
-                            }
-                        message_to_narrate = f"Você acertou {enemy.name} causando {damage_dealt} de dano. (Rolagem: {attack_roll} vs DC {to_hit_dc})"
-                    else:
-                        damage_dealt = 0
-                        game_state.combat["log"].append(
-                            f"Você tentou atacar {enemy.name}, mas errou! (Rolagem de ataque: {attack_roll} vs DC {to_hit_dc})"
-                        )
-                        message_to_narrate = f"Você errou o ataque contra {enemy.name}. (Rolagem: {attack_roll} vs DC {to_hit_dc})"
-                    return {
-                        "success": True,
-                        "message": message_to_narrate,
-                        "combat_ongoing": True,
-                        "damage_dealt": damage_dealt,
-                        "enemy_hp": enemy.health,
-                        "action_performed": "attack_resolved",
-                    }
+                # Aplicar dano ao inimigo
+                enemy.health = max(0, enemy.health - damage_dealt)
+                game_state.combat["enemy"] = (
+                    enemy  # Atualizar o objeto inimigo no estado
+                )
 
-            target_npc_lower = (
-                details.strip().lower() if isinstance(details, str) else ""
-            )
-            if game_state.npcs_present and any(
-                npc.lower() == target_npc_lower for npc in game_state.npcs_present
+                combat_log_entry = f"Você atacou {enemy.name} e causou {damage_dealt} de dano! ({attack_roll_string} vs DC {to_hit_dc})"
+                mechanical_outcome_message = (
+                    f"Você acertou {enemy.name} causando {damage_dealt} de dano."
+                )
+
+                if enemy.health <= 0:
+                    # Inimigo derrotado
+                    combat_log_entry += f" {enemy.name} foi derrotado!"
+                    mechanical_outcome_message += f" {enemy.name} foi derrotado."
+                    game_state.combat["active"] = False  # Fim do combate
+                    game_state.combat["enemy"] = None  # Remover inimigo
+                    action_performed_type = "attack_kill"
+
+            else:
+                # Errou!
+                damage_dealt = 0
+                combat_log_entry = f"Você tentou atacar {enemy.name}, mas errou! ({attack_roll_string} vs DC {to_hit_dc})"
+                mechanical_outcome_message = f"Você errou o ataque contra {enemy.name}."
+                action_performed_type = "attack_miss"
+
+            # Adicionar entrada ao log de combate
+            if "log" not in game_state.combat or not isinstance(
+                game_state.combat["log"], list
             ):
-                npc_to_attack: Optional[str] = None
+                game_state.combat["log"] = []  # Garantir que o log existe e é uma lista
+            game_state.combat["log"].append(combat_log_entry)
+
+            # Retornar resultado mecânico para a IA narrar
+            return {
+                "success": True,  # A ação mecânica foi processada
+                "action_performed": action_performed_type,  # Tipo de resultado mecânico
+                "combat_ongoing": (
+                    game_state.combat.get("active", False)
+                    if game_state.combat
+                    else False
+                ),
+                "enemy_hp": (
+                    getattr(enemy, "health", 0) if enemy else 0
+                ),  # HP atual do inimigo
+                "enemy_max_hp": (
+                    getattr(enemy, "max_health", 0) if enemy else 0
+                ),  # Max HP do inimigo
+                "combat_log_update": combat_log_entry,  # Enviar a última entrada do log para o frontend
+            }
+
+        # Se não está em combate, mas a ação é "attack" com um alvo específico
+        if details and details.strip():
+            target_name_query = details.strip()
+            target_name_lower = target_name_query.lower()
+
+            # Verificar se o alvo é um NPC presente
+            npc_to_attack: Optional[str] = None
+            if game_state.npcs_present:
                 try:
                     npc_to_attack = next(
                         npc
                         for npc in game_state.npcs_present
-                        if npc.lower() == target_npc_lower
+                        if npc.lower() == target_name_lower
                     )
                 except StopIteration:
-                    logger.error(
-                        f"Alvo do ataque '{target_npc_lower}' inconsistência: encontrado por 'any' mas não por 'next'."
-                    )
-                if npc_to_attack:
-                    enemy = Enemy(
-                        name=npc_to_attack,
-                        level=random.randint(character.level, character.level + 2),
-                        max_health=random.randint(20, 50),
-                        health=random.randint(20, 50),
-                        attack_damage_min=random.randint(3, 8),
-                        attack_damage_max=random.randint(9, 15),
-                        defense=random.randint(3, 10),
-                        description=f"Um(a) hostil {npc_to_attack} que você decidiu atacar.",
-                    )
-                    if not hasattr(game_state, "combat") or not game_state.combat:
-                        game_state.combat = {
-                            "enemy": enemy,
-                            "round": 1,
-                            "log": [f"Você iniciou combate com {npc_to_attack}!"],
-                        }
-                        return {
-                            "success": True,
-                            "message": f"Você atacou {npc_to_attack} e iniciou um combate! Prepare-se para lutar!",
-                            "combat": True,
-                        }
-            enemy_types = [
-                "Walker Lento",
-                "Corredor Ágil",
-                "Devorador Inchado",
-                "Cão Infectado Raivoso",
-                "Saqueador Oportunista",
-                "Membro de Gangue Brutal",
-                "Rato Mutante Gigante",
-            ]
-            enemy_name = random.choice(enemy_types)
-            enemy = Enemy(
-                name=enemy_name,
-                level=random.randint(character.level, character.level + 2),
-                max_health=random.randint(20, 50),
-                health=random.randint(20, 50),
-                attack_damage_min=random.randint(3, 8),
-                attack_damage_max=random.randint(9, 15),
-                defense=random.randint(3, 10),
-                description=f"Um(a) hostil {enemy_name} que apareceu de repente.",
-            )
-            if not hasattr(game_state, "combat") or not game_state.combat:
+                    pass  # Alvo não é um NPC presente
+
+            if npc_to_attack:
+                # Iniciar combate com o NPC
+                # Você precisará de uma forma de obter ou gerar stats para NPCs que viram inimigos
+                # Por enquanto, vamos gerar stats genéricos
+                enemy = Enemy(
+                    name=npc_to_attack,
+                    level=random.randint(character.level, character.level + 2),
+                    max_health=random.randint(20, 50),  # Stats genéricos
+                    health=random.randint(20, 50),
+                    attack_damage_min=random.randint(3, 8),
+                    attack_damage_max=random.randint(9, 15),
+                    defense=random.randint(3, 10),
+                    description=f"Um(a) hostil {npc_to_attack} que você decidiu atacar.",
+                )
                 game_state.combat = {
+                    "active": True,  # Combate ativo
                     "enemy": enemy,
                     "round": 1,
-                    "log": [f"Um(a) {enemy_name} apareceu e você o(a) atacou!"],
+                    "log": [f"Você iniciou combate com {npc_to_attack}!"],
                 }
+                # Remover NPC da lista de npcs_present se ele virou inimigo? Depende da sua lógica.
+                # if npc_to_attack in game_state.npcs_present:
+                #     game_state.npcs_present.remove(npc_to_attack)
+
                 return {
-                    "success": True,
-                    "message": f"Você procurou por inimigos e encontrou um(a) {enemy_name}! Combate iniciado!",
-                    "combat": True,
+                    "success": True,  # Mecanicamente, o combate foi iniciado
+                    "message": f"Você atacou {npc_to_attack} e iniciou um combate!",  # Mensagem para a IA narrar o início
+                    "action_performed": "combat_start_npc",
+                    "combat_ongoing": True,
+                    "enemy_name": enemy.name,
+                    "enemy_hp": enemy.health,
+                    "enemy_max_hp": enemy.max_health,
+                    "combat_log_update": game_state.combat["log"][-1],
                 }
-        return self.ai_response("attack", details, character, game_state)
+
+            # Se o alvo não é um NPC presente, talvez seja um inimigo genérico ou algo no ambiente
+            # A IA pode interpretar isso.
+            # Retornamos sucesso=True para que o GameEngine chame a IA com action="attack"
+            return {
+                "success": True,
+                "action_performed": "attack_attempt_target",
+            }
+
+        # Se a ação é "attack" sem detalhes (ex: "attack" ou "atacar")
+        # A IA pode interpretar como procurar por inimigos ou se preparar para combate.
+        # Retornamos sucesso=True para que o GameEngine chame a IA com action="attack"
+        return {
+            "success": True,
+            "action_performed": "attack_attempt_generic",
+        }
 
 
 class UseItemActionHandler(ActionHandler):
@@ -571,278 +508,242 @@ class UseItemActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
+        # A lógica mecânica de usar item acontece AQUI.
+        # A IA será chamada DEPOIS para narrar o resultado mecânico.
+
         from utils.item_generator import ItemGenerator
 
-        item_generator = ItemGenerator(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+        # Precisamos do caminho para o diretório de dados para ItemGenerator
+        data_dir_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "..", "data"
         )
+        item_generator = ItemGenerator(data_dir_path)
+
+        item_name_query = details.strip() if isinstance(details, str) else ""
+
         if (
-            not details
+            not item_name_query
             or not hasattr(character, "inventory")
             or not character.inventory
         ):
             return {
                 "success": False,
-                "message": "Você não tem esse item no seu inventário.",
+                "message": "Você não especificou qual item usar ou seu inventário está vazio.",
             }
-        item_name_query = details.strip() if isinstance(details, str) else ""
-        item_found = False
+
         item_index = -1
-        item_data = None
+        item_data: Optional[Dict[str, Any]] = None
         actual_item_name: Optional[str] = None
+
+        # Procurar o item no inventário
         for i, inv_item in enumerate(character.inventory):
-            if isinstance(inv_item, str) and (
-                inv_item.lower() == item_name_query.lower()
-                or (item_name_query and inv_item.lower() in item_name_query.lower())
-            ):
-                item_found = True
+            # Tenta encontrar pelo nome, seja string ou dict['name']
+            inv_item_name = ""
+            if isinstance(inv_item, str):
+                inv_item_name = inv_item
+            elif isinstance(inv_item, dict) and "name" in inv_item:
+                inv_item_name = inv_item["name"]
+
+            if inv_item_name and inv_item_name.lower() == item_name_query.lower():
                 item_index = i
-                actual_item_name = inv_item
-                item_data = item_generator.get_item_by_name(actual_item_name)
-                break
-            if (
-                isinstance(inv_item, dict)
-                and inv_item.get("name", "").lower() == item_name_query.lower()
-            ):
-                item_found = True
-                item_index = i
-                actual_item_name = inv_item.get("name")
-                item_data = inv_item
-                break
-        if not item_found or actual_item_name is None:
+                actual_item_name = inv_item_name
+                # Se o item no inventário já é um dict, use-o.
+                if isinstance(inv_item, dict):
+                    item_data = inv_item
+                else:
+                    # Senão, carregue os dados.
+                    # actual_item_name é garantidamente str aqui devido ao 'if inv_item_name:'
+                    name_for_lookup: str = actual_item_name
+                    item_data = item_generator.get_item_by_name(name_for_lookup)
+                break  # Item encontrado
+
+        if item_index == -1 or actual_item_name is None or item_data is None:
+            # actual_item_name é None aqui ou item não foi encontrado, ou item_data não pôde ser carregado.
             return {
                 "success": False,
                 "message": f"Você não tem '{item_name_query}' no seu inventário.",
             }
-        if item_data:
-            item_type = item_data.get("type", "")
-            item_subtype = item_data.get("subtype", "")
-            item_description = item_data.get("description", "")
-            if item_type == "weapon":
-                if not hasattr(character, "equipment") or character.equipment is None:
-                    character.equipment = {}
-                old_item = character.equipment.get("weapon")
-                character.equipment["weapon"] = actual_item_name
-                if old_item:
-                    character.inventory.append(old_item)
-                character.inventory.pop(item_index)
-                damage_info = ""
-                if "damage_min" in item_data and "damage_max" in item_data:
-                    min_damage = item_data["damage_min"]
-                    max_damage = item_data["damage_max"]
-                    damage_info = f" Dano: {min_damage}-{max_damage}."
-                return {
-                    "success": True,
-                    "message": f"Você equipou {actual_item_name}.{damage_info} {item_description} {f'Seu {old_item} foi guardado no inventário.' if old_item else ''}",
-                }
-            if item_type == "protection":
-                if not hasattr(character, "equipment") or character.equipment is None:
-                    character.equipment = {}
-                slot = "body_armor"
-                if item_subtype and "capacete" in item_subtype.lower():
-                    slot = "helmet"
-                old_item = character.equipment.get(slot)
-                character.equipment[slot] = actual_item_name
-                if old_item:
-                    character.inventory.append(old_item)
-                character.inventory.pop(item_index)
-                defense_info = ""
-                if "defense" in item_data:
-                    defense_info = f" Defesa: +{item_data['defense']}."
-                return {
-                    "success": True,
-                    "message": f"Você equipou {actual_item_name}.{defense_info} {item_description} {f'Seu {old_item} foi guardado no inventário.' if old_item else ''}",
-                }
-            if item_type == "consumable":
-                effects_applied_messages = []
-                for effect in item_data.get("effects", []):
-                    effect_type = effect.get("type", "")
-                    effect_value = effect.get("value", 0)
+
+        # Item encontrado, processar uso
+        # Se chegamos aqui, actual_item_name NÃO é None, e item_data NÃO é None.
+        assert actual_item_name is not None  # Adiciona asserção para o type checker
+        guaranteed_actual_item_name: str = actual_item_name
+
+        item_type = item_data.get("type", "unknown")
+        item_subtype = item_data.get("subtype", "unknown")
+        item_description = item_data.get("description", "")
+        item_effects = item_data.get("effects", [])
+        item_equip_slot = item_data.get("equip_slot")
+
+        mechanical_outcome_message = ""
+        action_performed_type = "use_item_resolved"
+        inventory_changed = False
+        character_stats_updated = False
+        equipment_changed = False
+
+        if item_type == "consumable":
+            effects_applied_messages = []
+            for effect in item_effects:
+                effect_type = effect.get("type", "")
+                effect_value = effect.get("value", 0)
+                effect_target = effect.get("target", "self")  # Default target is self
+
+                if effect_target == "self":
                     if effect_type == "heal_hp":
-                        old_hp = character.attributes.get("current_hp", 0)
-                        max_hp = character.attributes.get("max_hp", old_hp)
-                        character.attributes["current_hp"] = min(
-                            old_hp + effect_value, max_hp
-                        )
-                        healed_amount = character.attributes["current_hp"] - old_hp
-                        effects_applied_messages.append(
-                            f"restaurou {healed_amount} pontos de vida"
-                        )
+                        old_hp = character.current_hp
+                        max_hp = character.max_hp
+                        character.current_hp = min(old_hp + effect_value, max_hp)
+                        healed_amount = character.current_hp - old_hp
+                        if healed_amount > 0:
+                            effects_applied_messages.append(
+                                f"restaurou {healed_amount} pontos de vida"
+                            )
+                            character_stats_updated = True
                     elif effect_type == "restore_hunger":
-                        stat_key = "current_hunger"
-                        max_stat_key = "max_hunger"
-                        old_value = character.survival_stats.get(stat_key, 0)
-                        max_value = character.survival_stats.get(max_stat_key, 100)
-                        character.survival_stats[stat_key] = min(
+                        old_value = character.current_hunger
+                        max_value = character.max_hunger
+                        character.current_hunger = min(
                             old_value + effect_value, max_value
                         )
-                        effects_applied_messages.append(
-                            f"reduziu a fome em {effect_value}"
-                        )
+                        restored_amount = character.current_hunger - old_value
+                        if restored_amount > 0:
+                            effects_applied_messages.append(
+                                f"reduziu a fome em {restored_amount}"
+                            )
+                            character_stats_updated = True
                     elif effect_type == "restore_thirst":
-                        stat_key = "current_thirst"
-                        max_stat_key = "max_thirst"
-                        old_value = character.survival_stats.get(stat_key, 0)
-                        max_value = character.survival_stats.get(max_stat_key, 100)
-                        character.survival_stats[stat_key] = min(
+                        old_value = character.current_thirst
+                        max_value = character.max_thirst
+                        character.current_thirst = min(
                             old_value + effect_value, max_value
                         )
-                        effects_applied_messages.append(
-                            f"reduziu a sede em {effect_value}"
-                        )
-                character.inventory.pop(item_index)
-                message_summary = f"Você usou {actual_item_name}."
-                if effects_applied_messages:
-                    message_summary += (
-                        " Ele " + ", e ".join(effects_applied_messages) + "."
-                    )
-                message_summary += f" {item_description}"
-                return {"success": True, "message": message_summary}
-            if item_type == "quest":
-                if (
-                    item_subtype in ["documento", "mapa", "carta"]  # Traduzido
-                    and "content" in item_data
-                ):
-                    return {
-                        "success": True,
-                        "message": f"Você examina {actual_item_name}. {item_description}\n\nConteúdo: {item_data['content']}",
-                    }
-                return {
-                    "success": True,
-                    "message": f"Você examina {actual_item_name}. {item_description}",
-                }
-        item_name_lower = actual_item_name.lower() if actual_item_name else ""
-        if any(
-            p in item_name_lower
-            for p in ["bandagem", "kit médico", "analgésicos", "primeiros socorros"]
-        ):
-            heal_amount = (
-                item_data.get("effect", {}).get("value", 20)
-                if item_data and item_data.get("type") == "consumable"
-                else 20
-            )
-            old_hp = character.attributes.get("current_hp", 0)
-            max_hp = character.attributes.get("max_hp", old_hp)
-            character.attributes["current_hp"] = min(old_hp + heal_amount, max_hp)
-            healed_amount = character.attributes["current_hp"] - old_hp
-            current_hp_display = character.attributes.get("current_hp", 0)
-            max_hp_display = character.attributes.get("max_hp", 0)
+                        restored_amount = character.current_thirst - old_value
+                        if restored_amount > 0:
+                            effects_applied_messages.append(
+                                f"reduziu a sede em {restored_amount}"
+                            )
+                            character_stats_updated = True
+                    # Adicionar outros tipos de efeito de consumo aqui (ex: buff, remove_debuff)
+                # Adicionar lógica para efeitos em outros alvos (ex: "target": "other_npc", "target": "enemy") se aplicável
+
+            # Remover item consumido
             character.inventory.pop(item_index)
-            return {
-                "success": True,
-                "message": f"Você usou {actual_item_name} e recuperou {healed_amount} de vida. HP Atual: {current_hp_display}/{max_hp_display}.",
-            }
-        if isinstance(actual_item_name, str) and any(
-            eq in actual_item_name.lower()
-            for eq in [
-                "faca",
-                "canivete",
-                "machado",
-                "pé de cabra",
-                "cano",
-                "bastão",
-                "pistola",
-                "revólver",
-                "espingarda",
-                "rifle",
-                "arco",
-                "besta",
-                "jaqueta",
-                "colete",
-                "capacete",
-            ]
-        ):
-            equip_type = "weapon"
-            if any(
-                w in actual_item_name.lower()
-                for w in [
-                    "faca",
-                    "canivete",
-                    "machado",
-                    "pé de cabra",
-                    "cano",
-                    "bastão",
-                    "pistola",
-                    "revólver",
-                    "espingarda",
-                    "rifle",
-                    "arco",
-                    "besta",
-                ]
-            ) and isinstance(actual_item_name, str):
-                equip_type = "weapon"
-            elif isinstance(actual_item_name, str) and any(
-                a in actual_item_name.lower() for a in ["jaqueta", "colete"]
-            ):
-                equip_type = "body_armor"
-            elif isinstance(actual_item_name, str) and any(
-                h in actual_item_name.lower()
-                for h in ["capacete", "helmet", "chapéu"]  # Traduzido "hat"
-            ):
-                equip_type = "helmet"
+            inventory_changed = True
+
+            mechanical_outcome_message = f"Você usou {guaranteed_actual_item_name}."
+            if effects_applied_messages:
+                mechanical_outcome_message += (
+                    " Ele " + ", e ".join(effects_applied_messages) + "."
+                )
+            mechanical_outcome_message += f" {item_description}"  # Incluir descrição do item na mensagem para a IA
+            action_performed_type = "use_item_consumable"
+
+        elif item_type in ["weapon", "protection"]:
+            # Lógica de equipar
             if not hasattr(character, "equipment") or character.equipment is None:
-                character.equipment = {}
-            old_item = character.equipment.get(equip_type)
-            character.equipment[equip_type] = actual_item_name
-            if old_item:
-                character.inventory.append(old_item)
-            character.inventory.pop(item_index)
-            return {
-                "success": True,
-                "message": f"Você equipou {actual_item_name}. {f'Seu {old_item} foi guardado no inventário.' if old_item else ''}",
-            }
-        if isinstance(actual_item_name, str) and any(
-            f in actual_item_name.lower()
-            for f in [
-                "comida",
-                "lata",
-                "ração",
-                "barra",
-                "água",
-                "garrafa",
-                "refrigerante",
-                "suco",
-            ]
-        ):
-            if (
-                "current_hunger" in character.survival_stats
-                and "max_hunger" in character.survival_stats
-            ):
-                hunger_restore = 20
-                character.survival_stats["current_hunger"] = min(
-                    character.survival_stats["current_hunger"] + hunger_restore,
-                    character.survival_stats["max_hunger"],
+                character.equipment = {}  # Ensure equipment dict exists
+
+            slot = item_equip_slot  # Use the defined equip_slot
+            if not slot:  # Fallback if equip_slot is missing
+                slot = (
+                    "weapon" if item_type == "weapon" else "body_armor"
+                )  # Default slot based on type
+                if (
+                    item_subtype and "capacete" in item_subtype.lower()
+                ):  # Heurística para capacetes
+                    slot = "helmet"
+                logger.warning(
+                    f"Item '{guaranteed_actual_item_name}' missing 'equip_slot'. Using fallback slot: {slot}"
                 )
-            if (
-                "current_thirst" in character.survival_stats
-                and "max_thirst" in character.survival_stats
-            ):
-                thirst_restore = 20
-                character.survival_stats["current_thirst"] = min(
-                    character.survival_stats["current_thirst"] + thirst_restore,
-                    character.survival_stats["max_thirst"],
+
+            old_item_name = character.equipment.get(slot)
+
+            # Equipar o novo item (arma ou proteção)
+            character.equipment[slot] = (
+                guaranteed_actual_item_name  # Store just the name in equipment
+            )
+            equipment_changed = True
+
+            # Remover o item do inventário
+            character.inventory.pop(item_index)
+            inventory_changed = True
+
+            # Adicionar o item antigo de volta ao inventário, se houver
+            if old_item_name:
+                # Precisamos dos dados do item antigo para adicioná-lo de volta como dict ou string
+                # Para simplificar, vamos adicionar de volta como string por enquanto.
+                # Uma implementação mais robusta adicionaria o objeto/dict completo do item antigo.
+                character.inventory.append(old_item_name)
+                inventory_changed = True  # Inventário mudou novamente
+
+            mechanical_outcome_message = (
+                f"Você equipou {guaranteed_actual_item_name} no slot '{slot}'."
+            )
+            if old_item_name:
+                mechanical_outcome_message += (
+                    f" Seu {old_item_name} foi guardado no inventário."
                 )
-            character.inventory.pop(item_index)
-            return {
-                "success": True,
-                "message": f"Você consumiu {actual_item_name} e se sente revigorado(a).",
-            }
-        details_lower = details.lower() if isinstance(details, str) else ""
-        if (
-            "arremessar" in details_lower or "jogar" in details_lower
-        ):  # Traduzido "throw"
-            target = None
-            if "em " in details_lower:  # Traduzido "at "
-                target_part = details_lower.split("em ", 1)[1]
-                target = target_part.strip()
-            character.inventory.pop(item_index)
-            return {
-                "success": True,
-                "message": f"Você arremessou {actual_item_name}{f' em {target}' if target else ''}.",
-            }
-        result = self.ai_response("use_item", details, character, game_state)
-        if result.get("success", False):
-            character.inventory.pop(item_index)
+            mechanical_outcome_message += f" {item_description}"  # Incluir descrição do item na mensagem para a IA
+            action_performed_type = "use_item_equip"
+
+        elif item_type == "quest":
+            # Lógica para itens de quest (ex: ler documento, usar chave em porta)
+            # A IA fará a maior parte da narrativa aqui, mas podemos fornecer um resultado mecânico básico.
+            mechanical_outcome_message = (
+                f"Você examina {guaranteed_actual_item_name}. {item_description}"
+            )
+            if (
+                item_subtype in ["documento", "mapa", "carta"]
+                and "content" in item_data
+            ):
+                mechanical_outcome_message += f"\n\nConteúdo: {item_data['content']}"
+            # Itens de quest geralmente não são removidos do inventário automaticamente ao "usar"
+            # a menos que a ação seja específica (ex: "entregar chave para NPC X").
+            # Por enquanto, não removemos do inventário.
+            action_performed_type = "use_item_quest"
+            inventory_changed = False  # Inventário não muda por padrão
+
+        elif item_type == "tool":
+            # Lógica para usar ferramentas (ex: pé de cabra em porta, kit de arrombamento em cadeado)
+            # Isso geralmente envolveria um teste de habilidade/atributo.
+            # A IA pode sugerir a rolagem, ou o handler pode resolvê-la.
+            # Por enquanto, vamos apenas narrar que você está tentando usar a ferramenta.
+            mechanical_outcome_message = (
+                f"Você se prepara para usar {guaranteed_actual_item_name}."
+            )
+            # A IA precisará interpretar o que o jogador está tentando fazer COM a ferramenta (ex: "usar pé de cabra na porta")
+            # O GameEngine já passa os 'details' originais para a IA.
+            action_performed_type = "use_item_tool"
+            inventory_changed = False  # Ferramentas geralmente não são consumidas
+
+        else:
+            # Tipo de item desconhecido ou sem handler específico
+            mechanical_outcome_message = f"Você tenta usar {guaranteed_actual_item_name}, mas não tem certeza de como ou o que fazer com ele. {item_description}"
+            action_performed_type = "use_item_unknown"
+            inventory_changed = (
+                False  # Não consome item de tipo desconhecido por padrão
+            )
+
+        # Retornar resultado mecânico para a IA narrar
+        result = {
+            "success": True,  # A ação mecânica foi processada (tentativa ou sucesso)
+            "message": mechanical_outcome_message,  # Adicionar a mensagem mecânica ao resultado
+            "action_performed": action_performed_type,  # Tipo de resultado mecânico
+            "inventory_changed": inventory_changed,  # Indica se o inventário precisa ser atualizado no frontend
+            "character_stats_updated": character_stats_updated,  # Indica se HP/Stamina/Survival mudaram
+            "equipment_changed": equipment_changed,  # Indica se equipamento mudou
+            # Incluir dados atualizados do personagem se stats mudaram
+            "character_stats": (
+                character.to_dict()
+                if character_stats_updated or equipment_changed
+                else None
+            ),
+            "inventory": character.inventory if inventory_changed else None,
+            "equipment": character.equipment if equipment_changed else None,
+        }
+
+        # Se a IA sugerir uma rolagem após a tentativa de usar a ferramenta, o GameEngine lidará com isso.
+
         return result
 
 
@@ -852,34 +753,59 @@ class FleeActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
+        # Lógica mecânica de fuga AQUI. IA narra o resultado.
         if (
             not hasattr(game_state, "combat")
             or not game_state.combat
+            or not game_state.combat.get("active")
             or not game_state.combat.get("enemy")
         ):
-            return self.ai_response("flee", details, character, game_state)
-        dex_modifier = (character.attributes.get("dexterity", 10) - 10) // 2
-        flee_chance = 0.5 + (dex_modifier * 0.05)
-        flee_chance = max(0.1, min(0.9, flee_chance))
-        if random.random() < flee_chance:
-            enemy_name = game_state.combat["enemy"].name
-            game_state.combat = None
-            message = f"Você conseguiu escapar de {enemy_name}!"
+            # Não está em combate, a IA pode narrar que não há perigo para fugir.
             return {
-                "success": True,
-                "message": message,
-                "combat_ended": True,
-                "action_performed": "flee_success",
+                "success": True,  # Mecanicamente, a tentativa de fuga foi processada (mas não havia combate)
+                "message": "Você tenta fugir, mas não há perigo imediato por perto.",
             }
+
+        enemy_name = game_state.combat["enemy"].name  # Assumindo que enemy tem nome
+        dex_modifier = calculate_attribute_modifier(character.dexterity)
+
+        # Chance de fuga baseada em Destreza (exemplo simples)
+        flee_chance = 0.5 + (dex_modifier * 0.05)  # +5% chance por ponto de modificador
+        flee_chance = max(0.1, min(0.9, flee_chance))  # Limitar chance entre 10% e 90%
+
+        roll_result = random.random()  # Rola um número entre 0 e 1
+
+        mechanical_outcome_message = ""
+        action_performed_type = "flee_resolved"
+        combat_ended = False
+
+        if roll_result < flee_chance:
+            # Fuga bem-sucedida
+            mechanical_outcome_message = f"Você conseguiu escapar de {enemy_name}!"
+            action_performed_type = "flee_success"
+            combat_ended = True
+            game_state.combat["active"] = False  # Fim do combate
+            game_state.combat["enemy"] = None  # Remover inimigo
+            # TODO: Mover o personagem para uma localização adjacente segura?
+            # Isso exigiria lógica de movimento aqui ou um sinal para o GameEngine.
+            # Por enquanto, apenas termina o combate.
         else:
-            enemy_name = game_state.combat["enemy"].name
-            message = f"Você tentou fugir, mas {enemy_name} bloqueou seu caminho!"
-            return {
-                "success": True,
-                "message": message,
-                "combat_ended": False,
-                "action_performed": "flee_fail",
-            }
+            # Fuga falhou
+            mechanical_outcome_message = (
+                f"Você tentou fugir, mas {enemy_name} bloqueou seu caminho!"
+            )
+            action_performed_type = "flee_fail"
+            combat_ended = False  # Combate continua
+            # TODO: O inimigo pode ter um ataque de oportunidade?
+
+        # Retornar resultado mecânico para a IA narrar
+        return {
+            "success": True,  # A ação mecânica foi processada
+            "action_performed": action_performed_type,  # Tipo de resultado mecânico
+            "combat_ended": combat_ended,  # Indica se o combate terminou
+            "combat_ongoing": not combat_ended,  # Indica se o combate continua
+            # Se o combate terminou, o frontend precisará atualizar a UI.
+        }
 
 
 class RestActionHandler(ActionHandler):
@@ -888,353 +814,85 @@ class RestActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
+        # Lógica mecânica de descanso AQUI. IA narra o resultado.
         if (
             hasattr(game_state, "combat")
             and game_state.combat
+            and game_state.combat.get("active")
             and game_state.combat.get("enemy")
         ):
+            # Não pode descansar em combate
             return {
-                "success": False,
+                "success": False,  # Mecanicamente, a ação falhou
                 "message": "Você não pode descansar durante o combate!",
             }
-        if random.random() < 0.2:
-            message = "Você tenta encontrar um lugar para descansar, mas os barulhos ao redor e a tensão no ar tornam impossível relaxar."
-            return {
-                "success": True,
-                "message": message,
-                "rested": False,
-                "action_performed": "rest_fail",
-            }
-        hp_to_restore = max(1, character.max_hp // 10)
-        stamina_to_restore = max(1, character.max_stamina // 5)
-        character.attributes["current_hp"] = min(
-            character.max_hp, character.current_hp + hp_to_restore
-        )
-        character.attributes["current_stamina"] = min(
-            character.max_stamina, character.current_stamina + stamina_to_restore
-        )
-        message = f"Você encontra um momento de relativa calma para descansar. Você recupera {hp_to_restore} HP e {stamina_to_restore} de Vigor."
+
+        # Verificar segurança do local (exemplo simples: 20% chance de interrupção)
+        interruption_chance = 0.2
+        if random.random() < interruption_chance:
+            # Descanso interrompido
+            mechanical_outcome_message = "Você tenta encontrar um lugar para descansar, mas os barulhos ao redor e a tensão no ar tornam impossível relaxar."
+            action_performed_type = "rest_fail_interrupted"
+            rested_successfully = False  # Define rested_successfully
+        else:
+            # Descanso bem-sucedido
+            # Restaurar HP e Vigor (exemplo: 10% do máximo de HP, 20% do máximo de Vigor)
+            hp_to_restore = max(
+                1, int(character.max_hp * 0.1)
+            )  # Usar int() para garantir valor inteiro
+            stamina_to_restore = max(1, int(character.max_stamina * 0.2))  # Usar int()
+
+            old_hp = character.current_hp
+            old_stamina = character.current_stamina
+
+            character.current_hp = min(
+                character.max_hp, character.current_hp + hp_to_restore
+            )
+            character.current_stamina = min(
+                character.max_stamina, character.current_stamina + stamina_to_restore
+            )
+
+            hp_restored_amount = character.current_hp - old_hp
+            stamina_restored_amount = character.current_stamina - old_stamina
+
+            mechanical_outcome_message = f"Você encontra um momento de relativa calma para descansar. Você recupera {hp_restored_amount} HP e {stamina_restored_amount} de Vigor."
+            action_performed_type = "rest_success"
+            rested_successfully = True  # Define rested_successfully
+
+            # TODO: Reduzir fome/sede durante o descanso?
+
+        # Retornar resultado mecânico para a IA narrar
         return {
-            "success": True,
-            "message": message,
-            "rested": True,
-            "action_performed": "rest_success",
+            "success": True,  # A ação mecânica foi processada (tentativa ou sucesso)
+            "message": mechanical_outcome_message,  # Mensagem para a IA narrar
+            "action_performed": action_performed_type,  # Tipo de resultado mecânico
+            "character_stats_updated": rested_successfully,  # Indica se HP/Stamina mudaram
+            "character_stats": (
+                character.to_dict() if rested_successfully else None
+            ),  # Incluir stats atualizados se houve recuperação
         }
 
 
 class CustomActionHandler(ActionHandler):
-    """Handler for 'custom' (freeform) actions."""
+    """
+    Handler genérico para ações 'custom' ou 'interpret'.
+    Este handler NÃO tenta interpretar a ação mecanicamente.
+    Ele apenas retorna os detalhes brutos para que o GameEngine
+    os passe para a IA para interpretação e narração (via 'interpret_needed').
+    """
 
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
-        details_lower = details.lower() if isinstance(details, str) else ""
-        inventory_keywords = [
-            "pegar",
-            "coletar",
-            "guardar",
-            "inventário",
-            "apanhar",
-            "saquear",
-        ]
-        if any(keyword in details_lower for keyword in inventory_keywords):
-            items_to_add = []
-            common_items = [
-                "sucata de metal",
-                "fita adesiva",
-                "bandagens",
-                "analgésicos",
-                "kit médico",
-                "comida enlatada",
-                "garrafa de água",
-                "balas",
-                "cartuchos de espingarda",
-                "flechas",
-                "gasolina",
-                "bateria",
-                "pilha",
-                "corda",
-                "retalhos de tecido",
-                "tábuas de madeira",
-                "pregos",
-                "ferramentas",
-                "grampo",
-                "kit de arrombamento",
-                "pé de cabra",
-                "cano de metal",
-                "taco de beisebol",
-                "facão",
-                "faca",
-                "mochila",
-                "lanterna",
-                "isqueiro",
-                "fósforos",
-                "fragmento de mapa",
-                "bilhete",
-                "nota",
-                "peças de rádio",
-                "arame",
-            ]
-            for item in common_items:
-                if item in details_lower:
-                    items_to_add.append(item.capitalize())
-            if not items_to_add and any(
-                verb in details.lower()
-                for verb in ["pegar", "coletar", "apanhar", "saquear"]
-            ):
-                scene_items: List[str] = []
-                if hasattr(game_state, "scene_description"):
-                    scene_text = game_state.scene_description.lower()
-                    for item in common_items:
-                        if item in scene_text and item not in scene_items:
-                            scene_items.append(item.capitalize())
-                if scene_items:
-                    items_to_add = scene_items
-            if items_to_add:
-                if not hasattr(character, "inventory"):
-                    character.inventory = []
-                for item in items_to_add:
-                    character.inventory.append(item)
-                return {
-                    "success": True,
-                    "message": f"Você adicionou os seguintes itens ao seu inventário: {', '.join(items_to_add)}.",
-                }
-        combat_keywords = [
-            "atacar",
-            "lutar",
-            "combate",
-            "matar",
-            "batalha",
-            "enfrentar",
-        ]
-        if any(keyword in details_lower for keyword in combat_keywords):
-            target = None
-            if game_state.npcs_present:
-                for npc in game_state.npcs_present:
-                    if npc.lower() in details_lower:
-                        target = npc
-                        break
-            if target:
-                enemy = Enemy(
-                    name=target,
-                    level=random.randint(character.level, character.level + 2),
-                    max_health=random.randint(20, 50),
-                    health=random.randint(20, 50),
-                    attack_damage_min=random.randint(3, 8),
-                    attack_damage_max=random.randint(9, 15),
-                    defense=random.randint(3, 10),
-                    description=f"Um(a) hostil {target} que você decidiu atacar.",
-                )
-                if not hasattr(game_state, "combat") or not game_state.combat:
-                    game_state.combat = {
-                        "enemy": enemy,
-                        "round": 1,
-                        "log": [f"Você iniciou combate com {target}!"],
-                    }
-                    return {
-                        "success": True,
-                        "message": f"Você atacou {target} e iniciou um combate! Prepare-se para lutar!",
-                        "combat": True,
-                    }
-            else:
-                enemy_types = [
-                    "Walker Lento",
-                    "Corredor Ágil",
-                    "Devorador Inchado",
-                    "Cão Infectado Raivoso",
-                    "Saqueador Oportunista",
-                    "Membro de Gangue Brutal",
-                    "Rato Mutante Gigante",
-                ]
-                enemy_name = random.choice(enemy_types)
-                enemy = Enemy(
-                    name=enemy_name,
-                    level=random.randint(character.level, character.level + 2),
-                    max_health=random.randint(20, 50),
-                    health=random.randint(20, 50),
-                    attack_damage_min=random.randint(3, 8),
-                    attack_damage_max=random.randint(9, 15),
-                    defense=random.randint(3, 10),
-                    description=f"Um(a) hostil {enemy_name} que apareceu de repente.",
-                )
-                if not hasattr(game_state, "combat") or not game_state.combat:
-                    game_state.combat = {
-                        "enemy": enemy,
-                        "round": 1,
-                        "log": [f"Um(a) {enemy_name} apareceu e você o(a) atacou!"],
-                    }
-                    return {
-                        "success": True,
-                        "message": f"Você procurou por inimigos e encontrou um(a) {enemy_name}! Combate iniciado!",
-                        "combat": True,
-                    }
-        details_lower = details.lower() if isinstance(details, str) else ""
-        if (
-            "mapa" in details_lower
-            or "onde estou" in details_lower
-            or "localização" in details_lower
-        ):
-            has_map_item = False
-            if hasattr(character, "inventory"):
-                map_items = [
-                    "Mapa",
-                    "Fragmento de Mapa",
-                    "Bússola",
-                    "GPS Quebrado",
-                ]
-                has_map_item = any(item in character.inventory for item in map_items)
-            if has_map_item:
-                if hasattr(game_state, "coordinates") and hasattr(
-                    game_state, "world_map"
-                ):
-                    coords = game_state.coordinates
-                    known_locations = []
-                    if hasattr(game_state, "visited_locations"):
-                        for loc_id, loc_info in game_state.visited_locations.items():
-                            if loc_id in game_state.world_map["locations"]:
-                                loc_coords = game_state.world_map["locations"][
-                                    loc_id
-                                ].get("coordinates", {})
-                                distance = (
-                                    (loc_coords.get("x", 0) - coords.get("x", 0)) ** 2
-                                    + (loc_coords.get("y", 0) - coords.get("y", 0)) ** 2
-                                ) ** 0.5
-                                if distance <= 2:
-                                    known_locations.append(
-                                        f"{loc_info['name']} ({loc_coords.get('x', 0)}, {loc_coords.get('y', 0)})"
-                                    )
-                    return {
-                        "success": True,
-                        "message": f"Você consulta seu mapa. Você está em {game_state.current_location}, nas coordenadas ({coords.get('x', 0)}, {coords.get('y', 0)}). "
-                        + f"Locais próximos que você conhece: {', '.join(known_locations) if known_locations else 'nenhum além deste'}.",
-                    }
-                return {
-                    "success": True,
-                    "message": f"Você consulta seu mapa. Você está em {game_state.current_location}.",
-                }
-            return {
-                "success": False,
-                "message": "Você não tem um mapa ou bússola para determinar sua localização exata. Você sabe que está em "
-                + f"{game_state.current_location}, mas não consegue identificar suas coordenadas.",
-            }
-        influence_keywords = [
-            "exigir",
-            "convencer",
-            "persuadir",
-            "intimidar",
-            "forçar",
-            "ameaçar",
-        ]
-        target_object_keywords = ["portão", "sair", "passagem"]
-        attempting_influence = any(kw in details_lower for kw in influence_keywords)
-        targeting_exit_action = any(
-            kw in details_lower for kw in target_object_keywords
-        )
-        if attempting_influence and game_state.npcs_present:
-            targeted_npc_name: Optional[str] = None
-            for npc_name_in_scene in game_state.npcs_present:
-                if npc_name_in_scene.lower() in details_lower:
-                    targeted_npc_name = npc_name_in_scene
-                    break
-            if (
-                not targeted_npc_name
-                and "velho" in details_lower
-                and targeting_exit_action
-            ):
-                if "Velho Sobrevivente Cansado" in game_state.npcs_present:
-                    targeted_npc_name = "Velho Sobrevivente Cansado"
-            if targeted_npc_name:
-                npc_details = game_state.known_npcs.get(targeted_npc_name)
-                if not npc_details:
-                    return {
-                        "success": False,
-                        "message": f"Não tenho detalhes suficientes sobre {targeted_npc_name}.",
-                    }
-                contest_stat = "charisma"
-                contest_type_message = "tentativa de intimidação"
-                if "persuadir" in details_lower or "convencer" in details_lower:
-                    contest_type_message = "tentativa de persuasão"
-                elif "forçar" in details_lower:
-                    contest_stat = "strength"
-                    contest_type_message = "tentativa de forçar"
-                player_modifier = calculate_attribute_modifier(
-                    character.attributes.get(contest_stat, 10)
-                )
-                player_roll_result = roll_dice(1, 20, player_modifier)
-                player_roll_total = player_roll_result["total"]
-                npc_level = npc_details.get("level", 1)
-                npc_personality = npc_details.get("personality", "Neutro").lower()
-                base_dc = 10 + npc_level
-                if "cansado" in npc_personality:
-                    base_dc -= 1
-                if "apavorada" in npc_personality:
-                    base_dc -= 2
-                if "desconfiado" in npc_personality:
-                    base_dc += 2
-                if "brutal" in npc_personality:
-                    base_dc += 3
-                npc_dc = max(5, base_dc)
-                mechanical_outcome_message = ""
-                if player_roll_total >= npc_dc:
-                    mechanical_outcome_message = (
-                        f"Sua {contest_type_message} contra {targeted_npc_name} teve sucesso! "
-                        f"(Rolagem: {player_roll_total} vs DC: {npc_dc}). "
-                        f"{targeted_npc_name} parece reconsiderar..."
-                    )
-                else:
-                    mechanical_outcome_message = (
-                        f"Sua {contest_type_message} contra {targeted_npc_name} falhou. "
-                        f"(Rolagem: {player_roll_total} vs DC: {npc_dc}). "
-                        f"{targeted_npc_name} não se convenceu ou resistiu à sua tentativa."
-                    )
-                return {
-                    "success": True,
-                    "message": mechanical_outcome_message,
-                    "action_performed": "social_contest_resolved",
-                }
-
-        # Example: Physical challenge for forcing/breaking objects
-        physical_force_keywords = ["forçar", "arrombar", "quebrar"]
-        target_physical_keywords = ["porta", "portão", "caixa", "cadeado", "janela"]
-
-        attempting_physical_force = any(
-            kw in details_lower for kw in physical_force_keywords
-        )
-        targeting_physical_object = any(
-            kw in details_lower for kw in target_physical_keywords
-        )
-
-        if attempting_physical_force and targeting_physical_object:
-            target_object_name = "o objeto"
-            for kw in target_physical_keywords:
-                if kw in details_lower:
-                    target_object_name = (
-                        kw  # Gets the first matched keyword as the target
-                    )
-                    break
-
-            strength_modifier = calculate_attribute_modifier(
-                character.attributes.get("strength", 10)
-            )
-            # DC can be dynamic based on target_object_name or game_state
-            dc = 15  # Medium difficulty for a generic object
-            roll_result_obj = roll_dice(1, 20, strength_modifier)
-            roll_total = roll_result_obj["total"]
-
-            if roll_total >= dc:
-                outcome_message = f"Você tentou {random.choice(physical_force_keywords)} {target_object_name} e conseguiu! (Rolagem: {roll_total} vs DC: {dc})."
-                # TODO: Potentially update game_state here if the object is now open/broken
-            else:
-                outcome_message = f"Você tentou {random.choice(physical_force_keywords)} {target_object_name}, mas falhou. (Rolagem: {roll_total} vs DC: {dc}). O objeto permanece intacto."
-
-            return {
-                "success": True,  # Handler processed it, mechanical success depends on roll
-                "message": outcome_message,  # This is the mechanical outcome for the AI to narrate
-                "action_performed": "physical_challenge_resolved",
-                "roll_details": roll_result_obj,  # Optional: for debugging or more detailed AI prompt
-            }
-
-        return self.ai_response("custom", details, character, game_state)
+        """
+        Retorna os detalhes brutos para que a IA os interprete.
+        """
+        # Sempre retorna sucesso=True para indicar que a ação foi recebida
+        # e deve ser passada para a IA para interpretação.
+        return {
+            "success": True,
+            "action_performed": "interpret_needed",  # Sinaliza para o GameEngine que a IA precisa interpretar
+        }
 
 
 class UnknownActionHandler(ActionHandler):
@@ -1243,7 +901,11 @@ class UnknownActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
-        return self.ai_response("unknown", details, character, game_state)
+        # Ação desconhecida. Passa para a IA para ver se ela consegue fazer algo.
+        return {
+            "success": True,  # Indica que a ação foi recebida
+            "action_performed": "unknown_action",  # Sinaliza para a IA que a ação foi desconhecida
+        }
 
 
 class SkillActionHandler(ActionHandler):
@@ -1256,90 +918,178 @@ class SkillActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
+        # Lógica mecânica de habilidade AQUI. IA narra o resultado.
         if not details:
             available_skills = self.skill_manager.get_available_skills(character)
             skill_names = [skill.name for skill in available_skills]
             return {
-                "success": True,
+                "success": True,  # Mecanicamente, você conseguiu listar as habilidades
                 "message": f"Habilidades disponíveis: {', '.join(skill_names) if skill_names else 'Nenhuma'}",  # Traduzido
             }
-        skill_id = details.lower().replace(" ", "_")
+
+        skill_id = details.strip().lower().replace(" ", "_")
         target = None
-        if hasattr(game_state, "combat") and game_state.combat:
-            target = game_state.combat.get("enemy")
+        if (
+            game_state.combat
+            and game_state.combat.get("active")
+            and game_state.combat.get("enemy")
+        ):
+            target = game_state.combat.get(
+                "enemy"
+            )  # Alvo padrão em combate é o inimigo
+        # TODO: Adicionar lógica para selecionar outros alvos (NPCs, objetos)
+
+        # Usar a habilidade
         result = self.skill_manager.use_skill(character, skill_id, target)
+
+        # result do use_skill deve conter:
+        # success: bool
+        # message: str (resultado mecânico)
+        # raw_effects: List[Dict] (efeitos brutos para aplicar)
+        # action_performed: str (tipo de resultado da habilidade, ex: "skill_used", "skill_failed_check", "skill_failed_cost")
+
         if result["success"]:
-            if (
-                hasattr(game_state, "combat")
-                and game_state.combat
-                and "log" in game_state.combat
-            ):
-                game_state.combat["log"].append(result["message"])
-            if target and hasattr(game_state, "combat") and game_state.combat:
-                log_entries_from_effects = self._apply_combat_effects(
-                    result, game_state, character
-                )
-                if "log" in game_state.combat:
-                    game_state.combat["log"].extend(log_entries_from_effects)
-        return result
+            # Aplicar efeitos mecânicos se a habilidade foi usada com sucesso
+            log_entries_from_effects = self._apply_combat_effects(
+                result, game_state, character
+            )
+            if game_state.combat and "log" in game_state.combat:
+                game_state.combat["log"].extend(log_entries_from_effects)
+
+            # Retornar resultado mecânico para a IA narrar
+            return {
+                "success": True,  # A ação mecânica foi processada
+                "action_performed": result.get("action_performed", "skill_resolved"),
+                "combat_log_update": (
+                    "\n".join(log_entries_from_effects)
+                    if log_entries_from_effects
+                    else None
+                ),  # Enviar log de efeitos para o frontend
+                "character_stats_updated": True,  # Habilidades podem mudar stats (HP, Stamina, etc.)
+                "character_stats": character.to_dict(),  # Enviar stats atualizados
+                "combat_ongoing": (
+                    game_state.combat.get("active", False)
+                    if game_state.combat
+                    else False
+                ),  # Status de combate
+                "enemy_hp": (
+                    getattr(target, "health", 0)
+                    if target and game_state.combat and game_state.combat.get("active")
+                    else None
+                ),  # HP do inimigo se ainda em combate
+                "enemy_max_hp": (
+                    getattr(target, "max_health", 0)
+                    if target and game_state.combat and game_state.combat.get("active")
+                    else None
+                ),  # Max HP do inimigo
+            }
+        else:
+            # Habilidade falhou (ex: custo, check, alvo inválido)
+            return {
+                "success": False,  # A ação mecânica falhou
+                "message": result.get(
+                    "message", f"Você tentou usar {details}, mas falhou."
+                ),  # Mensagem mecânica para a IA
+            }
 
     @staticmethod
     def _apply_combat_effects(
         result: Dict[str, Any], game_state: Any, character: Character
     ) -> List[str]:
         combat_log_entries = []
-        if not game_state.combat or not game_state.combat.get("enemy"):
+        # Verificar se o combate está ativo e se há um inimigo
+        if (
+            not game_state.combat
+            or not game_state.combat.get("active")
+            or not game_state.combat.get("enemy")
+        ):
+            # Se a habilidade teve efeitos que não dependem de combate (ex: buff em si mesmo),
+            # a lógica precisaria ser adaptada para aplicar esses efeitos fora do contexto de combate.
+            # Por enquanto, esta função foca em efeitos de combate.
             return combat_log_entries
-        enemy = game_state.combat["enemy"]
+
+        enemy = game_state.combat["enemy"]  # O inimigo atual
+
         raw_effects = result.get("raw_effects", [])
         for effect_data in raw_effects:
             target_entity: Optional[Any] = None
             target_name: str = "Desconhecido"  # Traduzido
             effect_target_type = effect_data.get("target")
+
             if effect_target_type == "enemy":
-                if enemy:
-                    target_entity = enemy
-                    target_name = enemy.name
-                else:
-                    combat_log_entries.append(
-                        "Habilidade mira um inimigo, mas nenhum inimigo está presente para afetar."  # Traduzido
-                    )
-                    continue
+                target_entity = enemy
+                target_name = enemy.name
             elif effect_target_type == "self":
                 target_entity = character
                 target_name = character.name
+            # TODO: Adicionar outros alvos como "other_npc", "area", etc.
+
             if target_entity:
                 effect_type = effect_data.get("type")
                 amount = effect_data.get("amount", 0)
+                attribute = effect_data.get(
+                    "attribute"
+                )  # Para efeitos de modificação de atributo
+                duration = effect_data.get(
+                    "duration", 0
+                )  # Para efeitos de status/buff/debuff
+
                 if effect_type == "damage" and hasattr(target_entity, "health"):
-                    skill_damage_roll = roll_dice(1, amount, 0)
+                    # Calcular dano da habilidade (exemplo: rola um dado de 'amount' faces)
+                    skill_damage_roll = roll_dice(1, amount, 0)  # Ex: amount=6 para 1d6
                     actual_damage = skill_damage_roll["total"]
+                    # Aplicar defesa do alvo
                     actual_damage = max(
                         1, actual_damage - getattr(target_entity, "defense", 0)
                     )
-                    target_entity.health = max(0, target_entity.health - actual_damage)
-                    combat_log_entries.append(
-                        f"{target_name} sofreu {actual_damage} de {effect_type} da habilidade!"  # Traduzido
+                    # Aplicar dano
+                    target_entity.health = max(
+                        0, getattr(target_entity, "health", 0) - actual_damage
                     )
-                    if target_entity.health <= 0:
+                    # Atualizar o objeto inimigo no game_state se o alvo for o inimigo
+                    if effect_target_type == "enemy":
+                        game_state.combat["enemy"] = target_entity
+
+                    combat_log_entries.append(
+                        f"{target_name} sofreu {actual_damage} de dano da habilidade!"  # Traduzido
+                    )
+                    if effect_target_type == "enemy" and target_entity.health <= 0:
                         combat_log_entries.append(
                             f"{target_name} foi derrotado(a)!"
                         )  # Traduzido
-                elif effect_type == "heal" and effect_data.get("target") == "self":
-                    old_hp = character.attributes.get("current_hp", 0)
-                    max_hp = character.attributes.get("max_hp", old_hp)
+                        game_state.combat["active"] = False  # Fim do combate
+                        game_state.combat["enemy"] = None  # Remover inimigo
+
+                elif effect_type == "heal" and effect_target_type == "self":
+                    old_hp = character.current_hp
+                    max_hp = character.max_hp
                     heal_amount_from_skill = amount
-                    character.attributes["current_hp"] = min(old_hp + amount, max_hp)
-                    healed_amount = character.attributes["current_hp"] - old_hp
-                    combat_log_entries.append(
-                        f"{character.name} curou {healed_amount} HP."  # Traduzido
+                    character.current_hp = min(max_hp, old_hp + heal_amount_from_skill)
+                    healed_amount = character.current_hp - old_hp
+                    if healed_amount > 0:
+                        combat_log_entries.append(
+                            f"{character.name} curou {healed_amount} HP com a habilidade."  # Traduzido
+                        )
+                elif effect_type == "restore_stamina" and effect_target_type == "self":
+                    old_stamina = character.current_stamina
+                    max_stamina = character.max_stamina
+                    stamina_restored_amount = amount
+                    character.current_stamina = min(
+                        max_stamina, old_stamina + stamina_restored_amount
                     )
+                    restored_amount = character.current_stamina - old_stamina
+                    if restored_amount > 0:
+                        combat_log_entries.append(
+                            f"{character.name} recuperou {restored_amount} Vigor com a habilidade."  # Traduzido
+                        )
                 elif effect_type == "status":
-                    stat_mods = effect_data.get("stat_modifier", {})
-                    duration = effect_data.get("duration", 0)
+                    # Lógica para aplicar status (buffs/debuffs)
+                    # Isso exigiria um sistema de status no Character/Enemy
                     combat_log_entries.append(
-                        f"{target_name} é afetado(a) por um status: {stat_mods} por {duration} turnos."  # Traduzido
+                        f"{target_name} é afetado(a) por um status da habilidade (Tipo: {effect_data.get('status_type')}, Duração: {duration})."  # Traduzido
                     )
+                # TODO: Adicionar outros tipos de efeito (ex: restore_hunger, restore_thirst, modify_attribute)
+
         return combat_log_entries
 
 
@@ -1349,93 +1099,179 @@ class CraftActionHandler(ActionHandler):
     def __init__(self):
         from utils.item_generator import ItemGenerator
 
-        self.item_generator = ItemGenerator(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+        # Precisamos do caminho para o diretório de dados para ItemGenerator
+        data_dir_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "..", "data"
         )
-        self.skill_manager = SkillManager()
+        self.item_generator = ItemGenerator(data_dir_path)
+        self.skill_manager = SkillManager()  # Para verificar requisitos de habilidade
 
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
-        if not details:
+        # Lógica mecânica de criação AQUI. IA narra o resultado.
+        recipe_id_query = details.strip().lower() if isinstance(details, str) else ""
+
+        if not recipe_id_query:
+            # Se nenhum detalhe foi fornecido, listar receitas conhecidas
             available_crafts = []
+            # Precisamos de uma forma de saber quais receitas o personagem conhece.
+            # Por enquanto, listamos todas as receitas que o personagem tem habilidade para tentar.
             for recipe_id, recipe_data in CRAFTING_RECIPES.items():
                 skill_req = recipe_data.get("skill_required")
+                has_skill = True
                 if skill_req:
-                    skill_id_req, skill_level_req = skill_req
+                    skill_id_req, skill_level_req = (
+                        skill_req  # Assumindo formato (id, level)
+                    )
+                    # Verificar se o personagem tem a habilidade necessária
+                    # O sistema de habilidades precisaria rastrear habilidades aprendidas pelo personagem.
+                    # Por enquanto, vamos verificar se a habilidade ID está na lista character.skills
                     if skill_id_req not in character.skills:
-                        continue
-                available_crafts.append(f"{recipe_data['name']} (ID: {recipe_id})")
+                        has_skill = False
+                    # TODO: Verificar o nível da habilidade se necessário
+
+                if has_skill:
+                    available_crafts.append(
+                        f"{recipe_data.get('name', recipe_id)} (ID: {recipe_id})"
+                    )
+
             if not available_crafts:
                 return {
-                    "success": True,
+                    "success": True,  # Mecanicamente, você conseguiu verificar, mas não há receitas
                     "message": "Você não conhece nenhuma receita de criação ou não possui as habilidades necessárias para as conhecidas.",  # Traduzido
                 }
             return {
-                "success": True,
+                "success": True,  # Mecanicamente, você conseguiu listar
                 "message": "Você pode tentar criar: "
                 + ", ".join(available_crafts)
                 + ". Use 'craft [ID da receita]'.",  # Traduzido
+                "action_performed": "craft_list",  # Added closing brace here
             }
-        recipe_id_to_craft = details.strip().lower()
-        recipe = CRAFTING_RECIPES.get(recipe_id_to_craft)
+
+        # Tentar criar uma receita específica
+        recipe = CRAFTING_RECIPES.get(recipe_id_query)
+
         if not recipe:
             return {
-                "success": False,
-                "message": f"Receita '{recipe_id_to_craft}' não encontrada.",  # Traduzido
+                "success": False,  # Mecanicamente, a receita não existe
+                "action_performed": "craft_failed_recipe_not_found",
             }
+
+        # Verificar requisito de habilidade
         skill_req = recipe.get("skill_required")
         if skill_req:
             skill_id_req, skill_level_req = skill_req
             if skill_id_req not in character.skills:
+                # Tentar obter o nome da habilidade para a mensagem
                 skill_obj = self.skill_manager.available_skills.get(skill_id_req)
                 skill_display_name = skill_obj.name if skill_obj else skill_id_req
                 return {
-                    "success": False,
-                    "message": f"Você precisa aprender a habilidade '{skill_display_name}' para criar isto.",  # Traduzido
+                    "success": False,  # Mecanicamente, falta habilidade
+                    "action_performed": "craft_failed_skill_missing",
                 }
+            # TODO: Adicionar verificação de nível de habilidade e talvez um teste de habilidade aqui
+
+        # Verificar componentes necessários no inventário
         required_components = recipe.get("components", {})
-        inventory_copy = character.inventory[:]
+        inventory_copy = character.inventory[
+            :
+        ]  # Trabalhar em uma cópia para não modificar antes de confirmar
         missing_components = []
-        components_to_remove_indices = {}
+        components_to_remove_indices: Dict[str, List[int]] = (
+            {}
+        )  # {component_name: [indices_no_inventario]}
+
         for comp_id_ref, quantity_needed in required_components.items():
             found_quantity = 0
             indices_for_this_component = []
+            # Procurar o componente no inventário
             for i, inv_item_obj in enumerate(inventory_copy):
                 item_name_in_inv = ""
                 if isinstance(inv_item_obj, str):
                     item_name_in_inv = inv_item_obj
                 elif isinstance(inv_item_obj, dict) and "name" in inv_item_obj:
                     item_name_in_inv = inv_item_obj["name"]
+                # Comparar pelo ID de referência do componente (lowercase)
                 if item_name_in_inv.lower() == comp_id_ref.lower():
                     indices_for_this_component.append(i)
                     found_quantity += 1
                     if found_quantity >= quantity_needed:
-                        break
+                        break  # Já encontramos o suficiente deste componente
+
             if found_quantity < quantity_needed:
                 missing_components.append(
                     f"{comp_id_ref} (precisa de {quantity_needed}, tem {found_quantity})"  # Traduzido
                 )
             else:
+                # Guardar os índices dos itens que serão removidos para este componente
+                # Ordenar reversamente para remover sem bagunçar os índices restantes
                 components_to_remove_indices[comp_id_ref] = sorted(
                     indices_for_this_component[:quantity_needed], reverse=True
                 )
+
         if missing_components:
             return {
-                "success": False,
+                "success": False,  # Mecanicamente, faltam componentes
                 "message": "Componentes faltando: "
-                + ", ".join(missing_components),  # Traduzido
+                + ", ".join(missing_components),  # Mensagem para a IA narrar a falha
             }
-        for comp_id_ref, indices in components_to_remove_indices.items():
-            for index_to_remove in indices:
+
+        # Se chegou aqui, tem todos os componentes. Remover do inventário.
+        # Remover os itens do inventário original (character.inventory)
+        # É importante remover os índices maiores primeiro para não invalidar os menores.
+        all_indices_to_remove = sorted(
+            [
+                idx
+                for indices in components_to_remove_indices.values()
+                for idx in indices
+            ],
+            reverse=True,
+        )
+        for index_to_remove in all_indices_to_remove:
+            if 0 <= index_to_remove < len(character.inventory):
                 character.inventory.pop(index_to_remove)
-        output_item_name = recipe["name"]
+            else:
+                logger.error(
+                    f"Erro ao remover item do inventário para criação. Índice inválido: {index_to_remove}"
+                )
+
+        # Adicionar o item criado ao inventário
+        output_item_name = recipe.get(
+            "name", recipe_id_query
+        )  # Usar nome da receita como fallback
         output_quantity = recipe.get("output_quantity", 1)
+        # TODO: Gerar o item criado como um dict estruturado usando ItemGenerator
+        # Por enquanto, adicionamos como string.
         for _ in range(output_quantity):
-            character.inventory.append(output_item_name)
+            # character.inventory.append(output_item_name) # Adiciona como string
+            # Idealmente, gerar o item completo:
+            try:
+                crafted_item_data = self.item_generator.get_item_by_name(
+                    output_item_name
+                )
+                if crafted_item_data:
+                    character.inventory.append(crafted_item_data)  # Adiciona como dict
+                else:
+                    character.inventory.append(
+                        output_item_name
+                    )  # Fallback para string se ItemGenerator falhar
+                    logger.warning(
+                        f"ItemGenerator não encontrou dados para item criado: {output_item_name}. Adicionado como string."
+                    )
+            except Exception as e:
+                logger.error(
+                    f"Erro ao gerar dados para item criado '{output_item_name}': {e}. Adicionado como string.",
+                    exc_info=True,
+                )
+                character.inventory.append(output_item_name)  # Fallback para string
+
+        # Retornar resultado mecânico para a IA narrar
         return {
-            "success": True,
-            "message": f"Você criou com sucesso {output_quantity}x {output_item_name}!",  # Traduzido
+            "success": True,  # Mecanicamente, a criação foi bem-sucedida
+            "action_performed": "craft_success",
+            "inventory_changed": True,  # Inventário mudou
+            "inventory": character.inventory,  # Enviar inventário atualizado
         }
 
 
@@ -1448,14 +1284,14 @@ class InterpretActionHandler(ActionHandler):
     def handle(
         self, details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
-        """
-        Passes details through for AI interpretation.
-        The 'message' field will be used as 'details' for the AI prompt.
-        """
+        """Passa os detalhes para a IA interpretar."""
+        # Sempre retorna sucesso=True para indicar que a ação foi recebida
+        # Sempre retorna sucesso=True para indicar que a ação foi recebida
+        # e deve ser passada para a IA para interpretação.
         return {
-            "success": True,  # Indicates the handler itself didn't fail
-            "message": details,  # This will become the 'details' for the AI
-            "skip_ai_narration": False,  # We definitely want AI narration
+            "success": True,
+            "action_performed": "interpret_needed",  # Sinaliza para o GameEngine que a IA precisa interpretar
+            "skip_ai_narration": False,  # Queremos a narração da IA
         }
 
 
@@ -1479,9 +1315,12 @@ def get_action_handler(action: str) -> ActionHandler:
         "use_item": UseItemActionHandler(),
         "flee": FleeActionHandler(),
         "rest": RestActionHandler(),
-        "custom": CustomActionHandler(),
+        "custom": CustomActionHandler(),  # Custom agora apenas passa para a IA
         "skill": SkillActionHandler(),
         "craft": CraftActionHandler(),
-        "interpret": InterpretActionHandler(),
+        "interpret": InterpretActionHandler(),  # Interpret agora apenas passa para a IA
     }
-    return action_handlers.get(action, UnknownActionHandler())
+    # Se a ação não for uma das ações diretas conhecidas, usa CustomActionHandler
+    # para que a IA tente interpretar a entrada do jogador.
+    return action_handlers.get(action, CustomActionHandler())
+    return result

@@ -2,14 +2,14 @@
 """NPC module for managing non-player characters in the game world."""
 
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import (
     Any,
     Dict,
     List,
     Literal,
     Optional,
-    TypedDict,
+    TypedDict,  # Ensure TypedDict is imported
     cast,
 )  # Ensure these are imported
 import uuid  # Ensure uuid is imported if generating IDs
@@ -87,7 +87,7 @@ class NPC:
     race: Optional[str] = field(default="Human")  # Assuming default for race
     profession: Optional[str] = field(
         default="Commoner"
-    )  # Assuming default for profession
+    )  # Changed from profession to role for consistency  # Assuming default for profession
     personality: Optional[str] = field(
         default="Neutral"
     )  # Assuming default for personality
@@ -110,6 +110,62 @@ class NPC:
     dialogue_options: DialogueDict = field(default_factory=dict)
     # Attributes for NPCs, similar to Characters
     attributes: Dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "NPC":
+        """Creates an NPC object from a dictionary."""
+        # Ensure all fields expected by the dataclass constructor are present
+        # or have defaults.
+        # The 'level' field was identified as potentially problematic if not handled.
+        # If 'level' is not in data, it will use the default from the dataclass if defined,
+        # or raise an error if it's a required field without a default.
+        # Based on the current dataclass definition, 'level' is required.
+
+        # Map NPCBase fields to NPC dataclass fields if names differ or need defaults
+        npc_id = data.get("id", str(uuid.uuid4()))  # Generate ID if not present
+        name = data.get("name", "Unknown NPC")
+        level = data.get("level", 1)  # Default level to 1 if not provided
+        race = data.get("race", "Human")
+        profession = data.get("profession", "Commoner")
+        personality = data.get("personality", "Neutral")
+        current_mood = data.get("current_mood", "Normal")
+        disposition = data.get("disposition", "neutral")
+        faction = data.get("faction", "Neutral")
+        knowledge = data.get("knowledge", [])
+        skills = data.get("skills", [])
+        available_quests = data.get("available_quests", [])
+        interaction_count = data.get("interaction_count", 0)
+        last_interaction = data.get("last_interaction", "greet")
+        relationship_level = data.get("relationship_level", 0)
+        daily_schedule = data.get("daily_schedule", [])
+        dialogue_options = data.get("dialogue_options", {})
+        attributes = data.get("attributes", {})
+
+        return cls(
+            id=npc_id,
+            name=name,
+            level=level,
+            race=race,
+            profession=profession,
+            personality=personality,
+            current_mood=current_mood,
+            disposition=disposition,
+            faction=faction,
+            knowledge=knowledge,
+            skills=skills,
+            available_quests=available_quests,
+            interaction_count=interaction_count,
+            last_interaction=last_interaction,  # type: ignore
+            relationship_level=relationship_level,
+            daily_schedule=daily_schedule,
+            dialogue_options=dialogue_options,
+            attributes=attributes,
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Converts the NPC object to a dictionary."""
+        # Use asdict to convert the dataclass instance to a dictionary
+        return asdict(self)
 
     def get_greeting(self) -> str:
         """Generate a contextual greeting based on NPC's disposition.
