@@ -2,17 +2,10 @@
 """NPC module for managing non-player characters in the game world."""
 
 import random
-from dataclasses import dataclass, field, asdict
-from typing import (
-    Any,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    TypedDict,  # Ensure TypedDict is imported
-    cast,
-)  # Ensure these are imported
 import uuid  # Ensure uuid is imported if generating IDs
+from dataclasses import asdict, dataclass, field
+from typing import TypedDict  # Ensure TypedDict is imported
+from typing import Any, Dict, List, Literal, Optional, cast  # Ensure these are imported
 
 from .models import NPCBase
 
