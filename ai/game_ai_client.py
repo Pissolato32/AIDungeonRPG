@@ -6,22 +6,23 @@ and responses."""
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, TypedDict, Union, cast
 from typing import Protocol  # Added Protocol for AIModelClientType
+from typing import Any, Dict, List, Optional, TypedDict, Union, cast
+
 from ai.openrouter import OpenRouterClient  # Import OpenRouterClient
-from core.models import Character  # Import Character from core.models
+from ai.prompt_builder import InstructionsBuilder, PromptBuilder
 from core.game_state_model import GameState, MessageDict
-from ai.prompt_builder import PromptBuilder, InstructionsBuilder
+from core.models import Character  # Import Character from core.models
 
 from .fallback_handler import (
-    generate_fallback_response,
     FallbackResponse as FallbackResponseType,  # Importar fallback
-)  # Importar fallback
+)
+from .fallback_handler import generate_fallback_response
 
 logger = logging.getLogger(__name__)
-from core.game_state_model import (
+from core.game_state_model import (  # Mover importação para evitar potencial ciclo
     GameState,
-)  # Mover importação para evitar potencial ciclo
+)
 
 
 class AIPrompt(TypedDict):
