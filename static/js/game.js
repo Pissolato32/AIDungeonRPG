@@ -472,25 +472,6 @@ class GameUIManager {
             return;
         }
 
-        let displayMessage = message;
-        let interactableElementsForDisplay = interactableElements;
-
-        // Tenta analisar a mensagem como JSON, se não for um erro
-        if (!isError && typeof message === 'string') {
-            try {
-                const parsedJson = JSON.parse(message);
-                if (parsedJson && typeof parsedJson === 'object') {
-                    displayMessage = parsedJson.message || displayMessage; // Usa a mensagem do JSON ou o original
-                    // Se o JSON contiver interactable_elements, use-os (pode sobrescrever os passados)
-                    if (parsedJson.interactable_elements) {
-                        interactableElementsForDisplay = parsedJson.interactable_elements;
-                    }
-                }
-            } catch (e) {
-                // Não é um JSON válido, continue com a mensagem original
-            }
-        }
-
         const diceRollPattern = /rolagem (de \w+\s)?foi de (\d+)|roll(ed)? (a )?(\d+)|rolled (\d+)|rolagem: (\d+)|roll: (\d+)|rolou (\d+)/gi;
         // Ensure message is a string before calling replace
         const highlightedMessage = (typeof displayMessage === 'string' ? displayMessage : '').replace(diceRollPattern, match => {
@@ -503,11 +484,11 @@ class GameUIManager {
             return match;
         });
 
-        const messageDiv = document.createElement('div');
+        const messageDiv = document.createElement('div'); // Use the 'message' argument directly
         messageDiv.className = isError ? 'message text-danger' : 'message message-assistant';
 
         let fullMessageHTML = `<strong>${isError ? "Erro:" : "Mestre:"}</strong> ${highlightedMessage}`;
-
+        // Use interactableElements directly, as it comes from the parsed backend response
         if (interactableElementsForDisplay && interactableElementsForDisplay.length > 0) {
             fullMessageHTML += `<div class="interactable-elements-inline mt-2"><strong>Você percebe:</strong>`;
             const listGroup = document.createElement('div');
@@ -516,7 +497,7 @@ class GameUIManager {
             interactableElementsForDisplay.forEach(elementName => {
                 const button = document.createElement('button');
                 button.type = 'button';
-                button.className = 'list-group-item list-group-item-action list-group-item-secondary p-2';
+                button.className = 'list-group-item list-group-item-action list-group-item-secondary p-2 text-start'; // Added text-start for better alignment
                 button.textContent = elementName;
                 button.addEventListener('click', () => {
                     const actionDetailsInput = document.getElementById('actionDetails');

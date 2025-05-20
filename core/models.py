@@ -5,7 +5,6 @@ Central module for core game data models and type definitions.
 from typing import (
     Dict,
     Any,
-    Protocol,
     TypedDict,
     Optional,
     List,
@@ -50,14 +49,11 @@ class Character:
     max_stamina: int = 10
     current_stamina: int = 10
 
-    # Survival stats - assuming these are also direct attributes
-    # If they are complex, they could be a nested dataclass
-    # For simplicity, let's assume they are direct for now, or part of 'attributes'
-    # If they are direct:
-    # current_hunger: int = 100
-    # max_hunger: int = 100
-    # current_thirst: int = 100
-    # max_thirst: int = 100
+    # Survival stats as direct attributes with default values
+    current_hunger: int = 100
+    max_hunger: int = 100
+    current_thirst: int = 100
+    max_thirst: int = 100
     # current_fatigue: int = 0 # Example
     # max_fatigue: int = 100 # Example
 
@@ -104,36 +100,18 @@ class Character:
             "current_stamina": data.get(
                 "current_stamina", attributes_data.get("current_stamina", 10)
             ),
+            # Load survival stats, using defaults if not present
+            "current_hunger": data.get("current_hunger", 100),
+            "max_hunger": data.get("max_hunger", 100),
+            "current_thirst": data.get("current_thirst", 100),
+            "max_thirst": data.get("max_thirst", 100),
+            # Add other survival stats here if you add them to the dataclass
+            # "current_fatigue": data.get("current_fatigue", 0),
         }
         if char_id is not None:
             init_args["id"] = char_id
 
         return cls(**init_args)  # type: ignore[arg-type]
-
-
-class CharacterType(Protocol):
-    """Protocol for character objects passed to modules that don't need the full Character implementation."""
-
-    name: str
-    level: int
-    attributes: Dict[str, Any]
-    owner_session_id: str
-    description: str
-    experience: int
-    gold: int
-    inventory: List[Union[str, Dict[str, Any]]]
-    equipment: Dict[str, Any]
-    skills: List[str]
-    strength: int
-    dexterity: int
-    constitution: int
-    intelligence: int
-    wisdom: int
-    charisma: int
-    max_hp: int
-    current_hp: int
-    max_stamina: int
-    current_stamina: int
 
 
 class NPCBase(TypedDict, total=False):

@@ -7,22 +7,14 @@ logger = logging.getLogger(__name__)
 
 
 class CharacterManager:
+    # ATTRIBUTE_DEFAULTS for "int" (core stats) is no longer needed here.
+    # Defaults for core stats like strength, dexterity, etc., are handled by:
+    # 1. The HTML form inputs in character.html (which default to "8").
+    # 2. The Character model in models.py (which defaults to 10 if not provided).
     ATTRIBUTE_DEFAULTS = {
-        "int": {  # Core stats that can be set from form for a new character
-            "strength": 10,
-            "dexterity": 10,
-            "constitution": 10,
-            "intelligence": 10,
-            "wisdom": 10,
-            "charisma": 10,
-            # HP, Stamina, Gold, Level, Experience for new characters are handled directly
-            # in create_character_from_form or by Character model defaults.
-        },
         "str": {  # Default name if not provided
             "name": "Survivor",
         },
-        # Default inventory is now solely handled by generate_initial_inventory
-        # from character_utils.py, making this section redundant here.
     }
 
     # CLASS_HIT_DICE REMOVIDO
@@ -75,18 +67,21 @@ class CharacterManager:
             "charisma",
         ]
         for stat_name in core_stat_names:
-            try:
-                # Use default from ATTRIBUTE_DEFAULTS["int"] if not in character_data
-                value = character_data.get(
-                    stat_name, cls.ATTRIBUTE_DEFAULTS["int"].get(stat_name, 10)
-                )
-                character_direct_attrs[stat_name] = int(value)
-            except (ValueError, TypeError):
-                default_stat_val = cls.ATTRIBUTE_DEFAULTS["int"].get(stat_name, 10)
-                character_direct_attrs[stat_name] = default_stat_val
-                logger.warning(
-                    f"Invalid value for {stat_name}, using default: {default_stat_val}"
-                )
+            form_value_str = character_data.get(
+                stat_name
+            )  # Values from form are strings
+            if form_value_str is not None:
+                try:
+                    character_direct_attrs[stat_name] = int(form_value_str)
+                except (ValueError, TypeError):
+                    # If the form value is invalid (e.g., not a number),
+                    # we don't add it to character_direct_attrs.
+                    # The Character model's default (e.g., 10) will then be used.
+                    logger.warning(
+                        f"Invalid value for {stat_name} from form: '{form_value_str}'. "
+                        f"Character model default will be used."
+                    )
+            # If form_value_str is None (field not sent), Character model's default will be used.
 
         # 3. Calculate derived attributes (HP, Stamina, Gold) and add them
         constitution_for_hp_calc = character_direct_attrs.get("constitution", 10)
@@ -137,6 +132,3 @@ class CharacterManager:
             owner_session_id=owner_session_id,  # Use the owner_session_id passed as an argument
             **character_direct_attrs,  # Pass all other collected attributes
         )
-
-    # The get_character_attributes method is no longer needed with the streamlined
-    # create_character_from_form method and can be removed.

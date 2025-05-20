@@ -1,0 +1,182 @@
+{
+  "current_location": "Abrigo Subterr\u00e2neo - Sala Principal",
+  "scene_description": "A sala principal do abrigo continua iluminada com l\u00e2mpadas de emerg\u00eancia, com o som do gotejamento de \u00e1gua constante ao fundo. O gerador ainda est\u00e1 com problemas, fazendo a luz piscar.",
+  "npcs_present": [
+    "Velho Sobrevivente Cansado",
+    "M\u00e9dica de Campo Apavorada"
+  ],
+  "known_npcs": {},
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "Enquanto vasculha o gotejamento de \u00e1gua, voc\u00ea nota que o som parece vir de uma pequena fissura na parede, perto do ch\u00e3o. A M\u00e9dica de Campo se aproxima, examinando a \u00e1rea com cuidado. \"Isso pode ser um sinal de um problema maior na estrutura do abrigo\", diz ela, preocupada. O Velho Sobrevivente Cansado anota a localiza\u00e7\u00e3o, sugerindo que \u00e9 importante consertar a fissura antes que cause mais problemas."
+    },
+    {
+      "role": "user",
+      "content": "Analisar mais de perto fissura na parede"
+    },
+    {
+      "role": "system",
+      "content": "Voc\u00ea est\u00e1 gravemente ferido e precisa de cura!"
+    },
+    {
+      "role": "assistant",
+      "content": "Ao analisar mais de perto a fissura na parede, a M\u00e9dica de Campo observa que a \u00e1gua est\u00e1 vindo de uma pequena rachadura na tubula\u00e7\u00e3o de \u00e1gua subterr\u00e2nea. Ela sugere que \u00e9 importante consertar a tubula\u00e7\u00e3o antes que o dano se espalhe para outras partes do abrigo. O Velho Sobrevivente Cansado anota a localiza\u00e7\u00e3o e come\u00e7a a planejar uma equipe para realizar as reparos."
+    },
+    {
+      "role": "system",
+      "content": "Nota ao Mestre: o jogador repetiu a entrada/pergunta. Aprofunde com novos detalhes ou forne\u00e7a uma perspectiva diferente."
+    },
+    {
+      "role": "user",
+      "content": "Analisar mais de perto fissura na parede"
+    },
+    {
+      "role": "system",
+      "content": "Voc\u00ea est\u00e1 gravemente ferido e precisa de cura!"
+    },
+    {
+      "role": "assistant",
+      "content": "Ao examinar mais de perto a fissura na parede, voc\u00ea nota que a \u00e1gua est\u00e1 vindo de uma pequena rachadura na tubula\u00e7\u00e3o de \u00e1gua subterr\u00e2nea. A M\u00e9dica de Campo se aproxima e confirma sua observa\u00e7\u00e3o, explicando que \u00e9 crucial consertar a tubula\u00e7\u00e3o antes que o dano se espalhe para outras partes do abrigo. O Velho Sobrevivente Cansado anota a localiza\u00e7\u00e3o e come\u00e7a a planejar uma equipe para realizar os reparos, pedindo ao jogador que se prepare para ajudar na tarefa."
+    },
+    {
+      "role": "user",
+      "content": "- Voc\u00eas tem algum material para que possamos consertar isso? Posso procurar tamb\u00e9m l\u00e1 fora por algo \u00fatil, isso parece bem s\u00e9rio..."
+    },
+    {
+      "role": "system",
+      "content": "Voc\u00ea est\u00e1 gravemente ferido e precisa de cura!"
+    },
+    {
+      "role": "assistant",
+      "content": "Voc\u00ea pergunta sobre materiais para consertar a tubula\u00e7\u00e3o de \u00e1gua, e a M\u00e9dica de Campo responde: \"Sim, temos alguns rolos de fita adesiva, alguns tubos de reparo e uma ferramenta b\u00e1sica para soldar. No entanto, precisamos de mais materiais para fazer um reparo duradouro. Se voc\u00ea puder encontrar mais materiais l\u00e1 fora, seria uma grande ajuda.\" O Velho Sobrevivente Cansado assente, concordando com a M\u00e9dica."
+    },
+    {
+      "role": "user",
+      "content": "- Do que precisam exatamente?"
+    },
+    {
+      "role": "system",
+      "content": "Voc\u00ea est\u00e1 gravemente ferido e precisa de cura!"
+    },
+    {
+      "role": "assistant",
+      "content": "A M\u00e9dica de Campo olha para voc\u00ea com uma mistura de preocupa\u00e7\u00e3o e desespero, 'Precisamos de cura, sim, mas n\u00e3o estamos feridos. O que realmente precisamos \u00e9 de um gerador que funcione para manter a ilumina\u00e7\u00e3o e o oxig\u00eanio. Temos alguns materiais b\u00e1sicos para consertar o gerador, mas precisamos de mais pe\u00e7as e ferramentas espec\u00edficas. Se voc\u00ea puder encontrar algo \u00fatil l\u00e1 fora, seria uma grande ajuda.'"
+    },
+    {
+      "role": "user",
+      "content": "- Ok, vou procurar mais materiais l\u00e1 fora que possam ser \u00fateis"
+    },
+    {
+      "role": "system",
+      "content": "Voc\u00ea est\u00e1 gravemente ferido e precisa de cura!"
+    },
+    {
+      "role": "assistant",
+      "content": "Voc\u00ea decide procurar mais materiais \u00fateis l\u00e1 fora, mas antes de sair, a M\u00e9dica de Campo se aproxima e diz: 'Se voc\u00ea puder encontrar algo para reparar o gerador, seria um grande al\u00edvio. Estamos com a luz piscando h\u00e1 horas e a situa\u00e7\u00e3o aqui est\u00e1 se tornando cada vez mais insustent\u00e1vel.' O Velho Sobrevivente Cansado concorda, 'Sim, um gerador funcionando seria uma grande ajuda. Vamos precisar de algo para manter a ilumina\u00e7\u00e3o e o oxig\u00eanio.'"
+    },
+    {
+      "role": "user",
+      "content": "- Certo! *digo enquanto me preparo mentalmente para sair e enfrentar os perigos l\u00e1 fora em busca de materiais**"
+    },
+    {
+      "role": "system",
+      "content": "Voc\u00ea est\u00e1 gravemente ferido e precisa de cura!"
+    },
+    {
+      "role": "assistant",
+      "content": "Voc\u00ea se prepara para sair do abrigo em busca de materiais, mas a M\u00e9dica de Campo o intercepta, preocupada. 'Espere, Digao! Se voc\u00ea puder encontrar algo para reparar o gerador, seria um grande al\u00edvio. Estamos com a luz piscando h\u00e1 horas e a situa\u00e7\u00e3o aqui est\u00e1 se tornando cada vez mais insustent\u00e1vel.' O Velho Sobrevivente Cansado concorda, 'Sim, um gerador funcionando seria uma grande ajuda. Vamos precisar de algo para manter a ilumina\u00e7\u00e3o e o oxig\u00eanio.'"
+    }
+  ],
+  "coordinates": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "current_action": "interpret",
+  "discovered_locations": {},
+  "npcs_by_location": {},
+  "npc_relationships": {},
+  "location_id": "bunker_main",
+  "events": [
+    "Ouve-se o gotejar constante de \u00e1gua em algum lugar pr\u00f3ximo.",
+    "Um gerador falha e a luz pisca antes de voltar."
+  ],
+  "world_map": {
+    "bunker_main": {
+      "name": "Abrigo Subterr\u00e2neo - Principal",
+      "coordinates": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "connections": {
+        "north": "bunker_exit_tunnel",
+        "east": "bunker_infirmary",
+        "west": "bunker_storage"
+      }
+    },
+    "bunker_exit_tunnel": {
+      "name": "T\u00fanel de Sa\u00edda do Abrigo",
+      "coordinates": {
+        "x": 0,
+        "y": 1,
+        "z": 0
+      },
+      "connections": {
+        "south": "bunker_main",
+        "north": "ruined_street_01"
+      }
+    },
+    "bunker_infirmary": {
+      "name": "Enfermaria do Abrigo",
+      "coordinates": {
+        "x": 1,
+        "y": 0,
+        "z": 0
+      },
+      "connections": {
+        "west": "bunker_main"
+      }
+    },
+    "bunker_storage": {
+      "name": "Dep\u00f3sito do Abrigo",
+      "coordinates": {
+        "x": -1,
+        "y": 0,
+        "z": 0
+      },
+      "connections": {
+        "east": "bunker_main"
+      }
+    },
+    "ruined_street_01": {
+      "name": "Rua Devastada Pr\u00f3xima ao Abrigo",
+      "coordinates": {
+        "x": 0,
+        "y": 2,
+        "z": 0
+      },
+      "connections": {
+        "south": "bunker_exit_tunnel"
+      }
+    }
+  },
+  "visited_locations": {
+    "bunker_main": {
+      "name": "Abrigo Subterr\u00e2neo - Principal",
+      "last_visited": "initial",
+      "description": "Voc\u00ea est\u00e1 na sala principal de um abrigo subterr\u00e2neo improvisado. As paredes de concreto s\u00e3o \u00famidas e a \u00fanica luz vem de algumas l\u00e2mpadas de emerg\u00eancia piscando. H\u00e1 um port\u00e3o de metal refor\u00e7ado ao norte que leva \u00e0 superf\u00edcie, uma enfermaria improvisada a leste e um dep\u00f3sito de suprimentos a oeste.",
+      "npcs_seen": [
+        "Velho Sobrevivente Cansado",
+        "M\u00e9dica de Campo Apavorada"
+      ],
+      "events_seen": [
+        "Ouve-se o gotejar constante de \u00e1gua em algum lugar pr\u00f3ximo.",
+        "Um gerador falha e a luz pisca antes de voltar."
+      ],
+      "search_results": []
+    }
+  },
+  "combat": null
+}

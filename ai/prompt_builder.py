@@ -4,7 +4,7 @@ Module for constructing prompts for the AI model.
 """
 from typing import Any, Dict, List
 
-from core.models import CharacterType  # Importar CharacterType do models
+from core.models import Character  # Importar Character do models
 from core.game_state_model import GameState, MessageDict
 
 
@@ -67,23 +67,50 @@ class PromptBuilder:
 
     @staticmethod
     def _build_character_context(
-        character: CharacterType,
+        character: Character,
     ) -> str:
         """Builds the player character context part of the prompt."""
-        current_hp = character.attributes.get("current_hp", 0)
-        max_hp = character.attributes.get("max_hp", 0)
+        # Use direct attributes from Character dataclass
+        current_hp = character.current_hp
+        max_hp = character.max_hp
+        current_hunger = character.current_hunger
+        max_hunger = character.max_hunger
+        current_thirst = character.current_thirst
+        max_thirst = character.max_thirst
+
         health_status = "saudável"
         if max_hp > 0:
-            if current_hp <= max_hp / 2:
-                health_status = "ferido(a)"
-            if current_hp <= max_hp / 4:
+            hp_percentage = (current_hp / max_hp) * 100
+            if hp_percentage <= 25:
                 health_status = "gravemente ferido(a)"
+            elif hp_percentage <= 50:
+                health_status = "ferido(a)"
+            elif hp_percentage <= 75:
+                health_status = "levemente ferido(a)"
+
+        hunger_status = "saciado(a)"
+        if max_hunger > 0:
+            hunger_percentage = (current_hunger / max_hunger) * 100
+            if hunger_percentage <= 25:
+                hunger_status = "faminto(a)"
+            elif hunger_percentage <= 50:
+                hunger_status = "com fome"
+
+        thirst_status = "hidratado(a)"
+        if max_thirst > 0:
+            thirst_percentage = (current_thirst / max_thirst) * 100
+            if thirst_percentage <= 25:
+                thirst_status = "desidratado(a)"
+            elif thirst_percentage <= 50:
+                thirst_status = "com sede"
 
         return (
             "Personagem do jogador:\n"
             f"- Nome: {character.name}\n"
             f"- Nível: {character.level}\n"
-            f"- HP: {current_hp}/{max_hp} (Estado: {health_status})\n\n"
+            f"- Saúde: {current_hp}/{max_hp} (Estado: {health_status})\n"
+            f"- Fome: {current_hunger}/{max_hunger} (Estado: {hunger_status})\n"
+            f"- Sede: {current_thirst}/{max_thirst} (Estado: {thirst_status})\n\n"
         )
 
     @staticmethod
@@ -139,7 +166,7 @@ class PromptBuilder:
         action: str,
         details: str,
         current_location: str,
-        character: CharacterType,
+        character: Character,
         game_state: GameState,
     ) -> str:
         instruction_parts = []
@@ -181,7 +208,7 @@ class PromptBuilder:
         cls,
         action: str,
         details: str,
-        character: CharacterType,  # Removida importação local incorreta
+        character: Character,
         game_state: GameState,
     ) -> str:
         """
@@ -220,7 +247,7 @@ class InstructionsBuilder:
     def _build_interpret_instructions(
         details: str,
         current_location: str,
-        character: CharacterType,
+        character: Character,
         game_state: GameState,
     ) -> str:
         """Builds the AI's task instructions based on the action type."""
@@ -248,10 +275,10 @@ class InstructionsBuilder:
         if is_movement_intent:
             action_instructions_parts.append(
                 f"Ação de Movimento do Jogador (interprete e execute): {details}\n"
-                f"Localização Atual do Jogador (antes do movimento): {current_location}\n\n"
+                f"Localização Atual do Jogador (APÓS o movimento, definida pelo sistema): {current_location}\n\n"
                 "SUA TAREFA (para movimento interpretado):\n"
-                "1. DETERMINE O NOVO LOCAL: Baseado na 'Ação de Movimento do Jogador' e na 'Localização Atual do Jogador', determine para onde o jogador está tentando ir. Se for 'sair do abrigo', o novo local é claramente fora do abrigo. Se for uma direção, é um local adjacente. Se for um nome de local, é esse local.\n"
-                "2. NARRE A TRANSIÇÃO E O NOVO LOCAL: Sua `message` DEVE descrever o jogador saindo do local atual e chegando ao NOVO local. Descreva brevemente o que ele vê e sente ao chegar no NOVO local. É CRUCIAL que sua narrativa reflita a chegada ao NOVO local e NÃO um retorno ao local anterior ou qualquer confusão sobre a movimentação.\n"
+                "1. NARRE A CHEGADA E O NOVO LOCAL: A 'Localização Atual do Jogador' já foi atualizada pelo sistema para o local onde o jogador chegou. Sua `message` DEVE descrever o jogador chegando a este local e o que ele vê e sente. É CRUCIAL que sua narrativa reflita a chegada ao local fornecido e NÃO um retorno ao local anterior ou qualquer confusão sobre a movimentação.\n"
+                "2. ATUALIZE OS CAMPOS JSON PARA O NOVO LOCAL: No seu JSON de resposta:\n"
                 "3. ATUALIZE OS CAMPOS JSON PARA O NOVO LOCAL: No seu JSON de resposta:\n"
                 "   - `current_detailed_location` DEVE ser o nome detalhado do NOVO local para onde o jogador se moveu.\n"
                 "   - `scene_description_update` DEVE ser a descrição do NOVO local.\n"
@@ -329,20 +356,19 @@ class InstructionsBuilder:
 
     @staticmethod
     def _get_sub_intent_guidelines(
-        details: str, game_state: GameState, character: CharacterType
+        details: str, game_state: GameState, character: Character
     ) -> str:
-        sub_intent_parts = []
-        sub_intent_parts.append(
+        sub_intent_parts = [
             "SUB-DIRETRIZES PARA INTENÇÕES ESPECÍFICAS (aplique se relevante para a intenção que você interpretou ou para a ação direta fornecida):\n"
-            "INTENÇÃO 'search': Descreva o que o personagem encontra (ou não encontra) com base no ambiente e nos detalhes da busca. "
-            "Seja criativo e considere o que faria sentido encontrar em um local como este. "
-            "Pode ser algo útil, inútil, perigoso, ou apenas pistas sobre o que aconteceu.\n\n"
-            "INTENÇÃO 'look': Se houver um alvo específico nos detalhes da ação do jogador, descreva em detalhes o que o personagem observa sobre esse alvo. "
-            "Forneça informações visuais, pistas ou qualquer coisa relevante. Se for um olhar geral ao ambiente, reitere ou atualize a descrição da cena.\n\n"
+            "INTENÇÃO 'search': Descreva o que **o jogador (personagem)** encontra (ou não encontra) com base no ambiente e nos detalhes da busca. "
+            "Seja criativo e considere o que faria sentido **ele** encontrar em um local como este. "
+            "Pode ser algo útil, inútil, perigoso, ou apenas pistas sobre o que aconteceu que **ele** descobre.\n\n"
+            "INTENÇÃO 'look': Se houver um alvo específico nos detalhes da ação do jogador, descreva em detalhes o que **o jogador (personagem)** observa sobre esse alvo. "
+            "Forneça informações visuais, pistas ou qualquer coisa relevante que **ele** perceba. Se for um olhar geral ao ambiente, descreva o que **o jogador** nota ou como **ele** percebe a cena atualizada.\n\n"
             "INTENÇÃO 'move': Descreva a transição para o novo local ou a tentativa de movimento. "
             "Se o movimento for para um local conhecido, reforce a descrição com novos detalhes ou mudanças. "
             "Se for uma tentativa de ir a um local desconhecido ou bloqueado, descreva o obstáculo ou a razão pela qual o movimento não é simples.\n\n"
-        )
+        ]
 
         talk_prompt_parts = []
         talk_prompt_parts.append(
@@ -352,10 +378,10 @@ class InstructionsBuilder:
             "   Se a 'Ação textual do jogador' contiver um ponto de interrogação (?) OU começar com palavras como 'Quem', 'O quê', 'Onde', 'Quando', 'Por que', 'Como', 'Será que', 'Você acha que' E a intenção interpretada for 'talk':\n"
         )
         talk_prompt_parts.append(
-            "     - Identifique o NPC mais apropriado para responder à pergunta com base no contexto e no conhecimento esperado do NPC (ex: uma médica sobre questões médicas, um engenheiro sobre reparos, um líder sobre planos).\n"
+            "     - Identifique o NPC mais apropriado para responder à pergunta com base no contexto da conversa, no histórico recente e no conhecimento esperado do NPC (ex: uma médica sobre questões médicas, um engenheiro sobre reparos, um líder sobre planos).\n"
         )
         talk_prompt_parts.append(
-            "     - A resposta do NPC DEVE ser uma tentativa direta de responder à pergunta do jogador. EVITE que o NPC faça a mesma pergunta de volta ao jogador ou a outros NPCs, a menos que seja uma pergunta retórica clara e intencional para provocar reflexão (e isso deve ser raro e justificado pela personalidade do NPC).\n"
+            "     - A resposta do NPC DEVE ser uma tentativa direta e FOCADA de responder à pergunta do jogador, considerando o TÓPICO IMEDIATAMENTE ANTERIOR da conversa. Se a pergunta do jogador for uma continuação de um diálogo (ex: 'Do que precisam exatamente?' após discutir um problema específico), a resposta DEVE ser sobre esse problema específico. **EVITE REPETIR informações que o NPC já forneceu sobre esse tópico nas últimas interações.** Se o jogador perguntar novamente sobre algo já dito, o NPC pode adicionar um novo detalhe, expressar impaciência (se condizente com a personalidade) ou perguntar por que o jogador está perguntando de novo, em vez de simplesmente repetir a informação. EVITE que o NPC mude de assunto abruptamente ou responda de forma genérica se a pergunta for específica e contextualizada pela conversa anterior. EVITE que o NPC faça a mesma pergunta de volta ao jogador ou a outros NPCs, a menos que seja uma pergunta retórica clara e intencional para provocar reflexão (e isso deve ser raro e justificado pela personalidade do NPC).\n"
         )
         talk_prompt_parts.append(
             "     - Se nenhum NPC presente puder responder, a narrativa pode indicar isso (ex: 'Ninguém parece saber a resposta.' ou 'A Médica de Campo balança a cabeça, incerta.' ou 'O Velho Sobrevivente dá de ombros, claramente sem saber.').\n"
@@ -370,7 +396,7 @@ class InstructionsBuilder:
             "   Senão, se a intenção for 'talk' (tentativa de conversa direta com um NPC específico, não sendo uma pergunta direta já tratada acima):\n"
         )
         talk_prompt_parts.append(
-            "     Você está controlando um NPC em uma conversa. Crie uma interação realista e envolvente que:\n"
+            "     Você está controlando um NPC em uma conversa. Crie uma interação realista, **progressiva** e envolvente que:\n"
         )
         talk_prompt_parts.append(
             "     1. Reflita a personalidade, o estado emocional (medo, desconfiança, esperança) e a atitude do NPC no contexto de um apocalipse zumbi.\n"
@@ -378,8 +404,8 @@ class InstructionsBuilder:
         talk_prompt_parts.append(
             "     2. Use informações prévias se o jogador já interagiu com este NPC.\n"
         )
-        talk_prompt_parts.append(
-            "     3. Revele detalhes sobre o mundo devastado, perigos imediatos, rumores, necessidades de sobrevivência ou possíveis missões/trocas.\n"
+        talk_prompt_parts.append(  # MODIFICADO
+            "     3. Revele detalhes **NOVOS ou adicionais** sobre o mundo devastado, perigos imediatos, rumores, necessidades de sobrevivência ou possíveis missões/trocas. **EVITE REPETIR informações que este NPC já deu ao jogador nas últimas interações, a menos que o jogador peça explicitamente por um lembrete ou a repetição sirva a um propósito narrativo claro (ex: ênfase devido à gravidade).**\n"
         )
         talk_prompt_parts.append(
             "     4. Mantenha consistência com interações anteriores.\n"
@@ -430,6 +456,10 @@ class InstructionsBuilder:
             "INTENÇÃO 'use_item': Descreva o resultado de usar o item especificado. Se for um consumível, descreva a sensação ou efeito. "
             "Se for uma ferramenta, descreva a ação e seu sucesso ou falha. "
             "Se for um item de quest, revele alguma informação ou consequência.\n\n"
+            "   - Se o item for uma FERRAMENTA ou ARMA (ex: 'Pé de Cabra', 'Faca'), e a ação for simplesmente 'usar [nome do item]', "
+            "     interprete como EQUIPAR o item, se aplicável, ou prepará-lo para uso. "
+            "     NÃO assuma que o jogador está tentando se curar com uma ferramenta, a menos que a descrição do item explicitamente diga que ele tem propriedades curativas. "
+            "     A narrativa deve focar na ação de equipar ou preparar a ferramenta.\n\n"
             "INTENÇÃO 'attack': Se não houver combate ativo, descreva o jogador se preparando para o combate ou atacando o alvo especificado (ou o mais óbvio), iniciando a confrontação. Se o combate já estiver ativo, descreva o resultado do ataque contra o inimigo atual.\n\n"
             "INTENÇÃO 'flee': Descreva a tentativa de fuga. Foi bem-sucedida? Houve perigos ou obstáculos? "
             "A fuga levou o personagem a uma situação melhor ou pior? "
@@ -447,10 +477,11 @@ class InstructionsBuilder:
     def _get_general_response_guidelines() -> str:
         return (
             "Diretrizes Gerais para Resposta (aplique sempre...):\n"
-            "1. **FOCO NA AÇÃO:** Sua resposta deve focar PRIMARIAMENTE no resultado direto e nas consequências imediatas da ação do jogador ('Ação atual do jogador').\n"
-            "2. **CONTEXTO DO HISTÓRICO:** Use o 'Histórico recente da conversa' para entender o foco atual do jogador e dar continuidade aos eventos recentes, especialmente para ações ambíguas (ex: 'consertar', 'investigar mais', 'usar item' sem especificar alvo).\n"
-            "   **ESTADO DO PERSONAGEM:** Considere o estado atual do personagem (HP, nível, etc.) ao descrever eventos ou reações de NPCs. Por exemplo, um NPC não deveria oferecer cura a um personagem com HP cheio, a menos que seja um golpe ou engano.\n"
-            "3. **PROGRESSÃO NARRATIVA:** Faça a narrativa progredir. Ações devem ter impacto. Se um inimigo é atacado, descreva o dano e a reação de forma crível (considere 'HP do Inimigo' se em combate). Evite situações onde o estado do inimigo se 'reseta' magicamente (ex: cura instantânea de um zumbi comum) a menos que seja uma habilidade especial e rara do inimigo.\n"
+            "1. **FOCO NA AÇÃO DO JOGADOR:** Sua resposta deve focar PRIMARIAMENTE no resultado direto e nas consequências imediatas da ação do jogador ('Ação atual do jogador'). **Ao descrever o que o jogador faz ou percebe como resultado direto de sua ação, narre do ponto de vista do jogador (ex: 'Você percebe que...', 'Você encontra...', 'Você consegue...').** NPCs podem reagir ou comentar *depois* que a ação do jogador e sua percepção inicial forem descritas.\n"
+            "2. **PROGRESSÃO E CONTEXTO DA CONVERSA, ESTADO DO PERSONAGEM:**\n"  # MODIFICADO
+            "   - Use o 'Histórico recente da conversa', especialmente a ÚLTIMA INTERAÇÃO DO JOGADOR E AS ÚLTIMAS FALAS DOS NPCs, para entender o foco atual e o tópico da conversa. A resposta do NPC deve ser uma continuação lógica e direta disso, **ADICIONANDO NOVAS INFORMAÇÕES OU PERSPECTIVAS, OU REAGINDO DE FORMA DIFERENTE SE O JOGADOR REPETIR UMA AÇÃO/PERGUNTA.** Evite que NPCs mudem de assunto abruptamente ou **REPITAM EXATAMENTE o que já foi dito por eles mesmos ou por outros NPCs nas últimas interações, a menos que seja para dar ênfase ou se o jogador pedir para repetir.**\n"
+            "   - **CRUCIAL: CONSIDERE O ESTADO ATUAL DO PERSONAGEM (Saúde, Fome, Sede, etc., fornecidos no prompt).** Sua narrativa e as reações dos NPCs DEVEM ser consistentes com esses status. Não descreva o personagem como 'gravemente ferido' se a Saúde estiver alta. NPCs não devem oferecer cura se o personagem estiver saudável, ou comida se estiver saciado, a menos que seja parte de um engano ou uma situação muito específica justificada pela narrativa.\n\n"
+            "3. **PROGRESSÃO NARRATIVA:** Faça a narrativa progredir. Ações devem ter impacto. Se um inimigo é atacado, descreva o dano e a reação de forma crível. Evite situações onde o estado do inimigo se 'reseta' magicamente a menos que seja uma habilidade especial.\n\n"
             "4. **EVITE REPETIÇÃO ATMOSFÉRICA:** Evite repetir excessivamente descrições atmosféricas (como o estado do ar, cheiros, ou a luz piscando) a menos que tenham mudado significativamente devido à ação do jogador ou a um novo evento importante. Mencione-os brevemente se relevante para a ação atual, mas não os torne o foco principal repetidamente.\n"
             "5. **CONSISTÊNCIA E TOM:** Mantenha a consistência com o mundo pós-apocalíptico, a descrição do local, os NPCs presentes e o tom de um RPG de apocalipse zumbi (perigo, escassez, desconfiança, mas com lampejos de esperança ou mistério).\n"
             "   Os NPCs devem usar ferramentas e conhecimentos apropriados à sua profissão e à situação. Por exemplo, uma médica não usaria um termômetro para verificar a potabilidade da água, mas poderia procurar por kits de teste de contaminação ou ferver a água.\n"
@@ -476,7 +507,7 @@ class InstructionsBuilder:
     def _get_json_format_instructions() -> str:
         return (
             "INSTRUÇÃO DE FORMATAÇÃO DA RESPOSTA:\n"
-            "RESPONDA SEMPRE E APENAS com uma string JSON válida...\n"
+            "RESPONDA SEMPRE E APENAS com uma string JSON válida, SEM QUALQUER TEXTO ADICIONAL ANTES OU DEPOIS DO JSON (incluindo markdown como ```json ou ```). Se `interactable_elements` for preenchido, sua `message` narrativa DEVE incluir uma frase como 'Você percebe os seguintes elementos de interesse: [lista dos elementos].' ou 'Você percebe: [elemento1], [elemento2] e [elemento3].' para introduzi-los ao jogador.\n"
             "- `message`: (string) Sua descrição narrativa principal da cena e do resultado da ação do jogador (em pt-br).\n"
             "- `current_detailed_location`: (string) O nome detalhado da localização atual do jogador, incluindo a sub-área específica dentro do local principal (ex: 'Abrigo Subterrâneo - Sala Principal', 'Floresta Sombria - Clareira Escondida'). Se o jogador se mover para um novo local principal (ex: de 'Floresta' para 'Abrigo Subterrâneo'), determine um ponto de entrada lógico para este novo local principal (ex: 'Pátio de Entrada', 'Corredor de Acesso', 'Garagem Empoeirada') e use-o como a sub-área em `current_detailed_location` (ex: 'Abrigo Subterrâneo - Pátio de Entrada'). (em pt-br)\n"
             "- `scene_description_update`: (string) Uma nova descrição concisa para a cena/sub-área atual (o `current_detailed_location`), focando nos elementos estáticos e ambientais importantes que o jogador perceberia. (em pt-br)\n"

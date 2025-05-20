@@ -6,9 +6,13 @@ and responses."""
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, TypedDict, cast, Protocol
-from core.models import CharacterType  # Import CharacterType from core.models
-from .prompt_builder import PromptBuilder  # Importar o novo PromptBuilder
+from typing import Any, Dict, List, Optional, TypedDict, Union, cast
+from typing import Protocol  # Added Protocol for AIModelClientType
+from ai.openrouter import OpenRouterClient  # Import OpenRouterClient
+from core.models import Character  # Import Character from core.models
+from core.game_state_model import GameState, MessageDict
+from ai.prompt_builder import PromptBuilder, InstructionsBuilder
+
 from .fallback_handler import (
     generate_fallback_response,
     FallbackResponse as FallbackResponseType,  # Importar fallback
@@ -75,7 +79,7 @@ class GameAIClient:
 
     @staticmethod
     def _create_action_prompt(
-        action: str, details: str, character: CharacterType, game_state: GameState
+        action: str, details: str, character: Character, game_state: GameState
     ) -> List[AIPrompt]:
         """Create a formatted prompt for the AI model.
 
@@ -150,7 +154,7 @@ class GameAIClient:
         )
 
     def process_action(
-        self, action: str, details: str, character: CharacterType, game_state: GameState
+        self, action: str, details: str, character: Character, game_state: GameState
     ) -> AIResponse:
         """Process a player action using AI.
 

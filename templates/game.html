@@ -142,6 +142,10 @@
                   </div>
                   {% endif %} {% endfor %}
                 </div>
+                <!-- Container for Interactive Choices -->
+                <div id="interactiveChoicesContainer" class="p-3 text-center">
+                  <!-- Buttons will be added here by JavaScript -->
+                </div>
               </div>
 
               <!-- Combat Interface -->
@@ -458,10 +462,8 @@
                     <div class="d-flex justify-content-between mb-1">
                       <span>Fome</span>
                       <span id="hungerDisplay">
-                        {{ character.survival_stats.current_hunger if character
-                        and character.survival_stats else 0 }} / {{
-                        character.survival_stats.max_hunger if character and
-                        character.survival_stats else 0 }}
+                        {{ character.current_hunger if character else 0 }} / {{
+                        character.max_hunger if character else 0 }}
                       </span>
                     </div>
                     <div class="progress mb-2">
@@ -469,10 +471,10 @@
                         id="hungerBar"
                         class="progress-bar bg-warning"
                         role="progressbar"
-                        style="width: {{ ((character.survival_stats.current_hunger if character and character.survival_stats else 0) / (character.survival_stats.max_hunger if character and character.survival_stats and character.survival_stats.max_hunger > 0 else 1) * 100)|round }}%;"
-                        aria-valuenow="{{ character.survival_stats.current_hunger if character and character.survival_stats else 0 }}"
+                        style="width: {{ ((character.current_hunger if character else 0) / (character.max_hunger if character and character.max_hunger > 0 else 1) * 100)|round }}%;"
+                        aria-valuenow="{{ character.current_hunger if character else 0 }}"
                         aria-valuemin="0"
-                        aria-valuemax="{{ character.survival_stats.max_hunger if character and character.survival_stats else 1 }}"
+                        aria-valuemax="{{ character.max_hunger if character else 1 }}"
                       ></div>
                     </div>
                   </div>
@@ -480,10 +482,8 @@
                     <div class="d-flex justify-content-between mb-1">
                       <span>Sede</span>
                       <span id="thirstDisplay">
-                        {{ character.survival_stats.current_thirst if character
-                        and character.survival_stats else 0 }} / {{
-                        character.survival_stats.max_thirst if character and
-                        character.survival_stats else 0 }}
+                        {{ character.current_thirst if character else 0 }} / {{
+                        character.max_thirst if character else 0 }}
                       </span>
                     </div>
                     <div class="progress mb-2">
@@ -491,10 +491,10 @@
                         id="thirstBar"
                         class="progress-bar bg-info"
                         role="progressbar"
-                        style="width: {{ ((character.survival_stats.current_thirst if character and character.survival_stats else 0) / (character.survival_stats.max_thirst if character and character.survival_stats and character.survival_stats.max_thirst > 0 else 1) * 100)|round }}%;"
-                        aria-valuenow="{{ character.survival_stats.current_thirst if character and character.survival_stats else 0 }}"
+                        style="width: {{ ((character.current_thirst if character else 0) / (character.max_thirst if character and character.max_thirst > 0 else 1) * 100)|round }}%;"
+                        aria-valuenow="{{ character.current_thirst if character else 0 }}"
                         aria-valuemin="0"
-                        aria-valuemax="{{ character.survival_stats.max_thirst if character and character.survival_stats else 1 }}"
+                        aria-valuemax="{{ character.max_thirst if character else 1 }}"
                       ></div>
                     </div>
                   </div>

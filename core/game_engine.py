@@ -34,7 +34,6 @@ class GameEngine:
         self.data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir)
-        self._location_cache: Dict[str, Dict[str, Any]] = {}
         self._location_types: Dict[str, List[str]] = {
             "abrigo": ["abrigo subterrâneo", "bunker", "refúgio seguro"],
             "ruina_urbana": [
@@ -217,6 +216,16 @@ class GameEngine:
         action_for_ai = result_from_handler.get("action_performed", action)
 
         if (
+            action.lower() == "move"
+            and result_from_handler.get("success")
+            and result_from_handler.get("new_location")
+        ):
+            # Se o handler de movimento foi bem-sucedido e forneceu um novo nome de local,
+            # atualize o current_location do game_state com o resultado do handler
+            # ANTES de chamar a IA. A IA então narrará com base neste estado atualizado.
+            game_state.current_location = result_from_handler["new_location"]
+
+        if (  # Este bloco permanece para interpretar ações custom/interpret
             action.lower() == "custom" or action.lower() == "interpret"
         ) and not result_from_handler.get("action_performed"):
             # If it was a custom/interpret action that didn't trigger specific handler logic (like social or physical)
@@ -297,8 +306,12 @@ class GameEngine:
                 if current_ai_response.get("success"):
                     # >>> NOVO: Método para aplicar atualizações da IA ao GameState
                     self._apply_ai_updates_to_gamestate(current_ai_response, game_state)
-                    # <<< FIM NOVO
-
+                    # Nota: _apply_ai_updates_to_gamestate irá atualizar game_state.current_location
+                    # com base na resposta da IA. Se a ação foi 'move', o handler
+                    # já definiu game_state.current_location. Precisamos garantir que a atualização
+                    # de localização da IA aqui não sobrescreva a localização correta do handler
+                    # com uma incorreta. Ajustamos _apply_ai_updates_to_gamestate
+                    # para pular a atualização de localização se a ação foi 'move'.
                     # >>> NOVO: Processar suggested_roll
                     if current_ai_response.get("suggested_roll") and isinstance(
                         actual_handler, CustomActionHandler
@@ -445,10 +458,15 @@ class GameEngine:
         This includes location, scene description, and potentially NPCs/events if
         the AI is empowered to suggest them directly.
         """
+        # Apenas atualize a localização a partir da IA se a ação NÃO foi uma ação de 'move'.
+        # Para 'move', o handler já definiu a localização correta.
         new_detailed_location = ai_response.get("current_detailed_location")
-        if new_detailed_location:
+        # Acessa a ação atual a partir de game_state
+        current_action = (
+            game_state.current_action.lower() if game_state.current_action else ""
+        )
+        if new_detailed_location and current_action != "move":
             # A lógica de _update_location já existe e é mais completa,
-            # mas ela espera um location_id. Se a IA retorna um nome,
             # precisamos de uma forma de mapear nome para ID ou atualizar diretamente.
             # Por enquanto, vamos atualizar os campos diretos do game_state.
             # Idealmente, a IA retornaria um location_id ou o GameEngine
@@ -461,6 +479,11 @@ class GameEngine:
                 # Se a IA também fornecer um novo location_id, atualize-o:
                 # if ai_response.get("new_location_id"):
                 #     game_state.location_id = ai_response["new_location_id"]
+
+        # Sempre atualize a descrição da cena a partir da IA, se fornecida
+        # A descrição da IA é a descrição narrativa da cena,
+        # que é seu papel principal após um movimento.
+        # Isso NÃO deve ser pulado para ações de 'move'.
 
         new_scene_description = ai_response.get("scene_description_update")
         if new_scene_description:
