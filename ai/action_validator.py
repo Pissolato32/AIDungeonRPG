@@ -58,7 +58,7 @@ def validate_action_with_ai(
         """
 
         response = ai_client.generate_response(
-            {"role": "user", "content": prompt}
+            messages=[{"role": "user", "content": prompt}]
         )  # Adicionado role e content
 
         result = process_ai_response(response)

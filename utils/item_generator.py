@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import random
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List, Union, TypedDict
 
 # Assuming GroqClient is in a top-level 'ai' directory or 'core.ai'
 # Adjust the import path based on your project structure.
@@ -16,6 +16,11 @@ from typing import Any, Dict, Optional
 from ai.openrouter import OpenRouterClient  # Corrigido o caminho e nome da classe
 
 logger = logging.getLogger(__name__)
+
+
+class RarityInfo(TypedDict):
+    modifier: float
+    chance: float
 
 
 class ItemGenerator:
@@ -103,13 +108,13 @@ class ItemGenerator:
     }
 
     # Item rarities and their modifiers
-    RARITIES = {
+    RARITIES: Dict[str, RarityInfo] = {
         "common": {"modifier": 1.0, "chance": 0.55},
         "uncommon": {"modifier": 1.5, "chance": 0.25},
         "rare": {"modifier": 2.0, "chance": 0.1},
         "epic": {"modifier": 3.0, "chance": 0.04},
         "legendary": {"modifier": 5.0, "chance": 0.01},
-    }
+    }  # type: ignore # Mypy pode reclamar da atribuição direta aqui se não for inicializado em __init__ ou com Final
 
     # Item prefixes - ZOMBIE APOCALYPSE THEME
     PREFIXES = {
@@ -450,7 +455,7 @@ class ItemGenerator:
         if "items" not in self.items_db:
             self.items_db["items"] = {}
         self.items_db["items"][item_id] = item_data
-        self.save_items_database()
+        # self.save_items_database() # Removido para otimização de performance em lote
         return item_data
 
     def generate_protection(
@@ -489,7 +494,7 @@ class ItemGenerator:
         if "items" not in self.items_db:
             self.items_db["items"] = {}
         self.items_db["items"][item_id] = item_data
-        self.save_items_database()
+        # self.save_items_database() # Removido para otimização de performance em lote
         return item_data
 
     def generate_consumable(
@@ -574,7 +579,7 @@ class ItemGenerator:
         if "items" not in self.items_db:
             self.items_db["items"] = {}
         self.items_db["items"][item_id] = item_data
-        self.save_items_database()
+        # self.save_items_database() # Removido para otimização de performance em lote
         return item_data
 
     def generate_quest_item(
@@ -618,7 +623,7 @@ class ItemGenerator:
         if "items" not in self.items_db:
             self.items_db["items"] = {}
         self.items_db["items"][item_id] = item_data
-        self.save_items_database()
+        # self.save_items_database() # Removido para otimização de performance em lote
         return item_data
 
     def generate_tool(
@@ -655,7 +660,7 @@ class ItemGenerator:
         }
         item_id = self.generate_item_id(name)
         self.items_db.setdefault("items", {})[item_id] = item_data
-        self.save_items_database()
+        # self.save_items_database() # Removido para otimização de performance em lote
         return item_data
 
     def generate_material_crafting(
@@ -684,7 +689,7 @@ class ItemGenerator:
         }
         item_id = self.generate_item_id(name)
         self.items_db.setdefault("items", {})[item_id] = item_data
-        self.save_items_database()
+        # self.save_items_database() # Removido para otimização de performance em lote
         return item_data
 
     def generate_random_item(self, level: int = 1) -> Dict[str, Any]:
@@ -715,8 +720,8 @@ class ItemGenerator:
         # handled
         logger.error(
             f"Unhandled item category in generate_random_item: {chosen_category_type}"
-        )
-        return self.generate_consumable(level)  # type: ignore # Final fallback
+        )  # No futuro, poderia levantar uma exceção ou ter um item "genérico desconhecido"
+        return self.generate_consumable(level)  # Final fallback
 
     def _select_rarity(self) -> str:  # type: ignore
         rarities = list(self.RARITIES.keys())
@@ -743,7 +748,7 @@ class ItemGenerator:
             Exemplo para '{name}': Este {item_subtype} {rarity} parece ter visto dias melhores, mas ainda pode ser útil.
             """
             prompt_dict = {"role": "user", "content": prompt}
-            response = self.ai_client.generate_response(prompt_dict)
+            response = self.ai_client.generate_response([prompt_dict])
             if isinstance(response, str) and response.strip():
                 return response.strip()
         except Exception as e:
@@ -801,7 +806,7 @@ class ItemGenerator:
                 prompt = f"Descreva brevemente o estado ou uma pista sobre o item '{specific_doc_type}'{context} em um apocalipse zumbi. O item é crucial para uma tarefa."
 
             prompt_dict = {"role": "user", "content": prompt}
-            response = self.ai_client.generate_response(prompt_dict)
+            response = self.ai_client.generate_response([prompt_dict])
             if isinstance(response, str) and response.strip():
                 return response.strip()
         except Exception as e:

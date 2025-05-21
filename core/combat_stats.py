@@ -1,151 +1,45 @@
 """
-Base combat statistics system.
-
-This module provides the base class for combat statistics that can be used by both
-characters and enemies.
+Módulo para definir as estatísticas e a estrutura base de personagens.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING
+
+# Para evitar importação circular em tempo de execução, mas permitir type checking
+if TYPE_CHECKING:
+    from .survival_system import SurvivalStats
 
 
 @dataclass
-class CombatStats:
-    """Base class for combat statistics."""
+class CharacterStats:
+    """Armazena os atributos de combate de um personagem."""
 
-    # Basic stats
-    health: int = 100
-    max_health: int = 100
-    stamina: int = 100
-    max_stamina: int = 100
+    health: int
+    attack: int
+    defense: int
+    aim_skill: int = 0  # Habilidade de mira, influencia headshots
 
-    # Combat stats
-    strength: int = 10
-    agility: int = 10
-    defense: int = 0
 
-    # Combat modifiers
-    damage_bonus: int = 0
-    defense_bonus: int = 0
-    critical_chance: float = 0.1
-    dodge_chance: float = 0.1
+class Character:
+    """Representa um personagem no jogo."""
 
-    # Status effects and resistances
-    resistances: Dict[str, float] = field(default_factory=dict)
-    status_effects: List[Dict[str, Any]] = field(default_factory=list)
-
-    def modify_health(self, amount: int) -> int:
-        """
-        Modify health by given amount.
-
-        Args:
-            amount: Amount to modify health by (positive for healing, negative for damage)
-
-        Returns:
-            Actual amount modified
-        """
-        old_health = self.health
-        self.health = max(0, min(self.max_health, self.health + amount))
-        return self.health - old_health
-
-    def modify_stamina(self, amount: int) -> int:
-        """
-        Modify stamina by given amount.
-
-        Args:
-            amount: Amount to modify stamina by
-
-        Returns:
-            Actual amount modified
-        """
-        old_stamina = self.stamina
-        self.stamina = max(0, min(self.max_stamina, self.stamina + amount))
-        return self.stamina - old_stamina
-
-    def add_status_effect(
+    def __init__(
         self,
-        effect_type: str,
-        duration: int,
-        strength: int = 1,
-        data: Optional[Dict] = None,
-    ) -> None:
-        """
-        Add a status effect.
-
-        Args:
-            effect_type: Type of effect
-            duration: Number of turns the effect lasts
-            strength: Strength of the effect
-            data: Additional effect data
-        """
-        self.status_effects.append(
-            {
-                "type": effect_type,
-                "duration": duration,
-                "strength": strength,
-                "data": data or {},
-            }
+        name: str,
+        stats: CharacterStats,
+        survival_stats: "SurvivalStats",
+        is_zombie: bool = False,  # Para identificar se o personagem é um zumbi
+    ):
+        """Inicializa um personagem."""
+        self.name = name
+        self.stats: CharacterStats = stats  # Atributo obrigatório
+        self.survival_stats: "SurvivalStats" = (
+            survival_stats  # Atributo de sobrevivência
         )
-
-    def remove_status_effect(self, effect_type: str) -> None:
-        """
-        Remove all status effects of given type.
-
-        Args:
-            effect_type: Type of effect to remove
-        """
-        self.status_effects = [
-            effect for effect in self.status_effects if effect["type"] != effect_type
-        ]
-
-    def update_status_effects(self) -> List[Dict]:
-        """
-        Update status effects durations and return expired effects.
-
-        Returns:
-            List of expired effects that were removed
-        """
-        expired = []
-        remaining = []
-
-        for effect in self.status_effects:
-            effect["duration"] -= 1
-            if effect["duration"] <= 0:
-                expired.append(effect)
-            else:
-                remaining.append(effect)
-
-        self.status_effects = remaining
-        return expired
-
-    def get_combat_stats(self) -> Dict[str, Any]:
-        """Get current combat statistics."""
-        return {
-            "health": self.health,
-            "max_health": self.max_health,
-            "stamina": self.stamina,
-            "max_stamina": self.max_stamina,
-            "strength": self.strength,
-            "agility": self.agility,
-            "defense": self.defense + self.defense_bonus,
-            "critical_chance": self.critical_chance,
-            "dodge_chance": self.dodge_chance,
-            "status_effects": self.status_effects.copy(),
-            "resistances": self.resistances.copy(),
-        }
-
-    def get_resource_percentage(self, resource: str) -> float:
-        """
-        Get percentage of a resource.
-
-        Args:
-            resource: Resource to check ("health" or "stamina")
-
-        Returns:
-            Percentage of resource remaining
-        """
-        if resource == "health":
-            return (self.health / self.max_health) * 100
-        if resource == "stamina":
-            return (self.stamina / self.max_stamina) * 100
-        return 0.0
+        self.is_alive: bool = True
+        self.is_zombie: bool = is_zombie
+        self.is_infected: bool = (
+            False  # Estado de infecção do personagem (se não for zumbi de início)
+        )
+        if is_zombie:  # Zumbis já começam infectados e "mortos-vivos"
+            self.is_infected = True

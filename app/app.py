@@ -17,6 +17,9 @@ from flask import (
     url_for,
 )
 import uuid  # Import uuid at the top level
+from dotenv import load_dotenv  # Importar dotenv
+
+load_dotenv()  # Carregar variáveis de ambiente do arquivo .env
 
 from ai.openrouter import OpenRouterClient  # Corrigido o caminho de importação
 from app.routes import bp as routes_bp
@@ -125,10 +128,10 @@ class GameApp:
 
                 character_data = request.form.to_dict()
                 # CharacterManager should assign a unique ID (e.g., character.id = str(uuid.uuid4()))
-                # Pass the current owner_session_id to the creation process
+                # Pass the current owner_session_id to the creation process.
                 character = self._create_character_from_form(
                     character_data, owner_session_id
-                )
+                )  # Pass owner_session_id
 
                 self.game_engine.save_character(
                     character
@@ -186,10 +189,10 @@ class GameApp:
         """Handle the main game view."""
         active_character_id = session.get("active_character_id")
         owner_session_id = session.get(
-            "user_id"
-        )  # For logging or other session-wide checks
+            "user_id"  # For logging or other session-wide checks
+        )
 
-        if not active_character_id:
+        if not active_character_id or not owner_session_id:
             flash(
                 "Nenhum personagem selecionado. Por favor, crie ou selecione um personagem.",
                 "warning",
@@ -206,7 +209,7 @@ class GameApp:
             )
             return redirect(url_for("routes.character"))
 
-        # Verify character ownership if necessary, though selection should handle this
+        # Verify character ownership
         if character.owner_session_id != owner_session_id:
             logger.error(
                 f"Ownership mismatch for character {active_character_id}. "
@@ -423,7 +426,7 @@ class GameApp:
         # This manager should now also handle setting a unique character.id
         # and potentially character.owner_session_id if passed in character_data or as an arg.
         return CharacterManager.create_character_from_form(
-            character_data, owner_session_id
+            character_data, owner_session_id  # Pass owner_session_id
         )
 
     def _load_game_state(self, character_id: str) -> Optional[GameState]:

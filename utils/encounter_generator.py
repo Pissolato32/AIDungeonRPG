@@ -286,6 +286,8 @@ class EncounterGenerator:
 
     def _generate_loot(self, difficulty: int, num_enemies: int) -> List[Dict[str, Any]]:
         """Gera itens de loot baseados na dificuldade."""
+        # TODO: Integrar com ItemGenerator para gerar itens mais ricos e consistentes
+        #       com o sistema de itens do jogo. Atualmente, gera dicts simples.
         items = []
         num_items = random.randint(1, max(2, num_enemies))
 

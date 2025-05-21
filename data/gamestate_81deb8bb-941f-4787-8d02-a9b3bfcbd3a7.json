@@ -1,6 +1,6 @@
 {
-  "current_location": "Abrigo Subterr\u00e2neo",
-  "scene_description": "Voc\u00ea est\u00e1 na sala principal de um abrigo subterr\u00e2neo improvisado. As paredes de concreto s\u00e3o \u00famidas e a \u00fanica luz vem de algumas l\u00e2mpadas de emerg\u00eancia piscando. H\u00e1 um port\u00e3o de metal refor\u00e7ado ao norte que leva \u00e0 superf\u00edcie, uma enfermaria improvisada a leste e um dep\u00f3sito de suprimentos a oeste.",
+  "current_location": "Abrigo Subterr\u00e2neo - Sala Principal",
+  "scene_description": "A sala principal do abrigo \u00e9 fria e \u00famida, com a \u00fanica luz vindo das l\u00e2mpadas de emerg\u00eancia piscando. O ar est\u00e1 cheio de tens\u00e3o, com os sobreviventes discutindo sobre o que fazer com voc\u00ea.",
   "npcs_present": [
     "Velho Sobrevivente Cansado",
     "M\u00e9dica de Campo Apavorada"
@@ -10,6 +10,18 @@
     {
       "role": "assistant",
       "content": "Voc\u00ea acorda no abrigo. O mundo l\u00e1 fora mudou. Sobreviva."
+    },
+    {
+      "role": "user",
+      "content": "Perguntar onde estou"
+    },
+    {
+      "role": "system",
+      "content": "Voc\u00ea est\u00e1 gravemente ferido e precisa de cura!"
+    },
+    {
+      "role": "assistant",
+      "content": "Voc\u00ea est\u00e1 gravemente ferido e precisa de cura! A M\u00e9dica de Campo Apavorada se aproxima de voc\u00ea, olhando seu estado com preocupa\u00e7\u00e3o. \"Vamos, precisamos te levar para a enfermaria improvisada. Tenho alguns suprimentos b\u00e1sicos que podem ajudar a tratar suas feridas.\" O Velho Sobrevivente Cansado intercede, \"Espere, n\u00e3o podemos simplesmente levar ele para l\u00e1. O que se os zumbis descobrissem nossa posi\u00e7\u00e3o?\" A M\u00e9dica hesita, \"N\u00f3s temos que correr o risco. Ele precisa de aten\u00e7\u00e3o m\u00e9dica, e r\u00e1pido.\""
     }
   ],
   "coordinates": {
@@ -17,7 +29,7 @@
     "y": 0,
     "z": 0
   },
-  "current_action": "",
+  "current_action": "interpret",
   "discovered_locations": {},
   "npcs_by_location": {},
   "npc_relationships": {},

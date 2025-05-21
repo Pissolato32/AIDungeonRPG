@@ -7,18 +7,22 @@ from typing import (
     Any,
     Dict,
     List,
+    get_args,  # Importar get_args para inspecionar Literal
     Literal,
     Optional,
     TypedDict,  # Ensure TypedDict is imported
     cast,
 )  # Ensure these are imported
 import uuid  # Ensure uuid is imported if generating IDs
+import logging  # Adicionar import de logging
 
 from .models import NPCBase
 
 # Type definitions
 DispositionType = Literal["hostile", "neutral", "friendly"]
 ActionType = Literal["greet", "trade", "quest", "ask_about", "small_talk"]
+
+logger = logging.getLogger(__name__)  # Adicionar logger
 
 
 class DialogueOption(TypedDict):
@@ -135,7 +139,19 @@ class NPC:
         skills = data.get("skills", [])
         available_quests = data.get("available_quests", [])
         interaction_count = data.get("interaction_count", 0)
-        last_interaction = data.get("last_interaction", "greet")
+
+        raw_last_interaction = data.get("last_interaction", "greet")
+        valid_action_types: List[ActionType] = list(
+            get_args(ActionType)
+        )  # Obter valores válidos de ActionType
+        if raw_last_interaction not in valid_action_types:
+            logger.warning(
+                f"Valor inválido '{raw_last_interaction}' para last_interaction do NPC '{name}'. Usando 'greet' como padrão."
+            )
+            last_interaction_val: ActionType = "greet"
+        else:
+            last_interaction_val = cast(ActionType, raw_last_interaction)
+
         relationship_level = data.get("relationship_level", 0)
         daily_schedule = data.get("daily_schedule", [])
         dialogue_options = data.get("dialogue_options", {})
@@ -155,7 +171,7 @@ class NPC:
             skills=skills,
             available_quests=available_quests,
             interaction_count=interaction_count,
-            last_interaction=last_interaction,  # type: ignore
+            last_interaction=last_interaction_val,
             relationship_level=relationship_level,
             daily_schedule=daily_schedule,
             dialogue_options=dialogue_options,

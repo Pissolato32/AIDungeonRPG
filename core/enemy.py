@@ -2,14 +2,17 @@
 Enemy module for the RPG game.
 """
 
+import random  # Movido para o topo do arquivo
 from dataclasses import dataclass, field
 from typing import List, Tuple
 
-from core.combat_stats import CombatStats
+from .combat_stats import (
+    CharacterStats,
+)  # Corrigido para CharacterStats e usando import relativo
 
 
 @dataclass
-class Enemy(CombatStats):
+class Enemy(CharacterStats):  # Corrigido para herdar de CharacterStats
     """
     Represents an enemy in the RPG game.
     """
@@ -21,6 +24,7 @@ class Enemy(CombatStats):
 
     # Combat stats are inherited from CombatStats (e.g., health, max_health,
     # strength, agility, defense)
+    # Nota: CharacterStats atualmente fornece health, attack, defense, aim_skill.
 
     # Specific damage range for this enemy type, to align with
     # AttackActionHandler
@@ -41,7 +45,6 @@ class Enemy(CombatStats):
 
     def get_gold_reward(self) -> int:
         """Get a random gold reward within the range."""
-        import random
 
         min_gold, max_gold = self.gold_reward
         return random.randint(min_gold, max_gold)

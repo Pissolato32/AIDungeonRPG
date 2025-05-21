@@ -2,8 +2,9 @@
 """
 Module for constructing prompts for the AI model.
 """
-from typing import Any, Dict, List
+from typing import List, Optional
 
+from core.npc import NPC  # Importar a classe NPC
 from core.models import Character  # Importar Character do models
 from core.game_state_model import GameState, MessageDict
 
@@ -14,18 +15,19 @@ class PromptBuilder:
     """
 
     @staticmethod
-    def _format_npc_details_for_prompt(npc_name: str, npc_data: Dict[str, Any]) -> str:
+    def _format_npc_details_for_prompt(npc_name: str, npc_data: NPC) -> str:
         """
         Formats NPC details for inclusion in a prompt.
         (Adaptado de prompt_manager.py)
         """
-        profession = npc_data.get("profession", "Profissão Desconhecida")
-        personality = npc_data.get("personality", "Personalidade Variada")
+        # Acessar atributos usando getattr para compatibilidade com objetos
+        # e fornecer valores padrão, similar ao dict.get().
+        profession = getattr(npc_data, "profession", "Profissão Desconhecida")
+        personality = getattr(npc_data, "personality", "Personalidade Variada")
 
-        npc_info_str = f"\nDetalhes sobre {npc_name}:\n"
-        npc_info_str += f"- Profissão: {profession}\n"
-        npc_info_str += f"- Personalidade: {personality}\n"
-        knowledge_list = npc_data.get("knowledge", [])
+        # Formato mais conciso, incluindo profissão e personalidade no cabeçalho.
+        npc_info_str = f"\nDetalhes sobre {npc_name} (Profissão: {profession}, Personalidade: {personality}):\n"
+        knowledge_list = getattr(npc_data, "knowledge", [])
         if isinstance(knowledge_list, list) and knowledge_list:
             npc_info_str += f"- Conhecimento: {', '.join(knowledge_list)}\n"
         return npc_info_str
@@ -34,13 +36,11 @@ class PromptBuilder:
     def build_system_prompt() -> str:
         """Builds the static system prompt."""
         return (
-            "Você é o Mestre do Jogo (MJ) em um RPG pós-apocalíptico. Seu objetivo é criar uma narrativa imersiva e reativa.\n"
-            "REGRAS CRÍTICAS PARA SUAS RESPOSTAS:\n"
-            "1. **EVITE REPETIÇÃO:** NUNCA repita frases ou respostas que você (como MJ ou como um NPC) já forneceu recentemente. Se o jogador fizer a mesma pergunta ou uma ação similar, encontre uma NOVA maneira de responder, adicione detalhes, mude a perspectiva do NPC, ou indique que o assunto já foi coberto.\n"
-            "2. **PROGRESSÃO:** Sempre tente fazer a conversa ou a situação progredir. Não fique preso em loops.\n"
-            "3. **COERÊNCIA COM HISTÓRICO:** Mantenha-se coerente com o histórico recente da conversa (últimos 3-5 turnos são cruciais).\n"
-            "4. **VARIEDADE:** Use vocabulário variado e diferentes formas de expressar ideias para enriquecer a narrativa.\n"
-            "5. **FOCO NO JOGADOR:** A ação do jogador é o gatilho. Sua narrativa deve ser uma consequência direta e lógica dessa ação."
+            "Você é o Mestre de um jogo de RPG ambientado em um mundo pós-apocalíptico. "
+            "Seu papel é narrar com riqueza de detalhes o ambiente, as consequências das ações do jogador, e interpretar os NPCs de forma viva, única e coerente. "
+            "Nunca diga que o jogador 'não especificou'; aja com bom senso e mantenha a narrativa fluindo. "
+            "Seja imersivo, criativo e mantenha o jogo andando. Se algo é ambíguo, improvise com lógica e drama. "
+            "Suas respostas devem ser cinematográficas, envolventes e sempre progredir a narrativa."
         )
 
     @staticmethod
@@ -54,7 +54,20 @@ class PromptBuilder:
         npcs_in_current_loc = loc_data.get("npcs", game_state.npcs_present)
         events_in_current_loc = loc_data.get("events", game_state.events)
 
-        npcs_text = ", ".join(npcs_in_current_loc) if npcs_in_current_loc else "Nenhum"
+        npc_descriptions = []
+        for npc in npcs_in_current_loc:
+            # npc_data agora será um objeto NPC ou None
+            npc_data: Optional[NPC] = game_state.known_npcs.get(npc)
+
+            if npc_data:  # Verifica se npc_data é um objeto NPC
+                prof = getattr(npc_data, "profession", "Desconhecido")
+                pers = getattr(npc_data, "personality", "Indefinido")
+            else:  # Fallback se o NPC não for encontrado ou não for um objeto NPC
+                prof = "Desconhecido"
+                pers = "Indefinido"
+            npc_descriptions.append(f"{npc} (Profissão: {prof}, Personalidade: {pers})")
+        npcs_text = ", ".join(npc_descriptions) if npc_descriptions else "Nenhum"
+
         events_text = (
             ", ".join(events_in_current_loc) if events_in_current_loc else "Nenhum"
         )
@@ -82,12 +95,14 @@ class PromptBuilder:
         health_status = "saudável"
         if max_hp > 0:
             hp_percentage = (current_hp / max_hp) * 100
-            if hp_percentage <= 25:
-                health_status = "gravemente ferido(a)"
-            elif hp_percentage <= 50:
-                health_status = "ferido(a)"
-            elif hp_percentage <= 75:
+            if hp_percentage >= 98:
+                health_status = "saudável"
+            elif hp_percentage >= 75:
                 health_status = "levemente ferido(a)"
+            elif hp_percentage >= 40:
+                health_status = "ferido(a)"
+            else:
+                health_status = "gravemente ferido(a)"
 
         hunger_status = "saciado(a)"
         if max_hunger > 0:
@@ -223,6 +238,12 @@ class PromptBuilder:
             "Os NPCs devem agir de forma lógica e consistente com suas profissões e o bom senso no contexto de sobrevivência. "
             "RESPONDA SEMPRE EM PORTUGUÊS DO BRASIL (pt-br).\n\n"
         )
+
+        # Adiciona resumo da cena atual como reforço de cenário
+        if game_state.scene_description:
+            user_prompt_parts.append(
+                f"Resumo do cenário atual: {game_state.scene_description}\n\n"
+            )
 
         user_prompt_parts.append(cls._build_scene_context(game_state))
         user_prompt_parts.append(cls._build_character_context(character))
@@ -508,8 +529,8 @@ class InstructionsBuilder:
     def _get_json_format_instructions() -> str:
         return (
             "INSTRUÇÃO DE FORMATAÇÃO DA RESPOSTA:\n"
-            "RESPONDA SEMPRE E APENAS com uma string JSON válida, SEM QUALQUER TEXTO ADICIONAL ANTES OU DEPOIS DO JSON (incluindo markdown como ```json ou ```). Se `interactable_elements` for preenchido, sua `message` narrativa DEVE incluir uma frase como 'Você percebe os seguintes elementos de interesse: [lista dos elementos].' ou 'Você percebe: [elemento1], [elemento2] e [elemento3].' para introduzi-los ao jogador.\n"
-            "- `message`: (string) Sua descrição narrativa principal da cena e do resultado da ação do jogador (em pt-br).\n"
+            "RESPONDA SEMPRE E APENAS com uma string JSON válida, SEM QUALQUER TEXTO ADICIONAL ANTES OU DEPOIS DO JSON (incluindo markdown como ```json ou ```).\n"
+            "- `message`: (string) Sua descrição narrativa principal da cena e do resultado da ação do jogador (em pt-br). Integre a percepção de novos `interactable_elements` de forma natural na narrativa, se possível, além de listá-los no campo apropriado.\n"
             "- `current_detailed_location`: (string) O nome detalhado da localização atual do jogador, incluindo a sub-área específica dentro do local principal (ex: 'Abrigo Subterrâneo - Sala Principal', 'Floresta Sombria - Clareira Escondida'). Se o jogador se mover para um novo local principal (ex: de 'Floresta' para 'Abrigo Subterrâneo'), determine um ponto de entrada lógico para este novo local principal (ex: 'Pátio de Entrada', 'Corredor de Acesso', 'Garagem Empoeirada') e use-o como a sub-área em `current_detailed_location` (ex: 'Abrigo Subterrâneo - Pátio de Entrada'). (em pt-br)\n"
             "- `scene_description_update`: (string) Uma nova descrição concisa para a cena/sub-área atual (o `current_detailed_location`), focando nos elementos estáticos e ambientais importantes que o jogador perceberia. (em pt-br)\n"
             "- `success`: (boolean) Sempre `true` se você puder gerar uma resposta narrativa. Use `false` apenas em caso de um erro interno seu ao processar o pedido (o que deve ser raro).\n\n"
@@ -520,7 +541,7 @@ class InstructionsBuilder:
             "Exemplo de JSON de resposta para uma ação textual 'Gritar muito alto!' no 'Abrigo Subterrâneo - Sala Principal':\n"
             "```json\n"
             "{\n"
-            '  "message": "Você solta um grito agudo que ecoa terrivelmente pelo abrigo! O Velho Sobrevivente Cansado se encolhe e sibila: \\"Cale a boca, imbecil! Quer que todos os mortos da cidade venham bater à nossa porta?!\\". A Médica de Campo empalidece, olhando para a entrada com puro terror.",\n'
+            '  "message": "Você solta um grito agudo que ecoa terrivelmente pelo abrigo! O Velho Sobrevivente Cansado se encolhe e sibila: \\"Cale a boca, imbecil! Quer que todos os mortos da cidade venham bater à nossa porta?!\\". A Médica de Campo empalidece, olhando para a entrada com puro terror. Ao seu redor, você nota o Portão de Metal Reforçado, uma Enfermaria Improvisada e o Gerador Barulhento.",\n'
             '  "current_detailed_location": "Abrigo Subterrâneo - Sala Principal",\n'
             '  "scene_description_update": "A sala principal do abrigo é fria e úmida. A tensão é palpável após o grito; os sobreviventes estão em alerta máximo.",\n'
             '  "success": true,\n'

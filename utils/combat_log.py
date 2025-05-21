@@ -19,6 +19,8 @@ class CombatAction:
     damage: Optional[int] = None
     healing: Optional[int] = None
     effects: List[str] = field(default_factory=list)
+    is_headshot: Optional[bool] = False
+    infection_attempted: Optional[bool] = False
     timestamp: datetime = field(default_factory=datetime.now)
 
 
@@ -40,11 +42,15 @@ class CombatLog:
         self.current_round: int = 0
         self.combat_stats: Dict[str, Any] = {
             "total_damage_dealt": 0,
-            "total_damage_taken": 0,
+            "total_damage_taken_by_survivors": 0,  # Mais específico
             "total_healing": 0,
-            "critical_hits": 0,
-            "dodges": 0,
-            "kills": 0,
+            "golpes_criticos": 0,
+            "esquivas_sortudas": 0,
+            "zumbis_eliminados": 0,
+            "sobreviventes_caidos": 0,
+            "headshots_efetuados": 0,
+            "tentativas_de_infeccao": 0,
+            "infeccoes_bem_sucedidas": 0,
         }
 
     def start_new_round(self) -> None:
@@ -60,6 +66,8 @@ class CombatLog:
         damage: Optional[int] = None,
         healing: Optional[int] = None,
         effects: Optional[List[str]] = None,
+        is_headshot: Optional[bool] = False,
+        infection_attempted: Optional[bool] = False,
     ) -> None:
         """
         Adiciona uma ação ao registro da rodada atual.
@@ -71,6 +79,8 @@ class CombatLog:
             damage: Dano causado (se houver)
             healing: Cura realizada (se houver)
             effects: Efeitos adicionais da ação
+            is_headshot: Se a ação foi um tiro na cabeça
+            infection_attempted: Se houve uma tentativa de infecção
         """
         if not self.rounds:
             self.start_new_round()
@@ -82,6 +92,8 @@ class CombatLog:
             damage=damage,
             healing=healing,
             effects=effects or [],
+            is_headshot=is_headshot,
+            infection_attempted=infection_attempted,
         )
 
         self.rounds[-1].actions.append(action)
@@ -111,6 +123,8 @@ class CombatLog:
                         "damage": action.damage,
                         "healing": action.healing,
                         "effects": action.effects,
+                        "is_headshot": action.is_headshot,
+                        "infection_attempted": action.infection_attempted,
                     }
                     for action in round_data.actions
                 ],
@@ -128,8 +142,10 @@ class CombatLog:
             "damage_dealt": 0,
             "damage_taken": 0,
             "healing_done": 0,
-            "critical_hits": 0,
+            "golpes_criticos_desferidos": 0,
             "actions_taken": 0,
+            "headshots_feitos": 0,
+            "infeccoes_causadas": 0,
         }
 
         for round_data in self.rounds:
@@ -140,10 +156,16 @@ class CombatLog:
                         stats["damage_dealt"] += action.damage
                     if action.healing:
                         stats["healing_done"] += action.healing
-                    if "crítico" in action.effects:
-                        stats["critical_hits"] += 1
+                    if "golpe_critico" in action.effects:
+                        stats["golpes_criticos_desferidos"] += 1
+                    if action.is_headshot:
+                        stats["headshots_feitos"] += 1
+                    if "infectado" in action.effects and action.infection_attempted:
+                        stats["infeccoes_causadas"] += 1
                 elif action.target == actor and action.damage:
                     stats["damage_taken"] += action.damage
+                    # Poderia adicionar lógica para saber se o 'actor' é um sobrevivente
+                    # para popular self.combat_stats["total_damage_taken_by_survivors"] aqui também.
 
         return stats
 
@@ -151,18 +173,33 @@ class CombatLog:
         """Atualiza as estatísticas gerais do combate."""
         if action.damage:
             self.combat_stats["total_damage_dealt"] += action.damage
+            # Assumindo que o log pode diferenciar se o alvo é sobrevivente
+            # if target_is_survivor(action.target):
+            # self.combat_stats["total_damage_taken_by_survivors"] += action.damage
 
         if action.healing:
             self.combat_stats["total_healing"] += action.healing
 
-        if "crítico" in action.effects:
-            self.combat_stats["critical_hits"] += 1
+        if "golpe_critico" in action.effects:
+            self.combat_stats["golpes_criticos"] += 1
 
-        if "esquiva" in action.effects:
-            self.combat_stats["dodges"] += 1
+        if action.is_headshot:
+            self.combat_stats["headshots_efetuados"] += 1
 
-        if "morte" in action.effects:
-            self.combat_stats["kills"] += 1
+        if "esquiva_sortuda" in action.effects:
+            self.combat_stats["esquivas_sortudas"] += 1
+
+        if "eliminacao_zumbi" in action.effects:
+            self.combat_stats["zumbis_eliminados"] += 1
+        elif "sobrevivente_caido" in action.effects:
+            self.combat_stats["sobreviventes_caidos"] += 1
+
+        if action.infection_attempted:
+            self.combat_stats["tentativas_de_infeccao"] += 1
+            if (
+                "infectado" in action.effects
+            ):  # Se o efeito "infectado" foi aplicado com sucesso
+                self.combat_stats["infeccoes_bem_sucedidas"] += 1
 
     def get_highlight_moments(self) -> List[Dict[str, Any]]:
         """Retorna os momentos mais destacados do combate."""
@@ -171,13 +208,13 @@ class CombatLog:
         for round_data in self.rounds:
             for action in round_data.actions:
                 # Golpes críticos
-                if "crítico" in action.effects:
+                if "golpe_critico" in action.effects:
                     highlights.append(
                         {
-                            "type": "critical",
+                            "type": "golpe_critico",
                             "round": round_data.round_number,
                             "description": (
-                                f"{action.actor} causou um golpe crítico em "
+                                f"{action.actor} desferiu um GOLPE CRÍTICO em "
                                 f"{action.target} causando {action.damage} de dano!"
                             ),
                         }
@@ -187,7 +224,7 @@ class CombatLog:
                 if action.healing and action.healing > 20:
                     highlights.append(
                         {
-                            "type": "healing",
+                            "type": "grande_cura",
                             "round": round_data.round_number,
                             "description": (
                                 f"{action.actor} curou {action.target} por "
@@ -197,10 +234,10 @@ class CombatLog:
                     )
 
                 # Esquivas impressionantes
-                if "esquiva" in action.effects:
+                if "esquiva_sortuda" in action.effects:
                     highlights.append(
                         {
-                            "type": "dodge",
+                            "type": "esquiva_sortuda",
                             "round": round_data.round_number,
                             "description": (
                                 f"{action.target} esquivou-se habilmente do "
@@ -209,22 +246,61 @@ class CombatLog:
                         }
                     )
 
-                # Abates
-                if "morte" in action.effects:
+                # Eliminações de Zumbis
+                if "eliminacao_zumbi" in action.effects:
                     highlights.append(
                         {
-                            "type": "kill",
+                            "type": "eliminacao_zumbi",
                             "round": round_data.round_number,
                             "description": (
-                                f"{action.actor} derrotou {action.target}!"
+                                f"{action.actor} eliminou o zumbi {action.target}!"
+                            ),
+                        }
+                    )
+                # Sobreviventes Caídos
+                elif "sobrevivente_caido" in action.effects:
+                    highlights.append(
+                        {
+                            "type": "sobrevivente_caido",
+                            "round": round_data.round_number,
+                            "description": (
+                                f"O sobrevivente {action.target} foi derrubado por {action.actor}!"
+                            ),
+                        }
+                    )
+                # Tiros na cabeça
+                if action.is_headshot:
+                    highlights.append(
+                        {
+                            "type": "headshot",
+                            "round": round_data.round_number,
+                            "description": (
+                                f"{action.actor} acertou um TIRO NA CABEÇA em {action.target}, causando {action.damage} de dano!"
+                            ),
+                        }
+                    )
+                # Infecções
+                if "infectado" in action.effects and action.infection_attempted:
+                    highlights.append(
+                        {
+                            "type": "infeccao",
+                            "round": round_data.round_number,
+                            "description": (
+                                f"{action.target} foi INFECTADO pelo ataque de {action.actor}!"
                             ),
                         }
                     )
 
         return sorted(
             highlights,
-            key=lambda x: (x["type"] == "kill", x["type"] == "critical", x["round"]),
+            key=lambda x: (
+                x["type"] == "sobrevivente_caido",
+                x["type"] == "infeccao",
+                x["type"] == "headshot",
+                x["type"] == "golpe_critico",
+                x["round"],
+            ),
             reverse=True,
         )[
             :5
-        ]  # Retorna os 5 momentos mais interessantes
+        ]  # Retorna os 5 momentos mais interessantes, priorizando os mais impactantes

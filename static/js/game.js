@@ -473,8 +473,8 @@ class GameUIManager {
         }
 
         const diceRollPattern = /rolagem (de \w+\s)?foi de (\d+)|roll(ed)? (a )?(\d+)|rolled (\d+)|rolagem: (\d+)|roll: (\d+)|rolou (\d+)/gi;
-        // Ensure message is a string before calling replace
-        const highlightedMessage = (typeof displayMessage === 'string' ? displayMessage : '').replace(diceRollPattern, match => {
+        // CORRIGIDO: Usar 'message' em vez de 'displayMessage'
+        const highlightedMessage = (typeof message === 'string' ? message : '').replace(diceRollPattern, match => {
             // Extract the number from the match
             const numberMatch = match.match(/\d+/);
             if (numberMatch) {
@@ -488,13 +488,13 @@ class GameUIManager {
         messageDiv.className = isError ? 'message text-danger' : 'message message-assistant';
 
         let fullMessageHTML = `<strong>${isError ? "Erro:" : "Mestre:"}</strong> ${highlightedMessage}`;
-        // Use interactableElements directly, as it comes from the parsed backend response
-        if (interactableElementsForDisplay && interactableElementsForDisplay.length > 0) {
+        // CORRIGIDO: Usar 'interactableElements' em vez de 'interactableElementsForDisplay'
+        if (interactableElements && interactableElements.length > 0) {
             fullMessageHTML += `<div class="interactable-elements-inline mt-2"><strong>Você percebe:</strong>`;
             const listGroup = document.createElement('div');
             listGroup.className = 'list-group list-group-flush mt-1';
 
-            interactableElementsForDisplay.forEach(elementName => {
+            interactableElements.forEach(elementName => { // Usar 'interactableElements'
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'list-group-item list-group-item-action list-group-item-secondary p-2 text-start'; // Added text-start for better alignment

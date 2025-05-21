@@ -969,22 +969,25 @@ class GameEngine:
             if potential_name not in game_state.known_npcs:
                 from core.npc import NPC
 
-                npc_data = {
-                    "name": potential_name,
-                    "race": "Humano",
-                    "profession": (
-                        potential_name.split(" ")[-1]
-                        if " " in potential_name
-                        else "Sobrevivente"
-                    ),
-                    "personality": random.choice(
-                        ["Cauteloso", "Desconfiado", "Prestativo", "Assustado"]
-                    ),
-                    "level": random.randint(1, 5),
-                    "knowledge": [],
-                    "quests": [],
-                    "current_mood": "Neutro",
-                    "disposition": "neutral",
-                }
-                game_state.add_npc(potential_name, npc_data)
+                # Criar o objeto NPC diretamente
+                new_npc_obj = NPC.from_dict(
+                    {
+                        "name": potential_name,
+                        "race": "Humano",
+                        "profession": (
+                            potential_name.split(" ")[-1]
+                            if " " in potential_name
+                            else "Sobrevivente"
+                        ),
+                        "personality": random.choice(
+                            ["Cauteloso", "Desconfiado", "Prestativo", "Assustado"]
+                        ),
+                        "level": random.randint(1, 5),
+                        "knowledge": [],
+                        "quests": [],
+                        "current_mood": "Neutro",
+                        "disposition": "neutral",
+                    }
+                )
+                game_state.add_npc(potential_name, new_npc_obj)
         return generated_npc_names

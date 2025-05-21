@@ -3,7 +3,7 @@ import logging
 import os
 import re  # Importar re para regex
 import random
-from typing import Any, Dict, List, Optional, Tuple  # Added Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast  # Added Tuple
 
 from core.enemy import Enemy  # Import Enemy class
 from core.models import Character
@@ -100,12 +100,25 @@ class MoveActionHandler(ActionHandler):
             new_location = world_generator.generate_adjacent_location(
                 current_location_id, normalized_direction, game_state.world_map
             )
-            game_state.world_map["locations"][new_location["id"]] = new_location
+
+            # Ensure new locations are properly added (incorporating user suggestion)
+            # Add the new location to the world_map only if its ID isn't already present.
+            # This adds robustness in case the generator could theoretically return an existing ID.
+            if new_location["id"] not in game_state.world_map["locations"]:
+                game_state.world_map["locations"][new_location["id"]] = new_location
+
+            # Update the connections of the original current_location (defined earlier in the method).
+            # The user's suggestion included re-fetching current_location here,
+            # which is generally not needed as the original reference is still valid.
             current_location.setdefault("connections", {})[normalized_direction] = (
                 new_location["id"]
             )
             world_generator.save_world(game_state.world_map)
             next_location_id = new_location["id"]
+
+        # Garantir que visited_locations exista no game_state
+        if not hasattr(game_state, "visited_locations"):
+            game_state.visited_locations = {}
 
         # If found or generated
         if next_location_id and next_location_id in game_state.world_map["locations"]:
@@ -114,11 +127,8 @@ class MoveActionHandler(ActionHandler):
             game_state.current_location = next_location["name"]
             game_state.coordinates = next_location["coordinates"].copy()
 
-            visited_info = (
-                game_state.visited_locations.get(next_location_id)
-                if hasattr(game_state, "visited_locations")
-                else None
-            )
+            # Agora é seguro acessar game_state.visited_locations diretamente
+            visited_info = game_state.visited_locations.get(next_location_id)
 
             if visited_info:
                 visited_info["last_visited"] = "revisited"
@@ -148,15 +158,15 @@ class MoveActionHandler(ActionHandler):
             game_state.npcs_present = next_location["npcs"]
             game_state.events = next_location["events"]
 
-            if hasattr(game_state, "visited_locations"):
-                game_state.visited_locations[next_location_id] = {
-                    "name": game_state.current_location,
-                    "last_visited": "first_time",
-                    "description": game_state.scene_description,
-                    "npcs_seen": game_state.npcs_present.copy(),
-                    "events_seen": game_state.events.copy(),
-                    "search_results": [],  # Initialize search_results
-                }
+            # game_state.visited_locations é garantido existir aqui
+            game_state.visited_locations[next_location_id] = {
+                "name": game_state.current_location,
+                "last_visited": "first_time",
+                "description": game_state.scene_description,
+                "npcs_seen": game_state.npcs_present.copy(),
+                "events_seen": game_state.events.copy(),
+                "search_results": [],  # Initialize search_results
+            }
 
             return {
                 "success": True,
@@ -266,14 +276,32 @@ class SearchActionHandler(ActionHandler):
         # A lógica mecânica do 'search' é mínima. A IA fará a maior parte da descrição do que é encontrado.
         details_lower = details.lower() if isinstance(details, str) else ""
         if "missão" in details_lower or "tarefa" in details_lower:  # Traduzido "quest"
-            if not hasattr(game_state, "npcs_present") or not game_state.npcs_present:
+            # Add null check and validation
+            if (
+                not getattr(game_state, "npcs_present", None)
+                or len(game_state.npcs_present) == 0
+            ):
                 return {
                     "success": False,
                     "message": "Não há ninguém por perto que possa oferecer missões no momento.",
                 }
+
+            # Filter valid NPC names and check again
+            valid_npcs = [
+                npc
+                for npc in game_state.npcs_present
+                if isinstance(npc, str) and npc.strip()
+            ]
+            if not valid_npcs:
+                return {
+                    "success": False,
+                    "message": "Não há NPCs válidos disponíveis para oferecer missões no momento.",
+                }
+
             if not hasattr(game_state, "quests"):
                 game_state.quests = []
-            quest_giver = random.choice(game_state.npcs_present)
+
+            quest_giver = random.choice(valid_npcs)
             new_quest = generate_quest(
                 location=game_state.current_location,
                 difficulty=character.level,
@@ -306,26 +334,33 @@ class AttackActionHandler(ActionHandler):
         if (
             game_state.combat
             and game_state.combat.get("active")
-            and game_state.combat.get("enemy")
+            # A verificação de game_state.combat.get("enemy") será feita abaixo com isinstance
         ):
-            enemy = game_state.combat.get(
-                "enemy"
-            )  # Assumindo que enemy é um objeto/dict com .name, .health, .defense
-            if not enemy:  # Fallback se o inimigo não estiver definido corretamente
+            enemy_data = game_state.combat.get("enemy")
+
+            # Garantir que enemy_data é uma instância de Enemy
+            if not isinstance(enemy_data, Enemy):
+                logger.error(
+                    f"AttackActionHandler: game_state.combat['enemy'] não é uma instância de Enemy. "
+                    f"Tipo encontrado: {type(enemy_data)}. Valor: {enemy_data}"
+                )
                 return {
                     "success": False,
-                    "message": "Erro no estado de combate: Inimigo não encontrado.",
+                    "message": "Erro crítico no estado de combate: dados do inimigo inválidos.",
+                    "action_performed": "attack_failed_enemy_data_error",
                 }
+
+            enemy: Enemy = (
+                enemy_data  # Agora temos certeza do tipo e podemos usar type hinting
+            )
 
             # Lógica de ataque contra o inimigo atual
             attacker_stats = (
                 character  # Usar o objeto Character diretamente para atributos
             )
-            # Assumindo que Character tem um atributo 'strength'
             str_modifier = calculate_attribute_modifier(attacker_stats.strength)
-            # DC para acertar o inimigo (exemplo simples: 10 + nível do inimigo)
-            # Assumindo que Enemy tem um atributo 'level'
-            to_hit_dc = 10 + getattr(enemy, "level", 1)
+            # Acesso direto aos atributos do inimigo
+            to_hit_dc = 10 + enemy.level
 
             # Rolagem de ataque (d20 + modificador)
             attack_roll_result = roll_dice(1, 20, str_modifier)
@@ -379,14 +414,11 @@ class AttackActionHandler(ActionHandler):
 
                 damage_dealt = max(
                     1,  # Dano mínimo de 1
-                    damage_roll_result["total"] - getattr(enemy, "defense", 0),
+                    damage_roll_result["total"] - enemy.defense,  # Acesso direto
                 )
 
                 # Aplicar dano ao inimigo
                 enemy.health = max(0, enemy.health - damage_dealt)
-                game_state.combat["enemy"] = (
-                    enemy  # Atualizar o objeto inimigo no estado
-                )
 
                 combat_log_entry = f"Você atacou {enemy.name} e causou {damage_dealt} de dano! ({attack_roll_string} vs DC {to_hit_dc})"
                 mechanical_outcome_message = (
@@ -424,12 +456,8 @@ class AttackActionHandler(ActionHandler):
                     if game_state.combat
                     else False
                 ),
-                "enemy_hp": (
-                    getattr(enemy, "health", 0) if enemy else 0
-                ),  # HP atual do inimigo
-                "enemy_max_hp": (
-                    getattr(enemy, "max_health", 0) if enemy else 0
-                ),  # Max HP do inimigo
+                "enemy_hp": enemy.health,  # Acesso direto ao HP atual do inimigo
+                "enemy_max_hp": enemy.max_health,  # Acesso direto ao Max HP do inimigo
                 "combat_log_update": combat_log_entry,  # Enviar a última entrada do log para o frontend
             }
 
@@ -457,8 +485,10 @@ class AttackActionHandler(ActionHandler):
                 enemy = Enemy(
                     name=npc_to_attack,
                     level=random.randint(character.level, character.level + 2),
-                    max_health=random.randint(20, 50),  # Stats genéricos
-                    health=random.randint(20, 50),
+                    max_health=random.randint(20, 50),
+                    health=random.randint(
+                        20, 50
+                    ),  # Pode ser igual a max_health na criação
                     attack_damage_min=random.randint(3, 8),
                     attack_damage_max=random.randint(9, 15),
                     defense=random.randint(3, 10),
@@ -553,6 +583,8 @@ class UseItemActionHandler(ActionHandler):
                 else:
                     # Senão, carregue os dados.
                     # actual_item_name é garantidamente str aqui devido ao 'if inv_item_name:'
+                    if actual_item_name is None:
+                        raise ValueError("actual_item_name should not be None here.")
                     name_for_lookup: str = actual_item_name
                     item_data = item_generator.get_item_by_name(name_for_lookup)
                 break  # Item encontrado
@@ -566,8 +598,9 @@ class UseItemActionHandler(ActionHandler):
 
         # Item encontrado, processar uso
         # Se chegamos aqui, actual_item_name NÃO é None, e item_data NÃO é None.
-        assert actual_item_name is not None  # Adiciona asserção para o type checker
-        guaranteed_actual_item_name: str = actual_item_name
+        if actual_item_name is None:
+            raise RuntimeError("actual_item_name should not be None here.")
+        guaranteed_actual_item_name = actual_item_name
 
         item_type = item_data.get("type", "unknown")
         item_subtype = item_data.get("subtype", "unknown")
@@ -1186,14 +1219,18 @@ class CraftActionHandler(ActionHandler):
             found_quantity = 0
             indices_for_this_component = []
             # Procurar o componente no inventário
+            # Unified item name extraction
             for i, inv_item_obj in enumerate(inventory_copy):
-                item_name_in_inv = ""
+                item_name = ""
                 if isinstance(inv_item_obj, str):
-                    item_name_in_inv = inv_item_obj
+                    item_name = inv_item_obj.lower()
                 elif isinstance(inv_item_obj, dict) and "name" in inv_item_obj:
-                    item_name_in_inv = inv_item_obj["name"]
+                    item_name = inv_item_obj.get("name", "").lower()
+
                 # Comparar pelo ID de referência do componente (lowercase)
-                if item_name_in_inv.lower() == comp_id_ref.lower():
+                if (
+                    item_name == comp_id_ref.lower()
+                ):  # comp_id_ref já é o nome/ID do item da receita
                     indices_for_this_component.append(i)
                     found_quantity += 1
                     if found_quantity >= quantity_needed:
@@ -1241,32 +1278,39 @@ class CraftActionHandler(ActionHandler):
             "name", recipe_id_query
         )  # Usar nome da receita como fallback
         output_quantity = recipe.get("output_quantity", 1)
-        # TODO: Gerar o item criado como um dict estruturado usando ItemGenerator
-        # Por enquanto, adicionamos como string.
+
         for _ in range(output_quantity):
-            # character.inventory.append(output_item_name) # Adiciona como string
-            # Idealmente, gerar o item completo:
+            # Modified item creation with error handling (integrating user suggestion)
             try:
                 crafted_item_data = self.item_generator.get_item_by_name(
                     output_item_name
                 )
-                if crafted_item_data:
-                    character.inventory.append(crafted_item_data)  # Adiciona como dict
-                else:
-                    character.inventory.append(
-                        output_item_name
-                    )  # Fallback para string se ItemGenerator falhar
-                    logger.warning(
-                        f"ItemGenerator não encontrou dados para item criado: {output_item_name}. Adicionado como string."
+                if not crafted_item_data:
+                    # Se o item_generator não encontrar o item, consideramos uma falha crítica para esta receita.
+                    # A mensagem de log aqui é mais específica para depuração.
+                    logger.error(
+                        f"ItemGenerator não conseguiu encontrar/gerar dados para o item '{output_item_name}' durante a criação."
                     )
+                    raise ValueError(
+                        f"Definição do item '{output_item_name}' não encontrada pelo gerador."
+                    )
+
+                # Add structured data to inventory
+                character.inventory.append(crafted_item_data)
             except Exception as e:
+                # Captura o ValueError acima ou qualquer outra exceção durante get_item_by_name ou append.
                 logger.error(
-                    f"Erro ao gerar dados para item criado '{output_item_name}': {e}. Adicionado como string.",
+                    f"Erro crítico durante a criação ou adição do item '{output_item_name}': {str(e)}",
                     exc_info=True,
                 )
-                character.inventory.append(output_item_name)  # Fallback para string
+                return {  # Retorna falha para toda a ação de craft
+                    "success": False,
+                    "message": "A criação falhou devido a um erro inesperado no sistema de itens.",
+                    "inventory_changed": True,  # Componentes já foram removidos
+                    "inventory": character.inventory,
+                }
 
-        # Retornar resultado mecânico para a IA narrar
+        # Se o loop completar, todos os itens foram adicionados com sucesso.
         return {
             "success": True,  # Mecanicamente, a criação foi bem-sucedida
             "action_performed": "craft_success",
@@ -1295,6 +1339,10 @@ class InterpretActionHandler(ActionHandler):
         }
 
 
+# Cache para instâncias de handlers
+_action_handler_instances: Dict[str, ActionHandler] = {}
+
+
 # Action handler factory
 def get_action_handler(action: str) -> ActionHandler:
     """
@@ -1306,21 +1354,36 @@ def get_action_handler(action: str) -> ActionHandler:
     Returns:
         Handler for the action
     """
-    action_handlers = {
-        "move": MoveActionHandler(),
-        "look": LookActionHandler(),
-        "talk": TalkActionHandler(),
-        "search": SearchActionHandler(),
-        "attack": AttackActionHandler(),
-        "use_item": UseItemActionHandler(),
-        "flee": FleeActionHandler(),
-        "rest": RestActionHandler(),
-        "custom": CustomActionHandler(),  # Custom agora apenas passa para a IA
-        "skill": SkillActionHandler(),
-        "craft": CraftActionHandler(),
-        "interpret": InterpretActionHandler(),  # Interpret agora apenas passa para a IA
-    }
-    # Se a ação não for uma das ações diretas conhecidas, usa CustomActionHandler
-    # para que a IA tente interpretar a entrada do jogador.
-    return action_handlers.get(action, CustomActionHandler())
-    return result
+    global _action_handler_instances
+
+    if action in _action_handler_instances:
+        return _action_handler_instances[action]
+
+    handler: ActionHandler
+    if action == "move":
+        handler = MoveActionHandler()
+    elif action == "look":
+        handler = LookActionHandler()
+    elif action == "talk":
+        handler = TalkActionHandler()
+    elif action == "search":
+        handler = SearchActionHandler()
+    elif action == "attack":
+        handler = AttackActionHandler()
+    elif action == "use_item":
+        handler = UseItemActionHandler()
+    elif action == "flee":
+        handler = FleeActionHandler()
+    elif action == "rest":
+        handler = RestActionHandler()
+    elif action == "skill":
+        handler = SkillActionHandler()
+    elif action == "craft":
+        handler = CraftActionHandler()
+    elif action == "interpret":
+        handler = InterpretActionHandler()
+    else:  # Fallback para CustomActionHandler para ações desconhecidas ou 'custom'
+        handler = CustomActionHandler()
+
+    _action_handler_instances[action] = handler
+    return handler

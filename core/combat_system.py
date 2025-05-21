@@ -1,404 +1,132 @@
 """
-Sistema de combate.
+Sistema de combate refatorado.
 
-Este módulo gerencia as mecânicas de combate entre personagens e inimigos.
+Este módulo gerencia as mecânicas de combate simplificadas.
+Adaptado para um cenário de apocalipse zumbi.
 """
 
-from typing import Any, Dict, List, Optional
+import random  # Importa o módulo random
+from typing import Optional  # Importa Optional para type hinting
 
-from core.models import Character
-from utils.combat_log import CombatLog
-from utils.dice import roll_dice
+# Ajuste no import para refletir a nova estrutura de combat_stats.py
+
+from .combat_stats import Character  # Alterado para import relativo
+from utils.combat_log import CombatLog  # Opcional, para registrar o combate
 
 
 class CombatSystem:
-    """Sistema de gerenciamento de combate."""
+    """Sistema de gerenciamento de combate refatorado."""
 
-    def __init__(self) -> None:
-        """Inicializa o sistema de combate."""
-        self.combat_log = CombatLog()
-        self._status_effects: Dict[str, List[Dict[str, Any]]] = {}
+    def __init__(self, player: Character, enemy: Character):
+        self.player = player
+        self.enemy = enemy
+        self.combat_log: Optional[CombatLog] = None  # Log de combate opcional
 
-    def initiate_combat(
-        self, character: Character, enemies: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        """
-        Inicia um novo combate.
+    def set_combat_log(self, combat_log: CombatLog) -> None:
+        """Define uma instância de CombatLog para ser usada pelo sistema."""
+        self.combat_log = combat_log
+        if self.combat_log:
+            self.combat_log.start_new_round()  # Inicia o primeiro round no log
 
-        Args:
-            character: Personagem do jogador
-            enemies: Lista de inimigos no encontro
+    def calculate_damage(self, attacker: Character, defender: Character) -> int:
+        """Calcula dano com base nos stats dos personagens."""
+        return max(attacker.stats.attack - defender.stats.defense, 1)
 
-        Returns:
-            Informações iniciais do combate
-        """
-        self.combat_log = CombatLog()
-        self._status_effects.clear()
+    def _attempt_headshot(self, attacker: Character, target: Character) -> bool:
+        """Tenta um tiro na cabeça se o atacante for sobrevivente e o alvo um zumbi."""
+        if not attacker.is_zombie and target.is_zombie:
+            # Chance base de headshot + bônus pela habilidade de mira
+            # Ex: 10% base + 2% por ponto em aim_skill
+            headshot_chance = 0.10 + (attacker.stats.aim_skill * 0.02)
+            return random.random() < headshot_chance
+        return False
 
-        # Determinar ordem de iniciativa
-        initiative_order = self._determine_initiative(character, enemies)
+    def _attempt_infection(self, attacker: Character, target: Character) -> bool:
+        """Tenta infectar o alvo se o atacante for zumbi e o alvo um sobrevivente não infectado."""
+        if attacker.is_zombie and not target.is_zombie and not target.is_infected:
+            infection_chance = 0.25  # Chance de 25% de infecção por ataque de zumbi
+            return random.random() < infection_chance
+        return False
 
-        # Registrar início do combate
-        self.combat_log.start_new_round()
+    def attack(self, attacker: Character, target: Character) -> str:
+        """Executa um ataque e retorna mensagem de resultado."""
+        if not target.is_alive:
+            return f"{target.name} já foi derrotado!"
 
-        return {
-            "message": self._generate_combat_start_message(enemies),
-            "initiative_order": initiative_order,
-            "combat_id": id(self.combat_log),
-        }
+        action_effects = []
+        is_headshot_attempt = False
+        infection_attempted_flag = False
 
-    def process_combat_round(
-        self,
-        character: Character,
-        enemies: List[Dict[str, Any]],
-        character_action: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        """
-        Processa uma rodada de combate.
-
-        Args:
-            character: Personagem do jogador
-            enemies: Lista de inimigos ativos
-            character_action: Ação escolhida pelo jogador
-
-        Returns:
-            Resultado da rodada de combate
-        """
-        self.combat_log.start_new_round()
-
-        # Processar ação do jogador
-        action_result = self._process_character_action(
-            character, character_action, enemies
-        )
-
-        # Processar ações dos inimigos
-        enemy_results = []
-        for enemy in enemies:
-            if enemy.get("health", 0) > 0:  # Apenas inimigos vivos agem
-                enemy_action = self._generate_enemy_action(enemy, character)
-                result = self._process_enemy_action(enemy, enemy_action, character)
-                enemy_results.append(result)
-
-        # Processar efeitos de status
-        self._process_status_effects(character, enemies)
-
-        # Verificar condições de fim de combate
-        combat_status = self._check_combat_status(character, enemies)
-
-        return {
-            "character_result": action_result,
-            "enemy_results": enemy_results,
-            "status_effects": self._status_effects,
-            "combat_status": combat_status,
-            "highlights": self.combat_log.get_highlight_moments(),
-        }
-
-    @staticmethod
-    def _determine_initiative(
-        character: Character, enemies: List[Dict[str, Any]]
-    ) -> List[str]:
-        """Determina a ordem de iniciativa no combate."""
-        initiatives = []
-
-        # Iniciativa do personagem
-        char_init = roll_dice(1, 20)["total"] + character.attributes.get("agility", 0)
-        initiatives.append(("character", char_init))
-
-        # Iniciativa dos inimigos
-        for i, enemy in enumerate(enemies):
-            enemy_init = roll_dice(1, 20)["total"] + enemy.get("agility", 0)
-            initiatives.append((f"enemy_{i}", enemy_init))
-
-        # Ordenar por iniciativa
-        initiatives.sort(key=lambda x: x[1], reverse=True)
-        return [init[0] for init in initiatives]
-
-    def _process_character_action(
-        self,
-        character: Character,
-        action: Dict[str, Any],
-        enemies: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        """Processa a ação do personagem."""
-        action_type = action.get("type", "attack")
-        target_id = action.get("target")
-
-        if action_type == "attack":
-            if not target_id:
-                return {
-                    "success": False,
-                    "message": "Alvo não especificado para o ataque.",
-                }
-            defender_enemy = self._find_enemy(enemies, target_id)
-            if not defender_enemy:
-                return {
-                    "success": False,
-                    "message": f"Inimigo alvo com ID '{target_id}' não encontrado.",
-                }
-            return self._process_attack(
-                attacker=character,
-                defender=defender_enemy,
-                is_character=True,
+        damage = self.calculate_damage(attacker, target)
+        message = ""
+        if self._attempt_headshot(attacker, target):
+            is_headshot_attempt = True
+            damage = int(damage * 3.5)  # Headshots causam dano massivo
+            message += (
+                f"💥 TIRO NA CABEÇA! {attacker.name} acerta em cheio {target.name}!"
             )
-        if action_type == "skill":
-            skill_id_val = action.get("skill_id")
-            if not isinstance(skill_id_val, str):
-                return {
-                    "success": False,
-                    "message": "Ação de habilidade requer um 'skill_id' (string).",
-                }
-
-            target_enemy_for_skill = self._find_enemy(enemies, target_id)
-            # If a target_id was provided, but the enemy was not found, it's an
-            # error.
-            if target_id and not target_enemy_for_skill:
-                return {
-                    "success": False,
-                    "message": f"Alvo com ID '{target_id}' não encontrado para a habilidade.",
-                }
-
-            return self._process_skill(
-                character=character,
-                skill_id=skill_id_val,
-                target=target_enemy_for_skill,
-            )
-        if action_type == "item":
-            item_id_val = action.get("item_id")
-            if not isinstance(item_id_val, str):
-                return {
-                    "success": False,
-                    "message": "Ação de item requer um 'item_id' (string).",
-                }
-
-            target_enemy_for_item = self._find_enemy(enemies, target_id)
-            # If a target_id was provided, but the enemy was not found, it's an
-            # error.
-            if target_id and not target_enemy_for_item:
-                return {
-                    "success": False,
-                    "message": f"Alvo com ID '{target_id}' não encontrado para o item.",
-                }
-
-            return self._process_item_use(
-                character=character,
-                item_id=item_id_val,
-                target=target_enemy_for_item,
-            )
-        return {"success": False, "message": "Ação inválida"}
-
-    def _process_attack(
-        self,
-        attacker: Any,
-        defender: Any,
-        is_character: bool = False,  # defender will be Character or Dict
-    ) -> Dict[str, Any]:
-        """Processa um ataque básico."""
-        # Calcular chance de acerto
-        if is_character:  # attacker é Character, defender é Dict
-            attacker_accuracy = attacker.attributes.get("agility", 0)
-            defender_defense = defender.get("agility", 0)
-            attacker_name = attacker.name
-            defender_name = defender.get("name", "Inimigo")
-        else:  # attacker é Dict, defender é Character
-            attacker_accuracy = attacker.get("agility", 0)
-            defender_defense = defender.attributes.get("agility", 0)
-            attacker_name = attacker.get("name", "Inimigo")
-            defender_name = defender.name
-
-        accuracy = attacker_accuracy
-        defense = defender_defense
-
-        if roll_dice(1, 20)["total"] + accuracy <= defense:
-            self.combat_log.add_action(
-                actor=attacker_name,
-                target=defender_name,
-                action_type="attack",
-                effects=["esquiva"],
-            )
-            return {
-                "success": False,
-                "message": f"{defender_name} esquivou-se do ataque!",
-            }
-
-        # Calcular dano
-        damage_value = roll_dice(1, 6)["total"]
-        damage_bonus = (
-            attacker.attributes.get("strength", 0)
-            if is_character
-            else attacker.get("damage", attacker.get("strength", 0))
-            # Inimigos podem ter 'damage' ou 'strength'
-        )
-
-        # Verificar crítico
-        is_critical = roll_dice(1, 20)["total"] == 20
-        if is_critical:
-            damage_value *= 2
-
-        total_damage = damage_value + damage_bonus
-
-        # Aplicar dano
-        if is_character:
-            defender_current_hp = defender.get("health", 0)
-            defender["health"] = defender_current_hp - total_damage
+            action_effects.append("headshot_damage")
         else:
-            defender_current_hp = defender.attributes.get("current_hp", 0)
-            defender.attributes["current_hp"] = defender_current_hp - total_damage
+            message += f"{attacker.name} ataca {target.name}."
 
-        effects = []
-        if is_critical:
-            effects.append("crítico")
-        if (is_character and defender["health"] <= 0) or (
-            not is_character and defender.attributes.get("current_hp", 0) <= 0
-        ):
-            effects.append("morte")
-            if is_character:  # Personagem derrotou inimigo
-                defender["health"] = 0  # Garante que não seja negativo
-            else:  # Inimigo derrotou personagem
-                defender.attributes["current_hp"] = 0  # Garante que não seja negativo
+        # Tentativa de infecção
+        if self._attempt_infection(attacker, target):
+            infection_attempted_flag = True
+            target.is_infected = True
+            message += f" ☣️ {target.name} foi INFECTADO pelo ataque de {attacker.name}!"
+            action_effects.append("infectado")
 
-        self.combat_log.add_action(
-            actor=attacker_name,
-            target=defender_name,
-            action_type="attack",
-            damage=total_damage,
-            effects=effects,
-        )
+        target.stats.health = max(target.stats.health - damage, 0)
 
-        return {
-            "success": True,
-            "damage": total_damage,
-            "critical": is_critical,
-            "message": self._generate_attack_message(
-                attacker_name, total_damage, is_critical
-            ),
-        }
+        message += f" {target.name} sofre {damage} de dano."
 
-    @staticmethod
-    def _process_skill(
-        character: Character, skill_id: str, target: Optional[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        """Processa o uso de uma habilidade."""
-        # Implementar lógica de habilidades aqui
-        # Por enquanto retorna um erro
-        return {
-            "success": False,
-            "message": "Sistema de habilidades em desenvolvimento",
-        }
-
-    @staticmethod
-    def _process_item_use(
-        character: Character, item_id: str, target: Optional[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        """Processa o uso de um item."""
-        # Implementar lógica de uso de itens aqui
-        # Por enquanto retorna um erro
-        return {"success": False, "message": "Sistema de itens em desenvolvimento"}
-
-    @staticmethod
-    def _generate_enemy_action(
-        enemy: Dict[str, Any], character: Character
-    ) -> Dict[str, Any]:
-        """Gera uma ação para um inimigo."""
-        # Por enquanto, inimigos apenas atacam
-        return {"type": "attack", "target": "character"}
-
-    def _process_enemy_action(
-        self, enemy: Dict[str, Any], action: Dict[str, Any], character: Character
-    ) -> Dict[str, Any]:
-        """Processa a ação de um inimigo."""
-        if action["type"] == "attack":
-            return self._process_attack(
-                attacker=enemy, defender=character, is_character=False
-            )
-        return {"success": False, "message": "Ação inválida"}
-
-    def _process_status_effects(
-        self, character: Character, enemies: List[Dict[str, Any]]
-    ) -> None:
-        """Processa efeitos de status ativos."""
-        # Processar efeitos no personagem
-        char_effects = self._status_effects.get(character.name, [])
-        for effect in char_effects[:]:
-            effect["duration"] -= 1
-            if effect["duration"] <= 0:
-                char_effects.remove(effect)
+        if target.stats.health <= 0:
+            target.is_alive = False
+            if target.is_zombie:
+                message += f"\n💀 O zumbi {target.name} foi neutralizado!"
+                action_effects.append("eliminacao_zumbi")
             else:
-                self._apply_status_effect(character, effect, True)
+                message += f"\n✝️ {target.name} sucumbiu aos ferimentos!"
+                action_effects.append("sobrevivente_caido")
 
-        # Processar efeitos nos inimigos
-        for enemy in enemies:
-            enemy_effects = self._status_effects.get(enemy["name"], [])
-            for effect in enemy_effects[:]:
-                effect["duration"] -= 1
-                if effect["duration"] <= 0:
-                    enemy_effects.remove(effect)
-                else:
-                    self._apply_status_effect(enemy, effect, False)
-
-    def _apply_status_effect(
-        self, target: Any, effect: Dict[str, Any], is_character: bool
-    ) -> None:
-        """Aplica um efeito de status."""
-        effect_type = effect.get("type")
-        if effect_type == "poison":
-            damage = effect.get("damage", 2)
-            if is_character:
-                current_hp = target.attributes.get("current_hp", 0)
-                target.attributes["current_hp"] = max(0, current_hp - damage)
-                target_name = target.name
-            else:
-                current_hp = target.get("health", 0)
-                target["health"] = max(0, current_hp - damage)
-                target_name = target.get("name", "Inimigo")
-
+        if self.combat_log:
             self.combat_log.add_action(
-                actor="Veneno",
-                target=target_name,
-                action_type="status_effect",
+                actor=attacker.name,
+                target=target.name,
+                action_type=(
+                    "ataque_zumbi" if attacker.is_zombie else "ataque_sobrevivente"
+                ),
                 damage=damage,
-                effects=["poison"],
+                effects=action_effects,
+                is_headshot=is_headshot_attempt,
+                infection_attempted=infection_attempted_flag,
             )
 
-    @staticmethod
-    def _check_combat_status(
-        character: Character, enemies: List[Dict[str, Any]]
-    ) -> str:
-        """Verifica o estado atual do combate."""
-        if character.attributes.get("current_hp", 0) <= 0:
-            return "defeat"
+        return message
 
-        if all(enemy.get("health", 0) <= 0 for enemy in enemies):
-            return "victory"
+    def start_combat_round(self) -> str:
+        """Controla um round completo de combate."""
+        battle_log_messages = []
 
-        return "ongoing"
+        if (
+            self.combat_log and self.combat_log.current_round > 0
+        ):  # Se já houve um round, inicia um novo
+            # (a primeira rodada é iniciada quando o log é definido)
+            # Ou podemos simplesmente chamar start_new_round sempre aqui,
+            # e o log lida com a primeira inicialização.
+            # Para simplificar, vamos assumir que o log já foi iniciado se existir.
+            # Se não, o usuário deve chamar set_combat_log que inicia o primeiro round.
+            pass  # A lógica de round do log é mais complexa, esta função foca nas mensagens de turno.
 
-    @staticmethod
-    def _find_enemy(
-        enemies: List[Dict[str, Any]], target_id: Optional[str]
-    ) -> Optional[Dict[str, Any]]:
-        """Encontra um inimigo específico na lista."""
-        if not target_id:
-            return None
+        # Ataque do jogador
+        if self.player.is_alive:
+            log = self.attack(self.player, self.enemy)
+            if log:
+                battle_log_messages.append(log)
 
-        for enemy in enemies:
-            if enemy.get("id") == target_id:
-                return enemy
-        return None
+        # Ataque do inimigo (se ainda vivo)
+        if self.enemy.is_alive:
+            log = self.attack(self.enemy, self.player)
+        battle_log_messages.append(log)
 
-    @staticmethod
-    def _generate_combat_start_message(enemies: List[Dict[str, Any]]) -> str:
-        """Gera mensagem de início de combate."""
-        if len(enemies) == 1:
-            return f"Um {enemies[0]['name']} aparece!"
-        enemy_names = [e["name"] for e in enemies]
-        return (
-            f"Um grupo de {len(enemies)} inimigos aparece: "
-            f"{', '.join(enemy_names)}!"
-        )
-
-    @staticmethod
-    def _generate_attack_message(attacker: str, damage: int, critical: bool) -> str:
-        """Gera mensagem descritiva de ataque."""
-        if critical:
-            return f"{attacker} acerta um golpe crítico " f"causando {damage} de dano!"
-        return f"{attacker} ataca causando {damage} de dano!"
+        return "\n".join(battle_log_messages)
