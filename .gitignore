@@ -1,2 +1,7 @@
 .env
-data/
+
+# Ignorar todo o conteúdo da pasta 'data'
+data/*
+# Mas não ignorar o arquivo .gitkeep dentro da pasta 'data'
+!data/.gitkeep
+!data/README.md
