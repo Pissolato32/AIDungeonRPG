@@ -6,9 +6,9 @@ import random  # Movido para o topo do arquivo
 from dataclasses import dataclass, field
 from typing import List, Tuple
 
-from .combat_stats import (
+from .combat_stats import (  # Corrigido para CharacterStats e usando import relativo
     CharacterStats,
-)  # Corrigido para CharacterStats e usando import relativo
+)
 
 
 @dataclass

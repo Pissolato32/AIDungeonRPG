@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import random
-from typing import Any, Dict, Optional, List, Union, TypedDict
+from typing import Any, Dict, List, Optional, TypedDict, Union
 
 # Assuming GroqClient is in a top-level 'ai' directory or 'core.ai'
 # Adjust the import path based on your project structure.
@@ -397,7 +397,9 @@ class ItemGenerator:
                 ["weapon_melee", "weapon_ranged", "weapon_thrown"]
             )
 
-        base_weapon_type = random.choice(self.ITEM_TYPES.get(weapon_category, self.ITEM_TYPES["weapon_melee"]))  # type: ignore
+        base_weapon_type = random.choice(
+            self.ITEM_TYPES.get(weapon_category, self.ITEM_TYPES["weapon_melee"])
+        )  # type: ignore
         if not base_weapon_type:  # Fallback if category was invalid
             base_weapon_type = random.choice(self.ITEM_TYPES["weapon_melee"])  # type: ignore
 
@@ -430,7 +432,10 @@ class ItemGenerator:
             "durability": modified_stats.get("durability", 20),
             "weight": modified_stats.get("weight", 1.0),
             "description": self._generate_item_description(
-                name, base_weapon_type, rarity, "arma"  # type: ignore
+                name,
+                base_weapon_type,
+                rarity,
+                "arma",  # type: ignore
             ),
         }
         if weapon_category == "weapon_ranged" or weapon_category == "weapon_thrown":
@@ -487,7 +492,10 @@ class ItemGenerator:
             "durability": modified_stats.get("durability"),
             "weight": modified_stats.get("weight", 1.0),
             "description": self._generate_item_description(
-                name, protection_type, rarity, "proteção"  # type: ignore
+                name,
+                protection_type,
+                rarity,
+                "proteção",  # type: ignore
             ),
         }
         item_id = self.generate_item_id(name)
@@ -537,7 +545,10 @@ class ItemGenerator:
             "quantity": 1,
             "weight": modified_stats.get("weight", 0.2),
             "description": self._generate_item_description(
-                name, base_consumable_type, rarity, "consumível"  # type: ignore
+                name,
+                base_consumable_type,
+                rarity,
+                "consumível",  # type: ignore
             ),
         }
 
@@ -605,7 +616,10 @@ class ItemGenerator:
             "level_req": level,
             "weight": 0.1,
             "description": self._generate_item_description(
-                name, base_item_type, rarity, "item de missão"  # type: ignore
+                name,
+                base_item_type,
+                rarity,
+                "item de missão",  # type: ignore
             ),
         }
 
@@ -633,7 +647,9 @@ class ItemGenerator:
         if not rarity:
             rarity = self._select_rarity()  # type: ignore
 
-        base_tool_type = random.choice(self.ITEM_TYPES.get("tool", ["Ferramenta Quebrada"]))  # type: ignore
+        base_tool_type = random.choice(
+            self.ITEM_TYPES.get("tool", ["Ferramenta Quebrada"])
+        )  # type: ignore
         base_stats = self.BASE_ITEM_STATS.get(base_tool_type, {}).copy()
 
         if not base_stats:  # Fallback if no specific base stats for this tool
@@ -656,7 +672,9 @@ class ItemGenerator:
             "durability": modified_stats.get("durability", 10),
             "effectiveness": modified_stats.get("effectiveness", 0.1),
             "weight": modified_stats.get("weight", 0.5),
-            "description": self._generate_item_description(name, base_tool_type, rarity, "ferramenta"),  # type: ignore
+            "description": self._generate_item_description(
+                name, base_tool_type, rarity, "ferramenta"
+            ),  # type: ignore
         }
         item_id = self.generate_item_id(name)
         self.items_db.setdefault("items", {})[item_id] = item_data
@@ -670,7 +688,9 @@ class ItemGenerator:
         if not rarity:
             rarity = self._select_rarity()  # type: ignore
 
-        base_material_type = random.choice(self.ITEM_TYPES.get("material_crafting", ["Sucata Variada"]))  # type: ignore
+        base_material_type = random.choice(
+            self.ITEM_TYPES.get("material_crafting", ["Sucata Variada"])
+        )  # type: ignore
         base_stats = self.BASE_ITEM_STATS.get(base_material_type, {}).copy()
 
         if not base_stats:  # Fallback for materials
@@ -685,7 +705,9 @@ class ItemGenerator:
             "subtype": base_material_type,
             "rarity": rarity,
             "weight": base_stats.get("weight", 0.1),
-            "description": self._generate_item_description(name, base_material_type, rarity, "material de criação"),  # type: ignore
+            "description": self._generate_item_description(
+                name, base_material_type, rarity, "material de criação"
+            ),  # type: ignore
         }
         item_id = self.generate_item_id(name)
         self.items_db.setdefault("items", {})[item_id] = item_data

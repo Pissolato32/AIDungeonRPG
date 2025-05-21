@@ -1,22 +1,18 @@
 # filepath: c:\Users\rodri\Desktop\REPLIT RPG\core\actions.py
 import logging
 import os
-import re  # Importar re para regex
 import random
+import re  # Importar re para regex
 from typing import Any, Dict, List, Optional, Tuple, cast  # Added Tuple
 
 from core.enemy import Enemy  # Import Enemy class
 from core.models import Character
-from utils.dice import (
-    roll_dice,
-    calculate_attribute_modifier,
-    calculate_damage,
-)
-
-from .world_generator import WorldGenerator
-from .skills import SkillManager  # For SkillActionHandler
+from utils.dice import calculate_attribute_modifier, calculate_damage, roll_dice
 from utils.quest_generator import generate_quest  # Import generate_quest
+
 from .recipes import CRAFTING_RECIPES  # For CraftActionHandler
+from .skills import SkillManager  # For SkillActionHandler
+from .world_generator import WorldGenerator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

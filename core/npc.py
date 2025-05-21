@@ -1,20 +1,13 @@
 # filepath: c:\Users\rodri\Desktop\REPLIT RPG\core\npc.py
 """NPC module for managing non-player characters in the game world."""
 
-import random
-from dataclasses import dataclass, field, asdict
-from typing import (
-    Any,
-    Dict,
-    List,
-    get_args,  # Importar get_args para inspecionar Literal
-    Literal,
-    Optional,
-    TypedDict,  # Ensure TypedDict is imported
-    cast,
-)  # Ensure these are imported
-import uuid  # Ensure uuid is imported if generating IDs
 import logging  # Adicionar import de logging
+import random
+import uuid  # Ensure uuid is imported if generating IDs
+from dataclasses import asdict, dataclass, field
+from typing import TypedDict  # Ensure TypedDict is imported
+from typing import get_args  # Importar get_args para inspecionar Literal
+from typing import Any, Dict, List, Literal, Optional, cast  # Ensure these are imported
 
 from .models import NPCBase
 
