@@ -4,8 +4,9 @@ Módulo de sistema de sobrevivência.
 """
 # Código Refatorado do Sistema de Sobrevivência
 
-from typing import Dict, List, Optional, Union, Any
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Union
+
 from core.models import Character
 
 
