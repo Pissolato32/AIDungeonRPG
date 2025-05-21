@@ -418,14 +418,14 @@ class AttackActionHandler(ActionHandler):
                 )
 
                 # Aplicar dano ao inimigo
-                enemy.health = max(0, enemy.health - damage_dealt)
+                enemy.current_hp = max(
+                    0, enemy.current_hp - damage_dealt
+                )  # Alterado de health para current_hp
 
                 combat_log_entry = f"Você atacou {enemy.name} e causou {damage_dealt} de dano! ({attack_roll_string} vs DC {to_hit_dc})"
-                mechanical_outcome_message = (
-                    f"Você acertou {enemy.name} causando {damage_dealt} de dano."
-                )
+                mechanical_outcome_message = f"Você acertou {enemy.name} causando {damage_dealt} de dano."  # Alterado de health para current_hp  # Alterado de health para current_hp  # Alterado de health para current_hp
 
-                if enemy.health <= 0:
+                if enemy.current_hp <= 0:  # Alterado de health para current_hp
                     # Inimigo derrotado
                     combat_log_entry += f" {enemy.name} foi derrotado!"
                     mechanical_outcome_message += f" {enemy.name} foi derrotado."
@@ -456,8 +456,8 @@ class AttackActionHandler(ActionHandler):
                     if game_state.combat
                     else False
                 ),
-                "enemy_hp": enemy.health,  # Acesso direto ao HP atual do inimigo
-                "enemy_max_hp": enemy.max_health,  # Acesso direto ao Max HP do inimigo
+                "enemy_hp": enemy.current_hp,  # Alterado de health para current_hp
+                "enemy_max_hp": enemy.max_hp,  # Alterado de max_health para max_hp
                 "combat_log_update": combat_log_entry,  # Enviar a última entrada do log para o frontend
             }
 
@@ -481,18 +481,34 @@ class AttackActionHandler(ActionHandler):
             if npc_to_attack:
                 # Iniciar combate com o NPC
                 # Você precisará de uma forma de obter ou gerar stats para NPCs que viram inimigos
-                # Por enquanto, vamos gerar stats genéricos
+                # Gerar stats para o inimigo
+                max_hp_val = random.randint(
+                    character.level * 10 + 10, character.level * 15 + 30
+                )  # Ex: entre 20-60 para nível 1
+                current_hp_val = random.randint(
+                    int(max_hp_val * 0.7), max_hp_val
+                )  # Começa com 70-100% HP
+                enemy_attack_stat = random.randint(
+                    character.level + 2, character.level + 7
+                )  # Ex: 3-8 para nível 1
+                enemy_defense_stat = random.randint(
+                    character.level + 1, character.level + 5
+                )  # Ex: 2-6 para nível 1
+
                 enemy = Enemy(
+                    # Campos de CharacterStats (herdado por Enemy)
+                    current_hp=current_hp_val,
+                    max_hp=max_hp_val,
+                    attack=enemy_attack_stat,
+                    defense=enemy_defense_stat,
+                    # aim_skill pode usar o default de CharacterStats (0) ou ser definido aqui
+                    # Campos específicos de Enemy
                     name=npc_to_attack,
                     level=random.randint(character.level, character.level + 2),
-                    max_health=random.randint(20, 50),
-                    health=random.randint(
-                        20, 50
-                    ),  # Pode ser igual a max_health na criação
                     attack_damage_min=random.randint(3, 8),
                     attack_damage_max=random.randint(9, 15),
-                    defense=random.randint(3, 10),
                     description=f"Um(a) hostil {npc_to_attack} que você decidiu atacar.",
+                    # xp_reward, gold_reward, etc., usarão os defaults de Enemy se não especificados
                 )
                 game_state.combat = {
                     "active": True,  # Combate ativo
@@ -509,9 +525,9 @@ class AttackActionHandler(ActionHandler):
                     "message": f"Você atacou {npc_to_attack} e iniciou um combate!",  # Mensagem para a IA narrar o início
                     "action_performed": "combat_start_npc",
                     "combat_ongoing": True,
-                    "enemy_name": enemy.name,
-                    "enemy_hp": enemy.health,
-                    "enemy_max_hp": enemy.max_health,
+                    "enemy_name": enemy.name,  # type: ignore
+                    "enemy_hp": enemy.current_hp,  # Alterado de health para current_hp
+                    "enemy_max_hp": enemy.max_hp,  # Alterado de max_health para max_hp
                     "combat_log_update": game_state.combat["log"][-1],
                 }
 
@@ -951,79 +967,97 @@ class SkillActionHandler(ActionHandler):
     def handle(
         self, details: str, character: Character, game_state: Any
     ) -> Dict[str, Any]:
-        # Lógica mecânica de habilidade AQUI. IA narra o resultado.
+        """Processa o uso de habilidades do personagem e retorna os resultados mecânicos."""
+
+        # Listar habilidades disponíveis se nenhum detalhe for fornecido
         if not details:
-            available_skills = self.skill_manager.get_available_skills(character)
-            skill_names = [skill.name for skill in available_skills]
-            return {
-                "success": True,  # Mecanicamente, você conseguiu listar as habilidades
-                "message": f"Habilidades disponíveis: {', '.join(skill_names) if skill_names else 'Nenhuma'}",  # Traduzido
-            }
+            return self._handle_skill_listing(character)
 
+        return self._handle_skill_usage(details, character, game_state)
+
+    def _handle_skill_listing(self, character: Character) -> Dict[str, Any]:
+        """Retorna a lista de habilidades disponíveis do personagem."""
+        available_skills = self.skill_manager.get_available_skills(character)
+        skill_names = [skill.name for skill in available_skills]
+        skill_list = ", ".join(skill_names) if skill_names else "Nenhuma"
+        return {
+            "success": True,
+            "message": f"Habilidades disponíveis: {skill_list}",
+        }
+
+    def _handle_skill_usage(
+        self, details: str, character: Character, game_state: Any
+    ) -> Dict[str, Any]:
+        """Processa o uso de uma habilidade específica."""
         skill_id = details.strip().lower().replace(" ", "_")
-        target = None
-        if (
-            game_state.combat
-            and game_state.combat.get("active")
-            and game_state.combat.get("enemy")
-        ):
-            target = game_state.combat.get(
-                "enemy"
-            )  # Alvo padrão em combate é o inimigo
-        # TODO: Adicionar lógica para selecionar outros alvos (NPCs, objetos)
+        target = self._get_skill_target(game_state)
 
-        # Usar a habilidade
         result = self.skill_manager.use_skill(character, skill_id, target)
 
-        # result do use_skill deve conter:
-        # success: bool
-        # message: str (resultado mecânico)
-        # raw_effects: List[Dict] (efeitos brutos para aplicar)
-        # action_performed: str (tipo de resultado da habilidade, ex: "skill_used", "skill_failed_check", "skill_failed_cost")
+        if not result["success"]:
+            return self._build_failure_response(result, details)
 
-        if result["success"]:
-            # Aplicar efeitos mecânicos se a habilidade foi usada com sucesso
-            log_entries_from_effects = self._apply_combat_effects(
-                result, game_state, character
-            )
-            if game_state.combat and "log" in game_state.combat:
-                game_state.combat["log"].extend(log_entries_from_effects)
+        return self._build_success_response(result, character, game_state, target)
 
-            # Retornar resultado mecânico para a IA narrar
-            return {
-                "success": True,  # A ação mecânica foi processada
-                "action_performed": result.get("action_performed", "skill_resolved"),
-                "combat_log_update": (
-                    "\n".join(log_entries_from_effects)
-                    if log_entries_from_effects
-                    else None
-                ),  # Enviar log de efeitos para o frontend
-                "character_stats_updated": True,  # Habilidades podem mudar stats (HP, Stamina, etc.)
-                "character_stats": character.to_dict(),  # Enviar stats atualizados
-                "combat_ongoing": (
-                    game_state.combat.get("active", False)
-                    if game_state.combat
-                    else False
-                ),  # Status de combate
-                "enemy_hp": (
-                    getattr(target, "health", 0)
-                    if target and game_state.combat and game_state.combat.get("active")
-                    else None
-                ),  # HP do inimigo se ainda em combate
-                "enemy_max_hp": (
-                    getattr(target, "max_health", 0)
-                    if target and game_state.combat and game_state.combat.get("active")
-                    else None
-                ),  # Max HP do inimigo
-            }
-        else:
-            # Habilidade falhou (ex: custo, check, alvo inválido)
-            return {
-                "success": False,  # A ação mecânica falhou
-                "message": result.get(
-                    "message", f"Você tentou usar {details}, mas falhou."
-                ),  # Mensagem mecânica para a IA
-            }
+    def _get_skill_target(self, game_state: Any) -> Optional[Any]:
+        """Determina o alvo padrão para a habilidade baseado no estado do jogo."""
+        if not (game_state.combat and game_state.combat.get("active")):
+            return None
+
+        return game_state.combat.get("enemy")
+
+    def _build_failure_response(
+        self, result: Dict[str, Any], details: str
+    ) -> Dict[str, Any]:
+        """Constrói resposta para casos de falha no uso de habilidade."""
+        return {
+            "success": False,
+            "message": result.get(
+                "message", f"Você tentou usar {details}, mas falhou."
+            ),
+        }
+
+    def _build_success_response(
+        self, result: Dict[str, Any], character: Character, game_state: Any, target: Any
+    ) -> Dict[str, Any]:
+        """Constrói resposta detalhada para uso bem-sucedido de habilidade."""
+        log_entries = self._apply_combat_effects(result, game_state, character)
+        self._update_combat_log(game_state, log_entries)
+
+        combat_status = self._get_combat_status(game_state)
+        enemy_hp, enemy_max_hp = self._get_enemy_health_info(game_state, target)
+
+        return {
+            "success": True,
+            "action_performed": result.get("action_performed", "skill_resolved"),
+            "combat_log_update": "\n".join(log_entries) if log_entries else None,
+            "character_stats_updated": True,
+            "character_stats": character.to_dict(),
+            "combat_ongoing": combat_status,
+            "enemy_hp": enemy_hp,
+            "enemy_max_hp": enemy_max_hp,
+        }
+
+    def _update_combat_log(self, game_state: Any, log_entries: List[str]):
+        """Atualiza o registro de combate se aplicável."""
+        if game_state.combat and "log" in game_state.combat:
+            game_state.combat["log"].extend(log_entries)
+
+    def _get_combat_status(self, game_state: Any) -> bool:
+        """Retorna o status atual do combate."""
+        return bool(game_state.combat and game_state.combat.get("active", False))
+
+    def _get_enemy_health_info(
+        self, game_state: Any, target: Any
+    ) -> Tuple[Optional[int], Optional[int]]:
+        """Extrai informações de saúde do inimigo de forma segura."""
+        if not (target and self._get_combat_status(game_state)):
+            return None, None
+
+        return (
+            getattr(target, "current_hp", 0),
+            getattr(target, "max_hp", 0),
+        )
 
     @staticmethod
     def _apply_combat_effects(
@@ -1075,20 +1109,26 @@ class SkillActionHandler(ActionHandler):
                     actual_damage = max(
                         1, actual_damage - getattr(target_entity, "defense", 0)
                     )
-                    # Aplicar dano
-                    target_entity.health = max(
-                        0, getattr(target_entity, "health", 0) - actual_damage
-                    )
+                    # Aplicar dano # Alterado de health para current_hp
+                    target_entity.current_hp = (
+                        max(  # Alterado de health para current_hp
+                            0,
+                            getattr(target_entity, "current_hp", 0)
+                            - actual_damage,  # Alterado de health para current_hp
+                        )
+                    )  # Alterado de health para current_hp
                     # Atualizar o objeto inimigo no game_state se o alvo for o inimigo
                     if effect_target_type == "enemy":
                         game_state.combat["enemy"] = target_entity
 
                     combat_log_entries.append(
                         f"{target_name} sofreu {actual_damage} de dano da habilidade!"  # Traduzido
-                    )
-                    if effect_target_type == "enemy" and target_entity.health <= 0:
+                    )  # Alterado de health para current_hp
+                    if (
+                        effect_target_type == "enemy" and target_entity.current_hp <= 0
+                    ):  # Alterado de health para current_hp
                         combat_log_entries.append(
-                            f"{target_name} foi derrotado(a)!"
+                            f"{target_name} foi derrotado(a)!"  # Alterado de health para current_hp
                         )  # Traduzido
                         game_state.combat["active"] = False  # Fim do combate
                         game_state.combat["enemy"] = None  # Remover inimigo
@@ -1179,7 +1219,7 @@ class CraftActionHandler(ActionHandler):
                 "message": "Você pode tentar criar: "
                 + ", ".join(available_crafts)
                 + ". Use 'craft [ID da receita]'.",  # Traduzido
-                "action_performed": "craft_list",  # Added closing brace here
+                "action_performed": "craft_list",
             }
 
         # Tentar criar uma receita específica
@@ -1187,6 +1227,7 @@ class CraftActionHandler(ActionHandler):
 
         if not recipe:
             return {
+                "message": f"Receita com ID '{recipe_id_query}' não encontrada.",  # Adicionada mensagem para clareza
                 "success": False,  # Mecanicamente, a receita não existe
                 "action_performed": "craft_failed_recipe_not_found",
             }
@@ -1199,8 +1240,10 @@ class CraftActionHandler(ActionHandler):
                 # Tentar obter o nome da habilidade para a mensagem
                 skill_obj = self.skill_manager.available_skills.get(skill_id_req)
                 skill_display_name = skill_obj.name if skill_obj else skill_id_req
+                recipe_name = recipe.get("name", recipe_id_query)
                 return {
                     "success": False,  # Mecanicamente, falta habilidade
+                    "message": f"Você não tem a habilidade '{skill_display_name}' (nível {skill_level_req}) necessária para criar '{recipe_name}'.",  # Adicionada mensagem de erro
                     "action_performed": "craft_failed_skill_missing",
                 }
             # TODO: Adicionar verificação de nível de habilidade e talvez um teste de habilidade aqui
@@ -1383,7 +1426,9 @@ def get_action_handler(action: str) -> ActionHandler:
     elif action == "interpret":
         handler = InterpretActionHandler()
     else:  # Fallback para CustomActionHandler para ações desconhecidas ou 'custom'
-        handler = CustomActionHandler()
+        handler = (
+            CustomActionHandler()
+        )  # Explicitly use CustomActionHandler for unknown/custom
 
     _action_handler_instances[action] = handler
     return handler

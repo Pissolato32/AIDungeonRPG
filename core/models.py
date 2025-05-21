@@ -11,7 +11,55 @@ from typing import (
     Union,
 )  # Ensure List and Union are imported
 import uuid  # Importar uuid para gerar IDs
-from dataclasses import dataclass, field, asdict  # Import asdict
+from dataclasses import dataclass, field, asdict, fields  # Import fields
+
+
+@dataclass
+class CombatStats:
+    """Stores and manages combat-related attributes of a character."""
+
+    strength: int = 10
+    dexterity: int = 10
+    constitution: int = 10
+    intelligence: int = 10
+    wisdom: int = 10
+    charisma: int = 10
+    max_hp: int = 10
+    current_hp: int = 10
+    max_stamina: int = 10
+    current_stamina: int = 10
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Converts the CombatStats object to a dictionary."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CombatStats":
+        """Creates a CombatStats object from a dictionary, using defaults for missing keys."""
+        field_names = {f.name for f in fields(cls)}
+        filtered_data = {k: v for k, v in data.items() if k in field_names}
+        return cls(**filtered_data)
+
+
+@dataclass
+class SurvivalStats:
+    """Stores and manages survival attributes of a character."""
+
+    hunger: int = 100  # Default to max
+    thirst: int = 100  # Default to max
+    # stamina: int = 100 # Consider if this is needed or if CombatStats.current_stamina is sufficient
+    infection_risk: int = 0  # Default to no risk
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Converts the SurvivalStats object to a dictionary."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SurvivalStats":
+        """Creates a SurvivalStats object from a dictionary, using defaults for missing keys."""
+        field_names = {f.name for f in fields(cls)}
+        filtered_data = {k: v for k, v in data.items() if k in field_names}
+        return cls(**filtered_data)
 
 
 @dataclass
@@ -37,81 +85,52 @@ class Character:
     )  # e.g., {"weapon": "Sword", "armor": "Leather"}
     skills: List[str] = field(default_factory=list)  # e.g., ["Lockpicking", "Stealth"]
 
-    # Core combat/status attributes as direct fields
-    strength: int = 10
-    dexterity: int = 10
-    constitution: int = 10
-    intelligence: int = 10
-    wisdom: int = 10
-    charisma: int = 10
-    max_hp: int = 10
-    current_hp: int = 10
-    max_stamina: int = 10
-    current_stamina: int = 10
-
-    # Survival stats as direct attributes with default values
-    current_hunger: int = 100
-    max_hunger: int = 100
-    current_thirst: int = 100
-    max_thirst: int = 100
-    # current_fatigue: int = 0 # Example
-    # max_fatigue: int = 100 # Example
+    # Structured stats
+    stats: CombatStats = field(default_factory=CombatStats)
+    survival_stats: SurvivalStats = field(default_factory=SurvivalStats)
 
     def to_dict(self) -> Dict[str, Any]:
         """Converts the Character object to a dictionary."""
-        # Use asdict to convert the dataclass instance to a dictionary
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Character":
-        """Creates a Character object from a dictionary."""
-        char_id = data.get("id")
-        # Ensure attributes dict is loaded if present, otherwise default to empty
-        attributes_data = data.get("attributes", {})
+        """Creates a Character object from a dictionary.
+        Assumes 'data' may contain 'stats' and 'survival_stats' as sub-dictionaries.
+        """
+        stats_data = data.get("stats", {})
+        survival_stats_data = data.get("survival_stats", {})
 
-        init_args = {
-            "name": data.get("name", "Unknown Character"),
-            "level": data.get("level", 1),
-            "owner_session_id": data.get("owner_session_id", "unknown_owner"),
-            "attributes": attributes_data,  # Pass the loaded attributes dict
-            "description": data.get("description", ""),
-            "experience": data.get("experience", 0),
-            "gold": data.get("gold", 0),
-            "inventory": data.get("inventory", []),
-            "equipment": data.get("equipment", {}),
-            "skills": data.get("skills", []),
-            "strength": data.get(
-                "strength", attributes_data.get("strength", 10)
-            ),  # Load from root or attributes
-            "dexterity": data.get("dexterity", attributes_data.get("dexterity", 10)),
-            "constitution": data.get(
-                "constitution", attributes_data.get("constitution", 10)
-            ),
-            "intelligence": data.get(
-                "intelligence", attributes_data.get("intelligence", 10)
-            ),
-            "wisdom": data.get("wisdom", attributes_data.get("wisdom", 10)),
-            "charisma": data.get("charisma", attributes_data.get("charisma", 10)),
-            "max_hp": data.get("max_hp", attributes_data.get("max_hp", 10)),
-            "current_hp": data.get("current_hp", attributes_data.get("current_hp", 10)),
-            "max_stamina": data.get(
-                "max_stamina", attributes_data.get("max_stamina", 10)
-            ),
-            "current_stamina": data.get(
-                "current_stamina", attributes_data.get("current_stamina", 10)
-            ),
-            # Load survival stats, using defaults if not present
-            "current_hunger": data.get("current_hunger", 100),
-            "max_hunger": data.get("max_hunger", 100),
-            "current_thirst": data.get("current_thirst", 100),
-            "max_thirst": data.get("max_thirst", 100),
-            # Add other survival stats here if you add them to the dataclass
-            # "current_fatigue": data.get("current_fatigue", 0),
-        }
-        if char_id is not None:
-            init_args["id"] = char_id
+        # Required fields for Character constructor
+        name = data.get("name", "Unknown Character")
+        level = data.get("level", 1)
+        owner_session_id = data.get("owner_session_id", "unknown_owner")
 
-        return cls(**init_args)  # type: ignore[arg-type]
+        # Other direct fields of Character (will use dataclass defaults if not in data)
+        # These are fields like id, attributes, description, experience, etc.
+
+        character_field_names = {f.name for f in fields(cls)}
+
+        kwargs_for_direct_fields = {}
+        for field_name in character_field_names:
+            if field_name not in [
+                "name",
+                "level",
+                "owner_session_id",
+                "stats",
+                "survival_stats",
+            ]:
+                if field_name in data:
+                    kwargs_for_direct_fields[field_name] = data[field_name]
+
+        return cls(
+            name=name,
+            level=level,
+            owner_session_id=owner_session_id,
+            stats=CombatStats.from_dict(stats_data),
+            survival_stats=SurvivalStats.from_dict(survival_stats_data),
+            **kwargs_for_direct_fields,
+        )
 
 
 class NPCBase(TypedDict, total=False):

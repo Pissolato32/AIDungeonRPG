@@ -14,7 +14,9 @@ if TYPE_CHECKING:
 class CharacterStats:
     """Armazena os atributos de combate de um personagem."""
 
-    health: int
+    # health foi renomeado para current_hp e max_hp foi adicionado para consistência
+    current_hp: int
+    max_hp: int
     attack: int
     defense: int
     aim_skill: int = 0  # Habilidade de mira, influencia headshots
@@ -33,9 +35,10 @@ class Character:
         """Inicializa um personagem."""
         self.name = name
         self.stats: CharacterStats = stats  # Atributo obrigatório
-        self.survival_stats: "SurvivalStats" = (
-            survival_stats  # Atributo de sobrevivência
-        )
+        # Garante que survival_stats seja atribuído corretamente.
+        # Se character.survival_stats é esperado em outros lugares,
+        # esta atribuição deve ser mantida ou ajustada conforme a lógica do jogo.
+        self.survival_stats: "SurvivalStats" = survival_stats
         self.is_alive: bool = True
         self.is_zombie: bool = is_zombie
         self.is_infected: bool = (

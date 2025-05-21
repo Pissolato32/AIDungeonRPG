@@ -76,11 +76,13 @@ class CombatSystem:
             message += f" ☣️ {target.name} foi INFECTADO pelo ataque de {attacker.name}!"
             action_effects.append("infectado")
 
-        target.stats.health = max(target.stats.health - damage, 0)
+        target.stats.current_hp = max(
+            target.stats.current_hp - damage, 0
+        )  # Alterado de health para current_hp
 
         message += f" {target.name} sofre {damage} de dano."
 
-        if target.stats.health <= 0:
+        if target.stats.current_hp <= 0:  # Alterado de health para current_hp
             target.is_alive = False
             if target.is_zombie:
                 message += f"\n💀 O zumbi {target.name} foi neutralizado!"
