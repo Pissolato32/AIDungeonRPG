@@ -8,10 +8,11 @@ Adaptado para um cenário de apocalipse zumbi.
 import random  # Importa o módulo random
 from typing import Optional  # Importa Optional para type hinting
 
-# Ajuste no import para refletir a nova estrutura de combat_stats.py
+from utils.combat_log import CombatLog  # Opcional, para registrar o combate
 
 from .combat_stats import Character  # Alterado para import relativo
-from utils.combat_log import CombatLog  # Opcional, para registrar o combate
+
+# Ajuste no import para refletir a nova estrutura de combat_stats.py
 
 
 class CombatSystem:

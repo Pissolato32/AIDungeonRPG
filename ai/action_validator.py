@@ -8,9 +8,7 @@ This module provides functions for validating player actions using artificial in
 import logging
 from typing import Any, Dict
 
-from ai.response_processor import (
-    process_ai_response,
-)
+from ai.response_processor import process_ai_response
 
 logger = logging.getLogger(__name__)
 

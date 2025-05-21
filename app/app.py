@@ -4,8 +4,10 @@ import logging
 import os
 import sys
 import traceback
+import uuid  # Import uuid at the top level
 from typing import Any, Dict, Optional, Tuple
 
+from dotenv import load_dotenv  # Importar dotenv
 from flask import (
     Flask,
     flash,
@@ -16,8 +18,6 @@ from flask import (
     session,
     url_for,
 )
-import uuid  # Import uuid at the top level
-from dotenv import load_dotenv  # Importar dotenv
 
 load_dotenv()  # Carregar variáveis de ambiente do arquivo .env
 
@@ -426,7 +426,8 @@ class GameApp:
         # This manager should now also handle setting a unique character.id
         # and potentially character.owner_session_id if passed in character_data or as an arg.
         return CharacterManager.create_character_from_form(
-            character_data, owner_session_id  # Pass owner_session_id
+            character_data,
+            owner_session_id,  # Pass owner_session_id
         )
 
     def _load_game_state(self, character_id: str) -> Optional[GameState]:
