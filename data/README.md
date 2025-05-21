@@ -1,6 +1,6 @@
-# WebChatRPG Game Data Directory
+# Ai Dungeon RPG Game Data Directory
 
-This directory stores the game data files for WebChatRPG, including:
+This directory stores the game data files for Ai Dungeon RPG, including:
 
 - Character data files (`character_[user_id].json`)
 - Game state files (`game_state_[user_id].json`)
