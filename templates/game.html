@@ -421,40 +421,43 @@
                   <div class="mb-2">
                     <div class="d-flex justify-content-between mb-1">
                       <span>Saúde</span>
-                      <span id="hpDisplay"
-                        >{{ character.current_hp if character else 0 }} / {{
-                        character.max_hp if character else 0 }}</span
-                      >
+                      <span id="hpDisplay">
+                        {{ character.stats.current_hp if character and
+                        character.stats else 0 }} / {{ character.stats.max_hp if
+                        character and character.stats else 0 }}
+                      </span>
                     </div>
                     <div class="progress">
                       <div
                         id="hpBar"
                         class="progress-bar bg-danger"
                         role="progressbar"
-                        style="width: {{ ((character.current_hp if character else 0) / (character.max_hp if character and character.max_hp > 0 else 1) * 100)|round }}%;"
-                        aria-valuenow="{{ character.current_hp if character else 0 }}"
+                        style="width: {{ ((character.stats.current_hp if character and character.stats else 0) / (character.stats.max_hp if character and character.stats and character.stats.max_hp > 0 else 1) * 100)|round }}%;"
+                        aria-valuenow="{{ character.stats.current_hp if character and character.stats else 0 }}"
                         aria-valuemin="0"
-                        aria-valuemax="{{ character.max_hp if character else 1 }}"
+                        aria-valuemax="{{ character.stats.max_hp if character and character.stats else 1 }}"
                       ></div>
                     </div>
                   </div>
                   <div class="mb-2">
                     <div class="d-flex justify-content-between mb-1">
                       <span>Vigor</span>
-                      <span id="staminaDisplay"
-                        >{{ character.current_stamina if character else 0 }} /
-                        {{ character.max_stamina if character else 0 }}</span
-                      >
+                      <span id="staminaDisplay">
+                        {{ character.stats.current_stamina if character and
+                        character.stats else 0 }} / {{
+                        character.stats.max_stamina if character and
+                        character.stats else 0 }}
+                      </span>
                     </div>
                     <div class="progress mb-2">
                       <div
                         id="staminaBar"
                         class="progress-bar bg-success"
                         role="progressbar"
-                        style="width: {{ ((character.current_stamina if character else 0) / (character.max_stamina if character and character.max_stamina > 0 else 1) * 100)|round }}%;"
-                        aria-valuenow="{{ character.current_stamina if character else 0 }}"
+                        style="width: {{ ((character.stats.current_stamina if character and character.stats else 0) / (character.stats.max_stamina if character and character.stats and character.stats.max_stamina > 0 else 1) * 100)|round }}%;"
+                        aria-valuenow="{{ character.stats.current_stamina if character and character.stats else 0 }}"
                         aria-valuemin="0"
-                        aria-valuemax="{{ character.max_stamina if character else 1 }}"
+                        aria-valuemax="{{ character.stats.max_stamina if character and character.stats else 1 }}"
                       ></div>
                     </div>
                   </div>
@@ -462,8 +465,8 @@
                     <div class="d-flex justify-content-between mb-1">
                       <span>Fome</span>
                       <span id="hungerDisplay">
-                        {{ character.current_hunger if character else 0 }} / {{
-                        character.max_hunger if character else 0 }}
+                        {{ character.survival_stats.hunger if character and
+                        character.survival_stats else 0 }} / 100
                       </span>
                     </div>
                     <div class="progress mb-2">
@@ -471,10 +474,10 @@
                         id="hungerBar"
                         class="progress-bar bg-warning"
                         role="progressbar"
-                        style="width: {{ ((character.current_hunger if character else 0) / (character.max_hunger if character and character.max_hunger > 0 else 1) * 100)|round }}%;"
-                        aria-valuenow="{{ character.current_hunger if character else 0 }}"
+                        style="width: {{ ((character.survival_stats.hunger if character and character.survival_stats else 0) / 100 * 100)|round }}%;"
+                        aria-valuenow="{{ character.survival_stats.hunger if character and character.survival_stats else 0 }}"
                         aria-valuemin="0"
-                        aria-valuemax="{{ character.max_hunger if character else 1 }}"
+                        aria-valuemax="100"
                       ></div>
                     </div>
                   </div>
@@ -482,8 +485,8 @@
                     <div class="d-flex justify-content-between mb-1">
                       <span>Sede</span>
                       <span id="thirstDisplay">
-                        {{ character.current_thirst if character else 0 }} / {{
-                        character.max_thirst if character else 0 }}
+                        {{ character.survival_stats.thirst if character and
+                        character.survival_stats else 0 }} / 100
                       </span>
                     </div>
                     <div class="progress mb-2">
@@ -491,10 +494,10 @@
                         id="thirstBar"
                         class="progress-bar bg-info"
                         role="progressbar"
-                        style="width: {{ ((character.current_thirst if character else 0) / (character.max_thirst if character and character.max_thirst > 0 else 1) * 100)|round }}%;"
-                        aria-valuenow="{{ character.current_thirst if character else 0 }}"
+                        style="width: {{ ((character.survival_stats.thirst if character and character.survival_stats else 0) / 100 * 100)|round }}%;"
+                        aria-valuenow="{{ character.survival_stats.thirst if character and character.survival_stats else 0 }}"
                         aria-valuemin="0"
-                        aria-valuemax="{{ character.max_thirst if character else 1 }}"
+                        aria-valuemax="100"
                       ></div>
                     </div>
                   </div>
@@ -508,9 +511,10 @@
                         <span class="attribute-name"
                           ><i class="bi bi-shield-fill me-1"></i>Força</span
                         >
-                        <span class="attribute-value" id="strengthValue"
-                          >{{ character.strength if character else 0 }}</span
-                        >
+                        <span class="attribute-value" id="strengthValue">
+                          {{ character.stats.strength if character and
+                          character.stats else 0 }}
+                        </span>
                       </div>
                     </div>
                     <div class="col-6 mb-2">
@@ -519,9 +523,10 @@
                           ><i class="bi bi-arrow-up-right me-1"></i
                           >Destreza</span
                         >
-                        <span class="attribute-value" id="dexterityValue"
-                          >{{ character.dexterity if character else 0 }}</span
-                        >
+                        <span class="attribute-value" id="dexterityValue">
+                          {{ character.stats.dexterity if character and
+                          character.stats else 0 }}
+                        </span>
                       </div>
                     </div>
                     <div class="col-6 mb-2">
@@ -529,10 +534,10 @@
                         <span class="attribute-name"
                           ><i class="bi bi-heart me-1"></i>Constituição</span
                         >
-                        <span class="attribute-value" id="constitutionValue"
-                          >{{ character.constitution if character else 0
-                          }}</span
-                        >
+                        <span class="attribute-value" id="constitutionValue">
+                          {{ character.stats.constitution if character and
+                          character.stats else 0 }}
+                        </span>
                       </div>
                     </div>
                     <div class="col-6 mb-2">
@@ -541,10 +546,10 @@
                           ><i class="bi bi-lightbulb me-1"></i
                           >Inteligência</span
                         >
-                        <span class="attribute-value" id="intelligenceValue"
-                          >{{ character.intelligence if character else 0
-                          }}</span
-                        >
+                        <span class="attribute-value" id="intelligenceValue">
+                          {{ character.stats.intelligence if character and
+                          character.stats else 0 }}
+                        </span>
                       </div>
                     </div>
                     <div class="col-6 mb-2">
@@ -552,9 +557,10 @@
                         <span class="attribute-name"
                           ><i class="bi bi-book me-1"></i>Sabedoria</span
                         >
-                        <span class="attribute-value" id="wisdomValue"
-                          >{{ character.wisdom if character else 0 }}</span
-                        >
+                        <span class="attribute-value" id="wisdomValue">
+                          {{ character.stats.wisdom if character and
+                          character.stats else 0 }}
+                        </span>
                       </div>
                     </div>
                     <div class="col-6 mb-2">
@@ -562,9 +568,10 @@
                         <span class="attribute-name"
                           ><i class="bi bi-chat me-1"></i>Carisma</span
                         >
-                        <span class="attribute-value" id="charismaValue"
-                          >{{ character.charisma if character else 0 }}</span
-                        >
+                        <span class="attribute-value" id="charismaValue">
+                          {{ character.stats.charisma if character and
+                          character.stats else 0 }}
+                        </span>
                       </div>
                     </div>
                   </div>

@@ -95,8 +95,6 @@ class GameApp:
             # Initialize clients and engines
             # Primeiro, crie a instância do cliente LLM de baixo nível
             self.openrouter_client_instance = OpenRouterClient()
-            # Corrigido usando o adaptador:
-            self.openrouter_client_instance = OpenRouterClient()
             self.openrouter_adapter_instance = OpenRouterAdapter(
                 self.openrouter_client_instance
             )
@@ -471,7 +469,7 @@ class GameApp:
         # GameStateManager.load_game_state needs to accept character_id
         # Correção: Usar diretamente o método do GameEngine para carregar o estado do jogo.
         # Correção: Usar diretamente o método do GameEngine para carregar o estado do jogo.
-        gs: Optional[GameState] = self.game_engine.load_game_state(character_id)  # type: ignore # Assuming GameEngine has this method
+        gs: Optional[GameState] = self.game_engine.load_game_state(character_id)
         if not gs:
             logger.info(
                 f"No game state found for character {character_id}, will create new if needed."
@@ -485,9 +483,7 @@ class GameApp:
         if not active_character_id:
             return None, None
 
-        character = self.game_engine.load_character(
-            active_character_id  # type: ignore # Assuming GameEngine has this method
-        )  # Assumed method
+        character = self.game_engine.load_character(active_character_id)
         game_state = self._load_game_state(active_character_id)
 
         if character and not game_state:
@@ -518,10 +514,8 @@ class GameApp:
             )
             return
 
-        self.game_engine.save_character(character)  # type: ignore # Assuming GameEngine has this method
-        self.game_engine.save_game_state(  # type: ignore # Assuming GameEngine has this method
-            active_character_id, game_state
-        )  # Assumed method
+        self.game_engine.save_character(character)
+        self.game_engine.save_game_state(active_character_id, game_state)
 
     @staticmethod
     def _error_response(error_key: str, error_details: str = "") -> Any:

@@ -4,8 +4,8 @@ Módulo de sistema de sobrevivência.
 """
 # Código Refatorado do Sistema de Sobrevivência
 
-from typing import Dict, List, Optional, Union, Any
-from dataclasses import dataclass
+from typing import Dict, List, Optional, Union, Any, Callable
+from dataclasses import dataclass, field  # Added field
 from core.models import Character
 
 
@@ -16,8 +16,10 @@ class SurvivalConfig:
     STAT_MIN: int = 0
     STAT_MAX: int = 100
     INFECTION_RISK_THRESHOLD: int = 50
-    HP_DAMAGE_FROM_INFECTION: int = 10
-    DEFAULT_ACTION_COST: Dict[str, int] = {"hunger": 5, "thirst": 10}
+    HP_DAMAGE_FROM_INFECTION: int = 10  # Default HP damage from infection
+    DEFAULT_ACTION_COST: Dict[str, int] = field(
+        default_factory=lambda: {"hunger": 5, "thirst": 10}
+    )
 
 
 class SurvivalManager:

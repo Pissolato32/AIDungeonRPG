@@ -564,7 +564,9 @@ class UseItemActionHandler(ActionHandler):
         )
         item_generator = ItemGenerator(data_dir_path)
 
-        item_name_query = details.strip() if isinstance(details, str) else ""
+        item_name_query = (
+            details.strip().lower() if isinstance(details, str) else ""
+        )  # Normalize query
 
         if (
             not item_name_query
@@ -589,7 +591,9 @@ class UseItemActionHandler(ActionHandler):
             elif isinstance(inv_item, dict) and "name" in inv_item:
                 inv_item_name = inv_item["name"]
 
-            if inv_item_name and inv_item_name.lower() == item_name_query.lower():
+            if (
+                inv_item_name and inv_item_name.strip().lower() == item_name_query
+            ):  # Compare with normalized query
                 item_index = i
                 actual_item_name = inv_item_name
                 # Se o item no inventário já é um dict, use-o.
@@ -603,7 +607,8 @@ class UseItemActionHandler(ActionHandler):
                     name_for_lookup: str = actual_item_name
                     item_data = item_generator.get_item_by_name(name_for_lookup)
                 break  # Item encontrado
-
+        logger.info(f"Tentando usar: '{item_name_query}'")
+        logger.info(f"Inventário atual: {character.inventory}")
         if item_index == -1 or actual_item_name is None or item_data is None:
             # actual_item_name é None aqui ou item não foi encontrado, ou item_data não pôde ser carregado.
             return {

@@ -39,6 +39,10 @@ class Enemy(CharacterStats):  # Corrigido para herdar de CharacterStats
     possible_loot: List[str] = field(default_factory=list)
     loot_chance: float = 0.5
 
+    # Status flags for consistency with CombatSystem checks
+    is_zombie: bool = True
+    is_infected: bool = True
+
     def get_xp_reward(self) -> int:
         """Get the XP reward for defeating this enemy."""
         return self.xp_reward * self.level

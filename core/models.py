@@ -28,6 +28,9 @@ class CombatStats:
     current_hp: int = 10
     max_stamina: int = 10
     current_stamina: int = 10
+    attack: int = 1  # Default base attack
+    defense: int = 0  # Default base defense
+    aim_skill: int = 0  # Habilidade de mira, influencia headshots
 
     def to_dict(self) -> Dict[str, Any]:
         """Converts the CombatStats object to a dictionary."""
@@ -88,6 +91,18 @@ class Character:
     # Structured stats
     stats: CombatStats = field(default_factory=CombatStats)
     survival_stats: SurvivalStats = field(default_factory=SurvivalStats)
+
+    @property
+    def is_zombie(self) -> bool:
+        """Player characters are not zombies."""
+        return False
+
+    @property
+    def is_infected(self) -> bool:
+        """Player's infection status based on survival_stats."""
+        return (
+            self.survival_stats.infection_risk > 50
+        )  # Example threshold, adjust as needed
 
     def to_dict(self) -> Dict[str, Any]:
         """Converts the Character object to a dictionary."""
