@@ -17,11 +17,11 @@ def save_data(data: Dict[str, Any], filename: str) -> bool:
     Save data to a JSON file.
 
     Args:
-        data: Data to save
-        filename: File path
+        data: The dictionary data to save.
+        filename: The name of the file (e.g., "my_data.json").
+                  The function will save it within the project's "data" directory.
 
-    Returns:
-        Boolean indicating success of the operation
+    Returns: True if the data was saved successfully, False otherwise.
     """
     try:
         # Ensure we have a valid path with data directory
@@ -54,10 +54,12 @@ def load_data(filename: str) -> Optional[Dict[str, Any]]:
     Load data from a JSON file.
 
     Args:
-        filename: File path
+        filename: The name of the file to load (e.g., "my_data.json").
+                  The function will look for it within the project's "data" directory.
 
     Returns:
-        Loaded data or None if there's an error
+        A dictionary containing the loaded data, or None if the file is not found
+        or an error occurs during loading/parsing.
     """
     try:
         # Ensure we have a valid path with data directory
