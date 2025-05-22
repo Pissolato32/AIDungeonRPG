@@ -1,9 +1,9 @@
 # filepath: c:\Users\rodri\Desktop\REPLIT RPG\core\location_generator.py
-import random
 import logging
+import random
 from typing import Dict, List, Optional
 
-from .game_state_model import LocationCoords, LocationData, GameState
+from .game_state_model import GameState, LocationCoords, LocationData
 from .npc import NPC  # Assumindo que NPC está em core.npc
 
 logger = logging.getLogger(__name__)
