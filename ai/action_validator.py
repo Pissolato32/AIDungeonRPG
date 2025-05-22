@@ -22,13 +22,13 @@ def validate_action_with_ai(
     Validate if an action makes sense using artificial intelligence.
 
     Args:
-        action: The type of action (move, look, etc.)
-        details: The details of the action
-        location: Current location of the player
-        ai_client: Optional artificial intelligence client to use
-
+        action: The type of action the player is attempting (e.g., "move", "look").
+        details: Specific details of the action (e.g., "north", "the strange altar").
+        location: The current location of the player in the game.
+        ai_client: An optional AI client instance for making the validation call.
+                   If None, validation defaults to True.
     Returns:
-        Dictionary with validation result
+        A dictionary with 'valid' (boolean) and 'reason' (string) keys.
     """
     if not ai_client:
         return {"valid": True, "reason": "Validação de IA não disponível."}  # Traduzido

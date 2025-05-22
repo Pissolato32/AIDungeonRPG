@@ -19,12 +19,18 @@ logger = logging.getLogger(__name__)
 
 
 class RarityInfo(TypedDict):
+    """TypedDict for storing rarity information including modifier and chance."""
+
     modifier: float
     chance: float
 
 
 class ItemGenerator:
-    """Handles procedural generation of items with consistent attributes."""
+    """
+    Handles procedural generation of items with consistent attributes for a zombie apocalypse RPG.
+    It can generate various item types like weapons, protection, consumables, tools, and materials.
+    Item properties are influenced by rarity, level, and thematic prefixes/suffixes.
+    """
 
     # Item types - ZOMBIE APOCALYPSE THEME
     ITEM_TYPES = {
@@ -220,10 +226,13 @@ class ItemGenerator:
     def __init__(self, data_dir: str):
         """
         Initialize the item generator.
+        Loads an existing item database or prepares to create a new one.
 
         Args:
-            data_dir: Directory to store item data
+            data_dir: The directory where item data (items_database.json) is stored or will be stored.
         """
+        # TODO: Consider making ai_client injectable for better testability and flexibility.
+        # For example, pass an instance of OpenRouterClient or a compatible AI client to the constructor.
         self.data_dir = data_dir
         self.items_file = os.path.join(data_dir, "items_database.json")
         self.ai_client = OpenRouterClient()  # Corrigida a instanciação da classe
@@ -231,7 +240,14 @@ class ItemGenerator:
 
     @staticmethod
     def _sanitize_for_id(name: str) -> str:
-        """Sanitizes a name to be used as part of an ID."""
+        """
+        Sanitizes a given item name to create a file-system friendly and consistent ID.
+        Converts to lowercase, replaces spaces with underscores, and removes special characters.
+
+        Args:
+            name: The original item name.
+        Returns: A sanitized string suitable for use as an ID.
+        """
         name = name.lower()
         replacements = {
             " ": "_",
@@ -253,10 +269,11 @@ class ItemGenerator:
 
     def load_items_database(self) -> Dict[str, Any]:
         """
-        Load the items database from file.
+        Loads the items database from the `items_database.json` file.
+        If the file doesn't exist or an error occurs, returns a default empty database structure.
 
         Returns:
-            Items database dictionary
+            A dictionary representing the items database.
         """
         if os.path.exists(self.items_file):
             try:
@@ -269,10 +286,10 @@ class ItemGenerator:
 
     def save_items_database(self) -> bool:
         """
-        Save the items database to file.
+        Saves the current in-memory items database to the `items_database.json` file.
 
         Returns:
-            Success status
+            True if saving was successful, False otherwise.
         """
         try:
             os.makedirs(self.data_dir, exist_ok=True)
@@ -286,21 +303,37 @@ class ItemGenerator:
     def get_item(self, item_id: str) -> Optional[Dict[str, Any]]:
         """
         Get an item by its ID.
+
+        Args:
+            item_id: The unique ID of the item to retrieve.
+        Returns:
+            A dictionary containing the item's data if found, otherwise None.
         """
         return self.items_db.get("items", {}).get(item_id)
 
     def get_item_by_name(self, item_name: str) -> Optional[Dict[str, Any]]:
         """
         Get an item by its name.
+        Performs a case-insensitive search.
+
+        Args:
+            item_name: The name of the item to retrieve.
+        Returns:
+            A dictionary containing the item's data if found, otherwise None.
         """
         for _, item_data in self.items_db.get("items", {}).items():
             if item_data.get("name", "").lower() == item_name.lower():
                 return item_data
         return None
 
-    def generate_item_id(self, item_name: str) -> str:
+    def _generate_item_id(self, item_name: str) -> str:
         """
-        Generate a unique ID for an item.
+        Generates a unique ID for an item based on its name.
+        If an ID based on the sanitized name already exists, appends a counter.
+
+        Args:
+            item_name: The name of the item.
+        Returns: A unique string ID for the item.
         """
         base_id = self._sanitize_for_id(item_name)
         item_id = base_id
@@ -314,7 +347,16 @@ class ItemGenerator:
     def _apply_rarity_modifiers(
         base_stats: Dict[str, Any], rarity_mod: float, level: int
     ) -> Dict[str, Any]:
-        """Applies rarity modifiers to item stats."""
+        """
+        Applies rarity and level-based modifiers to an item's base stats.
+
+        Args:
+            base_stats: The original base statistics of the item.
+            rarity_mod: The multiplier associated with the item's rarity.
+            level: The character level or item level, used for scaling.
+        Returns:
+            A new dictionary with the modified stats.
+        """
         modified_stats = base_stats.copy()
         if "damage_min" in modified_stats:
             modified_stats["damage_min"] = max(
@@ -358,7 +400,16 @@ class ItemGenerator:
     def _generate_item_name(
         self, base_name: str, rarity: str, item_category: str
     ) -> str:
-        """Generates a thematic name for the item."""
+        """
+        Generates a thematic and descriptive name for an item based on its base name,
+        rarity, and category. Randomly adds prefixes and suffixes.
+
+        Args:
+            base_name: The fundamental name of the item (e.g., "Faca").
+            rarity: The rarity of the item (e.g., "common", "rare").
+            item_category: The general category of the item (e.g., "weapon", "consumable").
+        Returns: A generated string name for the item.
+        """
         name_parts = [base_name.capitalize()]
 
         if random.random() < 0.6:
@@ -390,6 +441,17 @@ class ItemGenerator:
         rarity: Optional[str] = None,
         weapon_category: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """
+        Generates a weapon item with stats scaled by level and rarity.
+
+        Args:
+            level: The level to scale the weapon for.
+            rarity: Optional specific rarity. If None, a rarity is chosen randomly.
+            weapon_category: Optional specific weapon category (e.g., "weapon_melee", "weapon_ranged").
+                             If None, a category is chosen randomly.
+        Returns:
+            A dictionary representing the generated weapon.
+        """
         if not rarity:
             rarity = self._select_rarity()  # type: ignore
         if not weapon_category:
@@ -450,8 +512,7 @@ class ItemGenerator:
             item_data.pop(
                 "capacity", None
             )  # Thrown items don't usually have capacity in the same way
-
-        item_id = self.generate_item_id(name)
+        item_id = self._generate_item_id(name)
         if "items" not in self.items_db:
             self.items_db["items"] = {}
         self.items_db["items"][item_id] = item_data
@@ -461,6 +522,15 @@ class ItemGenerator:
     def generate_protection(
         self, level: int = 1, rarity: Optional[str] = None
     ) -> Dict[str, Any]:
+        """
+        Generates a piece of protection (armor) with stats scaled by level and rarity.
+
+        Args:
+            level: The level to scale the protection for.
+            rarity: Optional specific rarity. If None, a rarity is chosen randomly.
+        Returns:
+            A dictionary representing the generated protection item.
+        """
         if not rarity:
             rarity = self._select_rarity()  # type: ignore
 
@@ -490,7 +560,7 @@ class ItemGenerator:
                 name, protection_type, rarity, "proteção"  # type: ignore
             ),
         }
-        item_id = self.generate_item_id(name)
+        item_id = self._generate_item_id(name)
         if "items" not in self.items_db:
             self.items_db["items"] = {}
         self.items_db["items"][item_id] = item_data
@@ -503,6 +573,17 @@ class ItemGenerator:
         rarity: Optional[str] = None,
         consumable_category: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """
+        Generates a consumable item (medical or food) with effects scaled by level and rarity.
+
+        Args:
+            level: The level to scale the consumable for.
+            rarity: Optional specific rarity. If None, a rarity is chosen randomly.
+            consumable_category: Optional specific consumable category (e.g., "consumable_medical").
+                                 If None, a category is chosen randomly.
+        Returns:
+            A dictionary representing the generated consumable item.
+        """
         if not rarity:
             rarity = self._select_rarity()  # type: ignore
         if not consumable_category:
@@ -575,7 +656,7 @@ class ItemGenerator:
         if base_consumable_type == "Antibióticos (dose única)":
             item_data["effects"].append({"type": "cure_infection_high", "value": 1})
 
-        item_id = self.generate_item_id(name)
+        item_id = self._generate_item_id(name)
         if "items" not in self.items_db:
             self.items_db["items"] = {}
         self.items_db["items"][item_id] = item_data
@@ -585,6 +666,15 @@ class ItemGenerator:
     def generate_quest_item(
         self, quest_name: Optional[str] = None, level: int = 1
     ) -> Dict[str, Any]:
+        """
+        Generates a quest item, potentially linked to a specific quest name.
+
+        Args:
+            quest_name: Optional name of the quest this item is related to, for naming.
+            level: The level associated with the quest item.
+        Returns:
+            A dictionary representing the generated quest item.
+        """
         base_item_type = random.choice(self.ITEM_TYPES["quest"])  # type: ignore
 
         # Use the base_item_type directly for the name, or append quest_name if
@@ -619,7 +709,7 @@ class ItemGenerator:
                 base_item_type, quest_name
             )
 
-        item_id = self.generate_item_id(name)
+        item_id = self._generate_item_id(name)
         if "items" not in self.items_db:
             self.items_db["items"] = {}
         self.items_db["items"][item_id] = item_data
@@ -629,7 +719,15 @@ class ItemGenerator:
     def generate_tool(
         self, level: int = 1, rarity: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Generates a tool item."""
+        """
+        Generates a tool item with stats scaled by level and rarity.
+
+        Args:
+            level: The level to scale the tool for.
+            rarity: Optional specific rarity. If None, a rarity is chosen randomly.
+        Returns:
+            A dictionary representing the generated tool item.
+        """
         if not rarity:
             rarity = self._select_rarity()  # type: ignore
 
@@ -658,7 +756,7 @@ class ItemGenerator:
             "weight": modified_stats.get("weight", 0.5),
             "description": self._generate_item_description(name, base_tool_type, rarity, "ferramenta"),  # type: ignore
         }
-        item_id = self.generate_item_id(name)
+        item_id = self._generate_item_id(name)
         self.items_db.setdefault("items", {})[item_id] = item_data
         # self.save_items_database() # Removido para otimização de performance em lote
         return item_data
@@ -666,7 +764,15 @@ class ItemGenerator:
     def generate_material_crafting(
         self, level: int = 1, rarity: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Generates a crafting material."""
+        """
+        Generates a crafting material. Rarity has less impact on direct stats for simple materials.
+
+        Args:
+            level: The level context (less impactful for basic materials).
+            rarity: Optional specific rarity. If None, a rarity is chosen randomly.
+        Returns:
+            A dictionary representing the generated crafting material.
+        """
         if not rarity:
             rarity = self._select_rarity()  # type: ignore
 
@@ -687,12 +793,21 @@ class ItemGenerator:
             "weight": base_stats.get("weight", 0.1),
             "description": self._generate_item_description(name, base_material_type, rarity, "material de criação"),  # type: ignore
         }
-        item_id = self.generate_item_id(name)
+        item_id = self._generate_item_id(name)
         self.items_db.setdefault("items", {})[item_id] = item_data
         # self.save_items_database() # Removido para otimização de performance em lote
         return item_data
 
     def generate_random_item(self, level: int = 1) -> Dict[str, Any]:
+        """
+        Generates a random item from various categories, scaled by level.
+        The type of item is chosen based on weighted probabilities.
+
+        Args:
+            level: The level to scale the item for.
+        Returns:
+            A dictionary representing the generated random item.
+        """
         item_categories = [
             "weapon",
             "protection",
@@ -724,6 +839,12 @@ class ItemGenerator:
         return self.generate_consumable(level)  # Final fallback
 
     def _select_rarity(self) -> str:  # type: ignore
+        """
+        Selects an item rarity based on predefined chances.
+
+        Returns:
+            A string representing the chosen rarity (e.g., "common", "rare").
+        """
         rarities = list(self.RARITIES.keys())
         chances = [self.RARITIES[r]["chance"] for r in rarities]  # type: ignore
         return random.choices(rarities, weights=chances, k=1)[0]
@@ -731,6 +852,17 @@ class ItemGenerator:
     def _generate_item_description(
         self, name: str, item_subtype: str, rarity: str, item_category_for_prompt: str
     ) -> str:
+        """
+        Generates a thematic description for an item using an AI model.
+        Falls back to predefined descriptions if AI generation fails.
+
+        Args:
+            name: The full generated name of the item.
+            item_subtype: The specific base type of the item (e.g., "Faca Improvisada").
+            rarity: The rarity of the item.
+            item_category_for_prompt: The general category for the AI prompt (e.g., "arma").
+        Returns: A string description for the item.
+        """
         try:
             prompt = f"""
             Gere uma descrição curta e atmosférica para um item de um RPG de apocalipse zumbi chamado '{name}'.
@@ -778,6 +910,16 @@ class ItemGenerator:
     def _generate_document_content(
         self, doc_type: str, quest_name: Optional[str] = None
     ) -> str:
+        """
+        Generates thematic content for a document-type quest item (e.g., diary entry, map description)
+        using an AI model. Falls back to predefined content if AI generation fails.
+
+        Args:
+            doc_type: The specific type of document (e.g., "Diário de um Sobrevivente Desesperado").
+            quest_name: Optional name of the quest this document is related to, for context.
+        Returns:
+            A string containing the generated content for the document.
+        """
         try:
             context = f" relacionado à tarefa '{quest_name}'" if quest_name else ""
             specific_doc_type = (

@@ -15,11 +15,11 @@ def format_datetime(dt_string: str, format_str: str = "%d/%m/%Y %H:%M") -> str:
     Format a date string to a readable format.
 
     Args:
-        dt_string: Date string in ISO format
-        format_str: Desired output format
+        dt_string: Date string, expected to be in ISO format.
+        format_str: The desired output format string (e.g., "%d/%m/%Y %H:%M").
 
     Returns:
-        Formatted date
+        The formatted date string, or the original string if formatting fails.
     """
     try:
         dt = datetime.fromisoformat(dt_string)

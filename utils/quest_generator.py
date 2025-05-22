@@ -95,11 +95,11 @@ def generate_quest(location: str, difficulty: int = 1) -> Dict[str, Any]:
     Generate a random quest.
 
     Args:
-        location: Quest location
-        difficulty: Quest difficulty
+        location: The general location context for the quest.
+        difficulty: The difficulty level of the quest, influencing rewards.
 
     Returns:
-        Dictionary with quest details
+        A dictionary containing the details of the generated quest.
     """
     try:
         # Select random quest type
@@ -139,11 +139,11 @@ def _generate_quest_details(quest_type: str, location: str) -> Dict[str, str]:
     Generate quest name and description based on type.
 
     Args:
-        quest_type: Quest type
-        location: Quest location
+        quest_type: The type of the quest (e.g., "scavenge", "rescue").
+        location: The location context for the quest description.
 
     Returns:
-        Dictionary with quest name and description
+        A dictionary containing the 'name' and 'description' of the quest.
     """
     target_key = random.choice(QUEST_TARGETS[quest_type])
     target_name = target_key  # Using the key directly as we removed translations
@@ -181,11 +181,11 @@ def _generate_quest_rewards(difficulty: int, quest_type: str) -> List[str]:
     Generate quest rewards based on difficulty and quest type.
 
     Args:
-        difficulty: Quest difficulty
-        quest_type: The type of quest, to tailor rewards
+        difficulty: The difficulty level of the quest.
+        quest_type: The type of the quest, used to tailor appropriate reward categories.
 
     Returns:
-        List of reward items (as strings for now, could be item objects later)
+        A list of item names as rewards.
     """
     # Inicializa o ItemGenerator. O path para 'data' precisa ser relativo ao local de execução
     # ou absoluto. Assumindo que 'data' está no mesmo nível que 'core' e 'utils'.
@@ -259,10 +259,10 @@ def _get_default_quest(location: str) -> Dict[str, Any]:
     Get a default quest for fallback.
 
     Args:
-        location: Quest location
+        location: The location context for the default quest.
 
     Returns:
-        Default quest data
+        A dictionary representing a default fallback quest.
     """
     return {
         "name": "Tarefa Simples de Sobrevivência",

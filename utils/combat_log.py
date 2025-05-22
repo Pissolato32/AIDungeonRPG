@@ -34,7 +34,10 @@ class CombatRound:
 
 
 class CombatLog:
-    """Gerenciador de registro de combate."""
+    """
+    Manages the log of actions and events during a combat encounter.
+    It tracks rounds, actions within rounds, and calculates combat statistics.
+    """
 
     def __init__(self) -> None:
         """Inicializa um novo registro de combate."""
@@ -73,14 +76,14 @@ class CombatLog:
         Adiciona uma ação ao registro da rodada atual.
 
         Args:
-            actor: Quem realizou a ação
-            target: Alvo da ação
-            action_type: Tipo de ação (ataque, cura, etc)
-            damage: Dano causado (se houver)
-            healing: Cura realizada (se houver)
-            effects: Efeitos adicionais da ação
-            is_headshot: Se a ação foi um tiro na cabeça
-            infection_attempted: Se houve uma tentativa de infecção
+            actor: The name of the combatant performing the action.
+            target: The name of the target of the action.
+            action_type: A string describing the type of action (e.g., "attack", "heal").
+            damage: Optional integer amount of damage dealt.
+            healing: Optional integer amount of healing done.
+            effects: Optional list of strings describing additional effects.
+            is_headshot: Optional boolean indicating if the action was a headshot.
+            infection_attempted: Optional boolean indicating if an infection was attempted.
         """
         if not self.rounds:
             self.start_new_round()
@@ -100,7 +103,13 @@ class CombatLog:
         self._update_stats(action)
 
     def add_status_effect(self, target: str, effect: str) -> None:
-        """Adiciona um efeito de status a um alvo."""
+        """
+        Adds a status effect to a target in the current round.
+
+        Args:
+            target: The name of the target receiving the status effect.
+            effect: A string describing the status effect.
+        """
         if not self.rounds:
             self.start_new_round()
 
@@ -110,7 +119,16 @@ class CombatLog:
         self.rounds[-1].status_effects[target].append(effect)
 
     def get_round_summary(self, round_number: int) -> Dict[str, Any]:
-        """Retorna um resumo de uma rodada específica."""
+        """
+        Retrieves a summary of a specific combat round.
+
+        Args:
+            round_number: The number of the round to summarize.
+
+        Returns:
+            A dictionary containing the round number, actions, and status effects for that round,
+            or an empty dictionary if the round number is invalid.
+        """
         if 0 < round_number <= len(self.rounds):
             round_data = self.rounds[round_number - 1]
             return {
@@ -133,11 +151,22 @@ class CombatLog:
         return {}
 
     def get_combat_statistics(self) -> Dict[str, Any]:
-        """Retorna estatísticas gerais do combate."""
+        """
+        Returns overall statistics for the entire combat encounter.
+
+        Returns:
+            A dictionary containing various combat statistics.
+        """
         return self.combat_stats
 
     def get_actor_statistics(self, actor: str) -> Dict[str, Any]:
-        """Retorna estatísticas específicas de um participante."""
+        """
+        Retrieves combat statistics for a specific actor (participant).
+
+        Args:
+            actor: The name of the actor whose statistics are to be retrieved.
+        Returns: A dictionary of statistics specific to the given actor.
+        """
         stats = {
             "damage_dealt": 0,
             "damage_taken": 0,
@@ -170,7 +199,12 @@ class CombatLog:
         return stats
 
     def _update_stats(self, action: CombatAction) -> None:
-        """Atualiza as estatísticas gerais do combate."""
+        """
+        Updates the overall combat statistics based on a single combat action.
+
+        Args:
+            action: The CombatAction object to process.
+        """
         if action.damage:
             self.combat_stats["total_damage_dealt"] += action.damage
             # Assumindo que o log pode diferenciar se o alvo é sobrevivente
@@ -202,7 +236,13 @@ class CombatLog:
                 self.combat_stats["infeccoes_bem_sucedidas"] += 1
 
     def get_highlight_moments(self) -> List[Dict[str, Any]]:
-        """Retorna os momentos mais destacados do combate."""
+        """
+        Identifies and returns a list of the most significant or "highlight" moments
+        from the combat log, sorted by impact.
+
+        Returns:
+            A list of dictionaries, each representing a highlight moment with its type, round, and description.
+        """
         highlights = []
 
         for round_data in self.rounds:

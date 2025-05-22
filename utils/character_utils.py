@@ -3,12 +3,20 @@ Character utility functions for consistent attribute, gold, and inventory calcul
 """
 
 import random
-from typing import List, Union, Dict, Any
+from typing import (
+    List,
+    Union,
+    Dict,
+    Any,
+)  # Keep Any if item structure is truly variable
 
 
 def calculate_initial_gold() -> int:  # Removido race
     """
-    Calculate initial "currency" for a survivor.
+    Calcula o "ouro" (ou moeda equivalente) inicial para um sobrevivente.
+
+    Returns:
+        int: A quantidade de ouro inicial.
     """
     # Sobreviventes começam com poucos recursos "monetários"
     base_currency = random.randint(5, 30)
@@ -23,8 +31,18 @@ def generate_initial_inventory(
     description: str = "",
 ) -> List[Union[str, Dict[str, Any]]]:
     """
-    Generate initial inventory for a survivor based on attributes and description.
-    No longer depends on class or race.
+    Gera um inventário inicial para um sobrevivente com base em atributos e descrição.
+    Não depende mais de classe ou raça.
+
+    Args:
+        strength: Força do personagem.
+        dexterity: Destreza do personagem.
+        intelligence: Inteligência do personagem.
+        description: Descrição textual do personagem, usada para itens temáticos.
+
+    Returns:
+        List[Union[str, Dict[str, Any]]]: Uma lista de itens iniciais.
+                                         Cada item pode ser uma string (nome) ou um dicionário (estrutura de item).
     """
     inventory: List[Union[str, Dict[str, Any]]] = (
         [  # Itens básicos para qualquer sobrevivente

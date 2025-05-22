@@ -82,7 +82,7 @@ logger = logging.getLogger(__name__)
 class GameApp:
     """Main application class for the RPG game."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         try:
             self.app = Flask(
                 __name__,
@@ -116,19 +116,19 @@ class GameApp:
             logger.error(traceback.format_exc())
             raise
 
-    def _configure_app(self):
+    def _configure_app(self) -> None:
         """Configure Flask application settings."""
         Config.configure_flask_app(self.app)
         self.app.config["SESSION_TYPE"] = os.environ.get("SESSION_TYPE", "filesystem")
         Session(self.app)
 
-    def register_app_specific_routes(self):
+    def register_app_specific_routes(self) -> None:
         """Register any application-specific routes not handled by blueprints."""
         # Este método pode ser usado para rotas que não estão no blueprint principal.
         # Por enquanto, está vazio, pois as rotas principais estão em routes.py
         pass
 
-    def run(self):
+    def run(self) -> None:
         """Run the Flask application."""
         config = self.get_app_config()
         GameLogger.log_game_action(
@@ -142,11 +142,11 @@ class GameApp:
 
     # Route handlers (these methods will be called by the blueprint routes)
     @staticmethod
-    def index():
+    def index() -> str:
         """Handle the index route."""
         return render_template("index.html")
 
-    def character(self):
+    def character(self) -> Any:
         """Handle character creation and editing."""
         owner_session_id = SessionManager.ensure_session_initialized()
         # Assumes GameEngine is updated for multi-character support
@@ -223,7 +223,7 @@ class GameApp:
                 existing_characters=existing_characters_list,
             )
 
-    def game(self):
+    def game(self) -> Any:
         """Handle the main game view."""
         active_character_id = session.get("active_character_id")
         owner_session_id = session.get(
@@ -268,7 +268,7 @@ class GameApp:
 
         return render_template("game.html", character=character, game_state=game_state)
 
-    def process_action(self):
+    def process_action(self) -> Any:
         """Process a game action from the API."""
         active_character_id = session.get("active_character_id")
         owner_session_id = session.get("user_id")
@@ -346,7 +346,7 @@ class GameApp:
             logger.error(traceback.format_exc())
             return self._error_response("unexpected", str(e))
 
-    def reset_game(self):
+    def reset_game(self) -> Any:
         """Reset the game state but keeps character basic info for re-creation."""
         active_character_id = session.get("active_character_id")
         owner_session_id = session.get("user_id")
@@ -394,7 +394,7 @@ class GameApp:
             return self._error_response("reset_error", str(e))
 
     # Removed @staticmethod as this method uses self
-    def select_character(self, character_id: str):
+    def select_character(self, character_id: str) -> Any:
         """Handle character selection."""
         # Ensure this method has a body. If it's not fully implemented yet,
         # you can use 'pass' as a placeholder.
@@ -416,7 +416,7 @@ class GameApp:
             return redirect(url_for("routes.character"))
 
     # Removed @staticmethod as this method uses self
-    def delete_character(self, character_id: str):
+    def delete_character(self, character_id: str) -> Any:
         """Handle character deletion."""
         owner_session_id = session.get("user_id")
         if not owner_session_id:

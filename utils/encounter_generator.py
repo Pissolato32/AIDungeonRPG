@@ -43,7 +43,10 @@ class Encounter(TypedDict):
 
 
 class EncounterGenerator:
-    """Gerador de encontros dinâmicos."""
+    """
+    Generates dynamic encounters for an RPG, including enemies, rewards,
+    and environmental effects based on player level and location.
+    """
 
     def __init__(self) -> None:
         """Inicializa o gerador de encontros."""
@@ -97,15 +100,15 @@ class EncounterGenerator:
         self, player_level: int, location_type: str, time_of_day: str = "day"
     ) -> Encounter:
         """
-        Gera um encontro baseado no nível do jogador e ambiente.
+        Generates a complete encounter based on player level, location type, and time of day.
 
         Args:
-            player_level: Nível do jogador
-            location_type: Tipo de localização
-            time_of_day: Período do dia
+            player_level: The current level of the player.
+            location_type: The type of location where the encounter occurs (e.g., "forest", "cave").
+            time_of_day: The current time of day (e.g., "day", "night").
 
         Returns:
-            Encontro gerado com inimigos e recompensas
+            An Encounter TypedDict containing all details of the generated encounter.
         """
         # Determinar dificuldade
         difficulty = self._calculate_difficulty(player_level, time_of_day)
@@ -136,7 +139,15 @@ class EncounterGenerator:
 
     @staticmethod
     def _calculate_difficulty(player_level: int, time_of_day: str) -> int:
-        """Calcula a dificuldade do encontro."""
+        """
+        Calculates the difficulty rating for an encounter.
+
+        Args:
+            player_level: The player's current level.
+            time_of_day: The current time of day ("day" or "night").
+        Returns:
+            An integer representing the calculated difficulty.
+        """
         base_difficulty = random.randint(max(1, player_level - 2), player_level + 2)
 
         # Modificadores de dificuldade
@@ -148,7 +159,16 @@ class EncounterGenerator:
     def _generate_enemies(
         self, difficulty: int, player_level: int, location_type: str
     ) -> List[EncounterEnemy]:
-        """Gera lista de inimigos para o encontro."""
+        """
+        Generates a list of enemies for the encounter, scaled by difficulty and player level.
+
+        Args:
+            difficulty: The calculated difficulty of the encounter.
+            player_level: The player's current level.
+            location_type: The type of location, influencing enemy types.
+        Returns:
+            A list of EncounterEnemy TypedDicts.
+        """
         num_enemies = random.randint(1, max(2, difficulty // 2))
         enemies: List[EncounterEnemy] = []
 
@@ -177,7 +197,16 @@ class EncounterGenerator:
     def _generate_rewards(
         self, difficulty: int, player_level: int, num_enemies: int
     ) -> EncounterReward:
-        """Gera recompensas para o encontro."""
+        """
+        Generates rewards for successfully completing the encounter.
+
+        Args:
+            difficulty: The difficulty of the encounter.
+            player_level: The player's level (can influence reward quality, though not directly used here yet).
+            num_enemies: The number of enemies in the encounter.
+        Returns:
+            An EncounterReward TypedDict.
+        """
         base_xp = 50 * difficulty
         base_gold = 10 * difficulty
 
@@ -197,7 +226,14 @@ class EncounterGenerator:
         }
 
     def _select_enemy_type(self, location_type: str) -> str:
-        """Seleciona tipo de inimigo baseado na localização."""
+        """
+        Selects an appropriate enemy type based on the location.
+
+        Args:
+            location_type: The type of location.
+        Returns:
+            A string representing the chosen enemy type (e.g., "goblin", "lobo").
+        """
         location_enemies = {
             "forest": ["goblin", "lobo"],
             "mountain": ["bandido", "lobo"],
@@ -212,7 +248,14 @@ class EncounterGenerator:
 
     @staticmethod
     def _generate_enemy_name(enemy_type: str) -> str:
-        """Gera um nome único para o inimigo."""
+        """
+        Generates a descriptive name for an enemy by adding a prefix to its type.
+
+        Args:
+            enemy_type: The base type of the enemy.
+        Returns:
+            A string name for the enemy (e.g., "Astuto Goblin").
+        """
         prefixes = {
             "goblin": ["Astuto", "Cruel", "Sorrateiro"],
             "lobo": ["Feroz", "Selvagem", "Faminto"],
@@ -226,7 +269,15 @@ class EncounterGenerator:
     def _get_environmental_effects(
         self, location_type: str, time_of_day: str
     ) -> Dict[str, Any]:
-        """Obtém efeitos ambientais para o encontro."""
+        """
+        Determines environmental effects based on location and time of day.
+
+        Args:
+            location_type: The type of location.
+            time_of_day: The current time of day.
+        Returns:
+            A dictionary of environmental effects (e.g., vision penalties, cover bonuses).
+        """
         effects = self._environment_effects.get(location_type, {}).copy()
 
         # Modificadores baseados no período do dia
@@ -238,7 +289,15 @@ class EncounterGenerator:
 
     @staticmethod
     def _calculate_escape_chance(difficulty: int, location_type: str) -> float:
-        """Calcula a chance de fuga do encontro."""
+        """
+        Calculates the chance for the player to escape the encounter.
+
+        Args:
+            difficulty: The difficulty of the encounter.
+            location_type: The type of location.
+        Returns:
+            A float representing the escape chance (0.0 to 1.0).
+        """
         base_chance = 0.5  # 50% base
 
         # Modificar baseado na dificuldade
@@ -258,7 +317,16 @@ class EncounterGenerator:
     def _generate_description(
         enemies: List[EncounterEnemy], location_type: str, time_of_day: str
     ) -> str:
-        """Gera uma descrição narrativa do encontro."""
+        """
+        Generates a narrative description for the start of the encounter.
+
+        Args:
+            enemies: A list of enemies in the encounter.
+            location_type: The type of location.
+            time_of_day: The current time of day.
+        Returns:
+            A string describing the encounter setup.
+        """
         time_desc = (
             "Sob a luz do dia" if time_of_day == "day" else "Na escuridão da noite"
         )
@@ -285,7 +353,16 @@ class EncounterGenerator:
         )
 
     def _generate_loot(self, difficulty: int, num_enemies: int) -> List[Dict[str, Any]]:
-        """Gera itens de loot baseados na dificuldade."""
+        """
+        Generates loot items for the encounter.
+        Currently generates simple item dictionaries; TODO: Integrate with ItemGenerator.
+
+        Args:
+            difficulty: The difficulty of the encounter.
+            num_enemies: The number of enemies (can influence quantity/quality of loot).
+        Returns:
+            A list of dictionaries, each representing a loot item.
+        """
         # TODO: Integrar com ItemGenerator para gerar itens mais ricos e consistentes
         #       com o sistema de itens do jogo. Atualmente, gera dicts simples.
         items = []
@@ -301,7 +378,11 @@ class EncounterGenerator:
 
     @staticmethod
     def _generate_common_item() -> Dict[str, Any]:
-        """Gera um item comum."""
+        """
+        Generates a random common item from a predefined list.
+        Returns:
+            A dictionary representing a common item.
+        """
         common_items = [
             {"name": "Poção de Cura", "type": "consumable", "value": 10},
             {"name": "Faca", "type": "weapon", "value": 5},
@@ -312,7 +393,14 @@ class EncounterGenerator:
 
     @staticmethod
     def _generate_rare_item(difficulty: int) -> Dict[str, Any]:
-        """Gera um item raro baseado na dificuldade."""
+        """
+        Generates a random rare item from a predefined list, with a bonus scaled by difficulty.
+
+        Args:
+            difficulty: The difficulty of the encounter, used to scale item bonus.
+        Returns:
+            A dictionary representing a rare item.
+        """
         rare_items = [
             {
                 "name": "Espada Mágica",
@@ -337,7 +425,15 @@ class EncounterGenerator:
 
     @staticmethod
     def _generate_reputation_rewards(difficulty: int) -> Optional[Dict[str, int]]:
-        """Gera recompensas de reputação com facções."""
+        """
+        Optionally generates reputation changes with factions based on the encounter.
+
+        Args:
+            difficulty: The difficulty of the encounter, influencing the amount of reputation change.
+        Returns:
+            A dictionary mapping faction names to reputation changes, or None if no
+            reputation change occurs.
+        """
         if random.random() < 0.3:  # 30% chance de afetar reputação
             factions = ["Vila", "Guilda", "Mercadores"]
             faction = random.choice(factions)
@@ -346,7 +442,14 @@ class EncounterGenerator:
 
     @staticmethod
     def _determine_encounter_type(enemies: List[EncounterEnemy]) -> str:
-        """Determina o tipo do encontro baseado nos inimigos presentes."""
+        """
+        Determines a descriptive type for the encounter based on the number and types of enemies.
+
+        Args:
+            enemies: A list of enemies in the encounter.
+        Returns:
+            A string describing the encounter type (e.g., "empty", "goblin_group", "horde").
+        """
         if not enemies:
             return "empty"
 

@@ -21,12 +21,14 @@ def roll_dice(num_dice: int, sides: int, modifier: int = 0) -> Dict[str, Any]:
     Roll dice in NdS+M format (N dice with S sides plus modifier M).
 
     Args:
-        num_dice: Number of dice to roll
-        sides: Number of sides on each die
-        modifier: Modifier to add to the result
+        num_dice: The number of dice to roll. Must be at least 1.
+        sides: The number of sides on each die.
+        modifier: An integer modifier to add to the sum of the rolls.
 
     Returns:
-        Dictionary with roll results including individual dice, total, and formatted string
+        A dictionary containing the individual dice rolls ('dice'), the total result
+        ('total'), the modifier ('modifier'), the formula string ('formula'),
+        a detailed result string ('result_string'), and a success flag ('success').
     """
     try:
         num_dice = max(1, num_dice)  # Ensure at least one die is rolled
@@ -75,10 +77,10 @@ def calculate_attribute_modifier(attribute_score: int) -> int:
     Calculate the modifier for an attribute score (DnD style).
 
     Args:
-        attribute_score: Attribute score
+        attribute_score: The raw attribute score (e.g., Strength 14).
 
     Returns:
-        Calculated modifier
+        The calculated modifier (e.g., for Strength 14, modifier is +2).
     """
     return (attribute_score - 10) // 2
 
@@ -95,14 +97,15 @@ def calculate_damage(
     Calculate attack damage considering all combat factors.
 
     Args:
-        attacker_stats: Attacker statistics
-        defender_stats: Defender statistics
-        attack_type: Attack type (basic, light, heavy)
-        weapon_stats: Optional weapon statistics
-        skill_stats: Optional skill statistics
+        attacker_stats: A dictionary of the attacker's relevant statistics (e.g., strength).
+        defender_stats: A dictionary of the defender's relevant statistics (e.g., defense, resistance).
+        attack_type: The type of attack (e.g., "basic", "light", "heavy"). Defaults to "basic".
+        weapon_stats: Optional dictionary of weapon statistics modifying the attack.
+        skill_stats: Optional dictionary of skill statistics modifying the attack.
 
     Returns:
-        Dict containing damage info, hit status, critical hit, and effects
+        A dictionary containing the calculated 'damage', 'hit' status (boolean),
+        'critical' status (boolean), a list of 'effects', and 'roll_info'.
     """
     try:
         # Ensure attack_type_str is always a string for internal use
@@ -213,11 +216,11 @@ def _get_attack_parameters(
     Get attack parameters based on attack type.
 
     Args:
-        attack_type: Attack type (basic, light, heavy)
-        attacker_stats: Attacker statistics
+        attack_type: The type of attack ("basic", "light", or "heavy").
+        attacker_stats: A dictionary of the attacker's statistics, must include "strength".
 
     Returns:
-        Tuple with min damage, max damage, and hit chance
+        A tuple containing (min_damage, max_damage, hit_chance_multiplier).
     """
     strength = attacker_stats.get("strength", 10)
 

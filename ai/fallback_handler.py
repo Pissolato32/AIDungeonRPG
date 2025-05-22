@@ -116,13 +116,12 @@ def generate_fallback_response(prompt: str) -> FallbackResponse:
     scripted response to maintain a basic level of interaction.
 
     Args:
-        prompt: The original prompt text that would have been sent to the AI
+        prompt: The original prompt text that would have been sent to the AI.
 
     Returns:
-        A structured fallback response based on the identified prompt type
+        A FallbackResponse TypedDict structured based on the identified prompt type.
     """
     prompt_type = identify_prompt_type(prompt)
-
     logger.warning(
         "API fallback triggered",
         extra={
@@ -142,13 +141,12 @@ def identify_prompt_type(prompt: str) -> PromptType:
     most appropriate type of fallback response to provide.
 
     Args:
-        prompt: The original prompt text to analyze
+        prompt: The original prompt text to analyze.
 
     Returns:
-        The identified prompt type for response selection
+        The identified PromptType (e.g., "move", "combat", "default").
     """
     prompt_lower = prompt.lower()
-
     for prompt_type, indicators in PROMPT_TYPE_INDICATORS.items():
         for indicator in indicators:
             if indicator in prompt_lower:

@@ -29,10 +29,10 @@ class ErrorHandler:
         Log an error with context.
 
         Args:
-            error: The exception to log
-            context: Additional context information
+            error: The exception object that was raised.
+            context: Optional string providing additional context about where the error occurred.
         """
-        error_message = f"{context + ': ' if context else ''}{error}"
+        error_message = f"{context + ': ' if context else ''}{str(error)}"
         logger.error(error_message)
         logger.error(traceback.format_exc())
 
@@ -42,7 +42,15 @@ class ErrorHandler:
     ) -> str:
         """
         Internal helper to get a pre-defined error message.
-        Since translations are removed, this will return pt-br strings.
+        Currently, it directly returns Portuguese (pt-br) strings as translations are not implemented.
+
+        Args:
+            error_key: The key identifying the error message.
+            language: The desired language for the error message (currently ignored, defaults to pt-br).
+            error_details: Optional specific details about the error to include in the message.
+
+        Returns:
+            The formatted error message string.
         """
         # language parameter is kept for signature compatibility but ignored.
         messages_pt_br = {
@@ -65,6 +73,17 @@ class ErrorHandler:
     def create_error_response(
         error_key: str, language: str, error_details: str = ""
     ) -> Any:
+        """
+        Creates a standardized JSON error response for API endpoints.
+
+        Args:
+            error_key: The key identifying the error.
+            language: The language for the error message (currently defaults to pt-br).
+            error_details: Optional specific details about the error.
+
+        Returns:
+            A Flask JSON response object.
+        """
         # language parameter is kept for signature compatibility but will be
         # 'pt-br'
         message = ErrorHandler._get_error_message(
@@ -77,6 +96,16 @@ class ErrorHandler:
     def handle_route_error(
         e: Exception, route_name: str, language: str
     ) -> Dict[str, Any]:
+        """
+        Handles errors occurring within a specific route, logs them, and prepares an error dictionary.
+
+        Args:
+            e: The exception that occurred.
+            route_name: The name of the route where the error occurred.
+            language: The language for the error message (currently defaults to pt-br).
+        Returns:
+            A dictionary containing the error response details.
+        """
         # Log the error
         ErrorHandler.log_error(e, f"Error in {route_name} route")
 

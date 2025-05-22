@@ -101,13 +101,13 @@ class GameUIManager {
         const actionForm = document.getElementById('actionForm');
         if (!actionForm) return;
 
-        actionForm.addEventListener('submit', (e) => {
+        actionForm.addEventListener('submit', async (e) => { // Added async
             e.preventDefault();
             if (this.isProcessing) return; // Prevent multiple submissions
 
             const actionType = "interpret"; // Ação agora é sempre "interpret"
             const actionDetailsElement = document.getElementById('actionDetails');
-            const actionDetails = actionDetailsElement ? actionDetailsElement.value : '';
+            const actionDetails = actionDetailsElement ? actionDetailsElement.value.trim() : '';
 
             // Show loading state
             this.isProcessing = true;
@@ -122,41 +122,26 @@ class GameUIManager {
             // Show "thinking" indicator
             this.showThinkingIndicator();
 
-            // Send action to server
-            this.sendGameAction(
-                actionType,
-                actionDetails,
-                (data) => {
-                    // Remove thinking indicator
-                    this.removeThinkingIndicator();
+            try {
+                const data = await this.sendGameAction(actionType, actionDetails);
+                this.handleActionResponse(data);
+                this.updateProgressBars();
+            } catch (error) {
+                this.displayErrorMessage('Ocorreu um erro ao processar sua ação. Por favor, tente novamente.');
+            } finally {
+                // Remove thinking indicator
+                this.removeThinkingIndicator();
 
-                    // Reset form
-                    if (actionDetailsElement) actionDetailsElement.value = '';
+                // Reset form
+                if (actionDetailsElement) actionDetailsElement.value = '';
 
-                    // Reset button state
+                // Reset button state
+                if (submitButton) {
                     submitButton.disabled = false;
                     submitButton.innerHTML = originalButtonContent;
-                    this.isProcessing = false;
-
-                    // Handle the response
-                    this.handleActionResponse(data);
-
-                    // Update bars after response
-                    this.updateProgressBars();
-                },
-                (error) => {
-                    // Remove thinking indicator
-                    this.removeThinkingIndicator();
-
-                    // Reset button state
-                    submitButton.disabled = false;
-                    submitButton.innerHTML = originalButtonContent;
-                    this.isProcessing = false;
-
-                    // Display error message
-                    this.displayErrorMessage('An error occurred while processing your action. Please try again.');
                 }
-            );
+                this.isProcessing = false;
+            }
         });
     }
 
@@ -219,13 +204,13 @@ class GameUIManager {
     setupCombatButtons() {
         const combatButtons = document.querySelectorAll('#attackBasic, #attackLight, #attackHeavy, #fleeButton');
         combatButtons.forEach(button => {
-            button.addEventListener('click', () => {
+            button.addEventListener('click', async () => { // Added async
                 const action = button.id === 'fleeButton' ? 'flee' : 'attack';
                 const details = button.id === 'attackBasic' ? 'basic' :
                     button.id === 'attackLight' ? 'light' :
                         button.id === 'attackHeavy' ? 'heavy' : '';
 
-                this.handleButtonAction(action, details, combatButtons);
+                await this.handleButtonAction(action, details, combatButtons);
             });
         });
     }
@@ -237,8 +222,8 @@ class GameUIManager {
         const restButton = document.getElementById('restButton');
         if (!restButton) return;
 
-        restButton.addEventListener('click', () => {
-            this.handleButtonAction('rest', '', restButton);
+        restButton.addEventListener('click', async () => { // Added async
+            await this.handleButtonAction('rest', '', restButton);
         });
     }
 
@@ -249,12 +234,12 @@ class GameUIManager {
         // Use event delegation for dynamically added items
         const inventoryList = document.getElementById('inventoryList');
         if (inventoryList) {
-            inventoryList.addEventListener('click', (event) => {
+            inventoryList.addEventListener('click', async (event) => { // Added async
                 if (event.target && event.target.classList.contains('use-item-btn')) {
                     const button = event.target;
                     const itemName = button.dataset.itemName; // Corrected: was getAttribute('data-item')
                     if (itemName) {
-                        this.handleButtonAction('use_item', itemName, [button]); // Pass button as an array
+                        await this.handleButtonAction('use_item', itemName, [button]); // Pass button as an array
                     }
                 }
             });
@@ -269,7 +254,7 @@ class GameUIManager {
      * @param {NodeList|Array|HTMLElement} buttons - Buttons to disable during processing
      * @param {boolean} reloadOnSuccess - Whether to reload the page on success
      */
-    handleButtonAction(action, details, buttons, reloadOnSuccess = true) {
+    async handleButtonAction(action, details, buttons, reloadOnSuccess = true) { // Added async
         // Add player's action to the message container
         this.addPlayerMessage(`${action}${details ? ': ' + details : ''}`);
 
@@ -280,36 +265,23 @@ class GameUIManager {
         const buttonArray = buttons instanceof NodeList || Array.isArray(buttons) ? Array.from(buttons) : [buttons];
         buttonArray.forEach(btn => { btn.disabled = true; });
 
-        // Send action to server
-        this.sendGameAction(
-            action,
-            details,
-            (data) => {
-                // Remove thinking indicator
-                this.removeThinkingIndicator();
+        try {
+            const data = await this.sendGameAction(action, details);
+            this.handleActionResponse(data);
 
-                // Handle the response
-                this.handleActionResponse(data);
-
-                // Reload page or continue
-                if (reloadOnSuccess && data.success && (data.combat || data.new_location)) {
-                    window.location.reload();
-                } else {
-                    // Re-enable buttons
-                    buttonArray.forEach(btn => { btn.disabled = false; });
-                }
-            },
-            (error) => {
-                // Remove thinking indicator
-                this.removeThinkingIndicator();
-
+            if (reloadOnSuccess && data.success && (data.combat_ongoing !== undefined || data.new_location)) {
+                // Reload if combat state changed or location changed
+                window.location.reload();
+            } else {
                 // Re-enable buttons
                 buttonArray.forEach(btn => { btn.disabled = false; });
-
-                // Display error message
-                this.displayErrorMessage('An error occurred while processing your action. Please try again.');
             }
-        );
+        } catch (error) {
+            this.displayErrorMessage('Ocorreu um erro ao processar sua ação. Por favor, tente novamente.');
+        } finally {
+            this.removeThinkingIndicator();
+            buttonArray.forEach(btn => { btn.disabled = false; });
+        }
     }
 
     /**
@@ -330,36 +302,29 @@ class GameUIManager {
             }
         });
 
-        confirmResetBtn.addEventListener('click', () => {
+        confirmResetBtn.addEventListener('click', async () => { // Added async
             // Disable button
             confirmResetBtn.disabled = true;
             confirmResetBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Resetting...';
 
-            // Send reset action to server
-            fetch(this.RESET_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // Add CSRF token if you implement Flask-WTF
-                    // 'X-CSRFToken': csrfToken 
-                }
-            })
-                .then(response => response.json())
-                .then(data => { // Changed from () to data
-                    if (data.redirect_url) { // Check for redirect_url
-                        window.location.href = data.redirect_url;
-                    } else {
-                        window.location.href = '/character'; // Fallback
+            try {
+                const response = await fetch(this.RESET_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // 'X-CSRFToken': csrfToken // Add if using Flask-WTF
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    // Re-enable button
-                    confirmResetBtn.disabled = false;
-                    confirmResetBtn.innerHTML = 'Reset Game';
-                    // Show error message
-                    this.displayErrorMessage('An error occurred while resetting the game. Please try again.');
                 });
+                const data = await response.json();
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.href = CHARACTER_PAGE_URL; // Use constant
+                }
+            } catch (error) {
+                console.error('Error resetting game:', error);
+                this.displayErrorMessage('Ocorreu um erro ao resetar o jogo. Por favor, tente novamente.');
+            } // Button re-enablement is handled by the modal closing or page redirect
         });
     }
 
@@ -367,10 +332,8 @@ class GameUIManager {
      * Send a game action to the server
      * @param {string} action - The action to perform
      * @param {string} details - Additional details for the action
-     * @param {Function} onSuccess - Callback function on successful response
-     * @param {Function} onError - Callback function on error
      */
-    sendGameAction(action, details, onSuccess, onError) {
+    async sendGameAction(action, details) { // Added async, removed callbacks
         const requestOptions = {
             method: 'POST',
             headers: {
@@ -382,20 +345,14 @@ class GameUIManager {
             body: JSON.stringify({ action, details })
         };
 
-        fetch(this.API_ENDPOINT, requestOptions)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (onSuccess) onSuccess(data);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                if (onError) onError(error);
-            });
+        const response = await fetch(this.API_ENDPOINT, requestOptions);
+        if (!response.ok) {
+            // Attempt to get error message from server response if possible
+            const errorData = await response.json().catch(() => ({})); // Gracefully handle non-JSON error responses
+            const errorMessage = errorData.message || `HTTP error! Status: ${response.status}`;
+            throw new Error(errorMessage);
+        }
+        return response.json();
     }
 
     /**

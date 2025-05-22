@@ -58,20 +58,24 @@ class ConversationManager:
         """Initialize the conversation manager.
 
         Args:
-            max_history_length: Maximum messages to keep in history
+            max_history_length: The maximum number of messages to retain in the history for each conversation.
         """
         self.max_history_length = max_history_length
         self.conversation_history: Dict[str, List[ConversationMessage]] = {}
         self.npc_memory: Dict[str, NPCMemory] = {}
 
     def get_conversation_prompt(self, context: ConversationContext) -> str:
-        """Generate a contextual conversation prompt.
+        """
+        Generates a contextual conversation prompt for the AI model.
+        This prompt includes NPC details, memory of past interactions with the player,
+        recent game context, and the conversation history.
 
         Args:
-            context: Current conversation context and NPC details
+            context: A ConversationContext object containing details about the NPC,
+                     player, and recent game events.
 
         Returns:
-            str: Formatted prompt for AI model
+            A formatted string prompt ready to be sent to an AI language model.
         """
         if context.npc_name not in self.npc_memory:
             self.npc_memory[context.npc_name] = NPCMemory(
@@ -141,8 +145,8 @@ class ConversationManager:
         """Add a user message to conversation history.
 
         Args:
-            character_id: Unique identifier for the player character
-            message: Content of the player's message
+            character_id: The unique identifier for the player character.
+            message: The content of the player's message.
         """
         if character_id not in self.conversation_history:
             self.conversation_history[character_id] = []
@@ -161,10 +165,10 @@ class ConversationManager:
         """Add an NPC response to conversation history.
 
         Args:
-            character_id: Unique identifier for the player character
-            npc_name: Name of the responding NPC
-            message: Content of the NPC's response
-            context: Optional additional context for memory updates
+            character_id: The unique identifier for the player character.
+            npc_name: The name of the NPC responding.
+            message: The content of the NPC's response.
+            context: Optional dictionary containing context for updating the NPC's memory (e.g., new topics discussed).
         """
         if character_id not in self.conversation_history:
             self.conversation_history[character_id] = []
@@ -180,10 +184,10 @@ class ConversationManager:
         """Retrieve conversation history for a character.
 
         Args:
-            character_id: Unique identifier for the player character
+            character_id: The unique identifier for the player character.
 
         Returns:
-            List of conversation messages
+            A list of ConversationMessage TypedDicts, or an empty list if no history exists.
         """
         return self.conversation_history.get(character_id, [])
 
@@ -191,7 +195,7 @@ class ConversationManager:
         """Trim conversation history to maximum length.
 
         Args:
-            character_id: Unique identifier for the player character
+        character_id: The unique identifier for the player character whose history needs trimming.
         """
         if character_id in self.conversation_history:
             history = self.conversation_history[character_id]
@@ -202,7 +206,15 @@ class ConversationManager:
     def _update_npc_memory(
         self, npc_name: str, message: str, context: Dict[str, Any]
     ) -> None:
-        """Update NPC's memory based on conversation context."""
+        """
+        Updates the NPC's internal memory based on the current conversation context.
+        This includes topics discussed, shared information, mentioned quests, and trust level changes.
+
+        Args:
+            npc_name: The name of the NPC whose memory is being updated.
+            message: The latest message in the conversation (currently unused in this method but kept for potential future use).
+            context: A dictionary containing data to update the NPC's memory, such as 'topics', 'shared_info', 'quests', 'trust_change'.
+        """
         if npc_name not in self.npc_memory:
             self.npc_memory[npc_name] = NPCMemory(
                 topics=set(), shared_info=set(), mentioned_quests=set(), trust_level=0
