@@ -2,11 +2,12 @@
 """
 Module for constructing prompts for the AI model.
 """
-from typing import TypedDict, NotRequired, List, Optional
 
-from core.npc import NPC  # Importar a classe NPC
-from core.models import Character  # Importar Character do models
+from typing import List, NotRequired, Optional, TypedDict
+
 from core.game_state_model import GameState, MessageDict
+from core.models import Character  # Importar Character do models
+from core.npc import NPC  # Importar a classe NPC
 
 
 class PromptBuilder:
