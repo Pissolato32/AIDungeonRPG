@@ -6,3 +6,4 @@ flask_session/*
 _pychace_/*
 .vscode/*
 uv.lock
+format_code.bat
