@@ -8,10 +8,12 @@ Adaptado para um cenário de apocalipse zumbi.
 import random  # Importa o módulo random
 from typing import Optional, Union  # Importa Optional e Union para type hinting
 
+from utils.combat_log import CombatLog  # Opcional, para registrar o combate
+
+from .enemy import Enemy  # Import Enemy class
+
 # Import Character from core.models
 from .models import Character
-from .enemy import Enemy  # Import Enemy class
-from utils.combat_log import CombatLog  # Opcional, para registrar o combate
 
 
 class CombatSystem:
