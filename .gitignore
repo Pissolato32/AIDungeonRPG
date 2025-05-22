@@ -1,0 +1,8 @@
+.env
+data/*
+!data/.gitkeep
+!data/README.md
+flask_session/*
+_pychace_/*
+.vscode/*
+uv.lock

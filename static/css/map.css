@@ -1,0 +1,93 @@
+.map-container {
+    border: 1px solid #444;
+    background-color: #1a1a1a;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    height: 300px;
+    overflow: hidden;
+}
+
+.game-map-canvas {
+    display: block;
+    margin: 0 auto;
+    background-color: #222;
+    image-rendering: pixelated;
+}
+
+.map-legend {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+    font-size: 0.8rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin: 0 10px;
+}
+
+.legend-color {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 5px;
+    border-radius: 2px;
+}
+
+.map-controls {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.map-controls button {
+    margin: 0 5px;
+    padding: 2px 8px;
+    background-color: #333;
+    border: 1px solid #555;
+    color: #fff;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.map-controls button:hover {
+    background-color: #444;
+}
+
+.map-icon {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);
+}
+
+.map-icon-city {
+    color: #FFD700;
+}
+
+.map-icon-village {
+    color: #90EE90;
+}
+
+.map-icon-dungeon {
+    color: #FF6347;
+}
+
+.map-icon-quest {
+    color: #1E90FF;
+}
+
+.map-icon-player {
+    color: #FF0000;
+    font-size: 18px;
+    z-index: 10;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.2); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+}

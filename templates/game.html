@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="{{ session.get('language', 'pt-br') }}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="AI Dungeon RPG - An interactive text-based adventure game"
+    />
+    <title>AI Dungeon RPG - Em Jogo</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="game-container">
+      <!-- Top Navigation Bar -->
+      <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="{{ url_for('routes.index') }}">
+            <i class="bi bi-controller me-2"></i>AI Dungeon RPG
+          </a>
+
+          <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarNav"
+            aria-controls="navbarNav"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+          >
+            <span class="navbar-toggler-icon"></span>
+          </button>
+
+          <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('routes.character') }}">
+                  <i class="bi bi-person-badge me-1"></i> Personagem
+                </a>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link" id="restButton">
+                  <i class="bi bi-moon-stars me-1"></i> Descansar
+                </button>
+              </li>
+            </ul>
+            <span class="navbar-text">
+              <span class="me-3">
+                <i class="bi bi-person-circle me-1"></i>
+                <span id="navbarCharacterName"
+                  >{{ character.name if character else 'N/A' }}</span
+                >
+              </span>
+              <span class="me-3">
+                <i class="bi bi-star-fill me-1 text-warning"></i> Nv.
+                <span id="navbarCharacterLevel"
+                  >{{ character.level if character else 1 }}</span
+                >
+              </span>
+            </span>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Main Game Content -->
+      <div class="row game-content m-0">
+        <!-- Game Scene -->
+        <div class="col-md-8 game-scene p-0">
+          <div class="card h-100 border-0 rounded-0">
+            <div class="card-header bg-dark border-bottom">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                  <i class="bi bi-compass me-2"></i
+                  ><span id="currentLocationDisplay"
+                    >{{ game_state.current_location if game_state else 'Local
+                    Desconhecido' }}</span
+                  >
+                </h5>
+                <div>
+                  <button
+                    class="btn btn-sm btn-outline-danger"
+                    id="resetGameBtn"
+                  >
+                    <i class="bi bi-arrow-clockwise me-1"></i>{{ 'Resetar Jogo'
+                    }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body p-0">
+              <!-- Story Output -->
+              <div class="game-output">
+                <div id="game-static-info" class="p-3">
+                  <div id="sceneDescription" class="scene-description mb-3">
+                    {{ game_state.scene_description if game_state else
+                    'Carregando cena...' }}
+                  </div>
+
+                  {% if game_state.npcs_present %}
+                  <div id="npcsPresent" class="npcs-present mb-3">
+                    <strong>NPCs Presentes:</strong>
+                    <span id="npcList"
+                      >{{ ', '.join(game_state.npcs_present) }}</span
+                    >
+                  </div>
+                  {% endif %} {% if game_state.events %}
+                  <div id="currentEvents" class="events mb-3">
+                    <strong>Eventos:</strong>
+                    <span id="eventList"
+                      >{{ ', '.join(game_state.events) }}</span
+                    >
+                  </div>
+                  {% endif %}
+                </div>
+
+                <div id="messagesContainer" class="messages-container">
+                  {% for message in game_state.messages if game_state and
+                  game_state.messages %} {% if message.role == 'user' %}
+                  <div class="message message-user">
+                    <strong>Você:</strong> {{ message.content }}
+                  </div>
+                  {% elif message.role == 'assistant' %}
+                  <div class="message message-assistant">
+                    <strong>Mestre:</strong> {{ message.content }}
+                  </div>
+                  {% else %} {# Para 'system' ou outros roles não especificados
+                  #}
+                  <div class="message message-system">
+                    <em>{{ message.content }}</em>
+                  </div>
+                  {% endif %} {% endfor %}
+                </div>
+                <!-- Container for Interactive Choices -->
+                <div id="interactiveChoicesContainer" class="p-3 text-center">
+                  <!-- Buttons will be added here by JavaScript -->
+                </div>
+              </div>
+
+              <!-- Combat Interface -->
+              <div
+                id="combatInterface"
+                class="combat-interface p-3 {% if not game_state or not game_state.combat or not game_state.combat.get('active') or not game_state.combat.get('enemy') %}d-none{% endif %}"
+              >
+                <div class="card bg-danger bg-opacity-25 mb-3">
+                  <div class="card-body">
+                    <h5 class="card-title d-flex justify-content-between">
+                      <span id="enemyName"
+                        >{{ game_state.combat.enemy.name if game_state and
+                        game_state.combat and game_state.combat.get('enemy')
+                        else 'Inimigo' }}</span
+                      >
+                      <span
+                        >HP:
+                        <span id="enemyHp"
+                          >{{ game_state.combat.enemy.current_hp if game_state
+                          and game_state.combat and
+                          game_state.combat.get('enemy') else 0 }}</span
+                        >
+                        /
+                        <span id="enemyMaxHp"
+                          >{{ game_state.combat.enemy.max_hp if game_state and
+                          game_state.combat and game_state.combat.get('enemy')
+                          else 0 }}</span
+                        ></span
+                      >
+                    </h5>
+                    <div
+                      class="progress mb-2"
+                      role="progressbar"
+                      aria-label="Enemy health"
+                    >
+                      <div
+                        id="enemyHpBar"
+                        class="progress-bar bg-danger"
+                        style="width: {{ ((game_state.combat.enemy.current_hp / (game_state.combat.enemy.max_hp if game_state.combat.enemy.max_hp > 0 else 1) * 100) if game_state and game_state.combat and game_state.combat.get('enemy') else 0)|round }}%;"
+                        aria-valuenow="{{ game_state.combat.enemy.current_hp if game_state and game_state.combat and game_state.combat.get('enemy') else 0 }}"
+                        aria-valuemin="0"
+                        aria-valuemax="{{ game_state.combat.enemy.max_hp if game_state and game_state.combat and game_state.combat.get('enemy') else 1 }}"
+                      ></div>
+                    </div>
+                    <p id="enemyDescription" class="mb-1 small">
+                      {{ game_state.combat.enemy.description if game_state and
+                      game_state.combat and game_state.combat.get('enemy') else
+                      'Uma criatura ameaçadora está diante de você.' }}
+                    </p>
+
+                    <div class="combat-log mt-3">
+                      <h6 class="border-top pt-2">Registro de Combate:</h6>
+                      <div id="combatLog" class="small">
+                        {% if game_state and game_state.combat and
+                        game_state.combat.get('log') %} {% for entry in
+                        game_state.combat.log %}
+                        <div>{{ entry }}</div>
+
+                        {% endfor %} {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="combat-actions d-flex gap-2">
+                  <button
+                    id="attackBasic"
+                    class="btn btn-outline-primary flex-grow-1"
+                  >
+                    <i class="bi bi-slash-circle me-1"></i>{{ 'Ataque Básico' }}
+                  </button>
+                  <button
+                    id="attackLight"
+                    class="btn btn-outline-success flex-grow-1"
+                  >
+                    <i class="bi bi-wind me-1"></i>Ataque Leve
+                  </button>
+                  <button
+                    id="attackHeavy"
+                    class="btn btn-outline-danger flex-grow-1"
+                  >
+                    <i class="bi bi-lightning-charge me-1"></i>Ataque Pesado
+                  </button>
+                  <button id="fleeButton" class="btn btn-outline-secondary">
+                    <i class="bi bi-door-open me-1"></i>Fugir
+                  </button>
+                </div>
+              </div>
+
+              <!-- Input Form -->
+              <div class="game-input-container p-3 border-top">
+                <form
+                  id="actionForm"
+                  class="{% if game_state and game_state.combat and game_state.combat.get('active') %}d-none{% endif %}"
+                >
+                  <div class="input-group">
+                    <input
+                      type="text"
+                      id="actionDetails"
+                      class="form-control"
+                      placeholder="O que você quer fazer?"
+                    />
+                    <button type="submit" class="btn btn-primary">
+                      <i class="bi bi-send"></i>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Character Status & Inventory -->
+        <div class="col-md-4 character-panel p-0">
+          <div class="card h-100 border-0 rounded-0">
+            <div class="card-header bg-dark border-bottom">
+              <ul class="nav nav-tabs card-header-tabs">
+                <li class="nav-item" role="presentation">
+                  <a
+                    class="nav-link active"
+                    id="inventory-tab-button"
+                    data-bs-toggle="tab"
+                    href="#inventoryTab"
+                    role="tab"
+                    aria-controls="inventoryTab"
+                    aria-selected="true"
+                    >Inventário</a
+                  >
+                </li>
+                <li class="nav-item" role="presentation">
+                  <a
+                    class="nav-link"
+                    id="stats-tab-button"
+                    data-bs-toggle="tab"
+                    href="#statsTab"
+                    role="tab"
+                    aria-controls="statsTab"
+                    aria-selected="false"
+                    >Atributos</a
+                  >
+                </li>
+                <li class="nav-item" role="presentation">
+                  <a
+                    class="nav-link"
+                    id="quests-tab-button"
+                    data-bs-toggle="tab"
+                    href="#questsTab"
+                    role="tab"
+                    aria-controls="questsTab"
+                    aria-selected="false"
+                    >Missões</a
+                  >
+                </li>
+                <li class="nav-item" role="presentation">
+                  <a
+                    class="nav-link"
+                    id="map-tab-button"
+                    data-bs-toggle="tab"
+                    href="#mapTab"
+                    role="tab"
+                    aria-controls="mapTab"
+                    aria-selected="false"
+                    >Mapa</a
+                  >
+                </li>
+              </ul>
+            </div>
+
+            <div class="card-body tab-content">
+              <!-- Inventory Tab -->
+              <div
+                class="tab-pane fade show active"
+                id="inventoryTab"
+                role="tabpanel"
+                aria-labelledby="inventory-tab-button"
+              >
+                <div class="d-flex justify-content-between mb-3">
+                  <h5 class="mb-0">Inventário</h5>
+                  <span class="gold-display"
+                    ><i class="bi bi-coin text-warning me-1"></i
+                    ><span id="characterGold"
+                      >{{ character.gold if character else 0 }}</span
+                    >
+                    Ouro</span
+                  >
+                </div>
+                <div class="inventory-list">
+                  {% if character and character.inventory %}
+                  <div class="list-group" id="inventoryList">
+                    {% for item in character.inventory %}
+                    <div
+                      class="list-group-item d-flex justify-content-between align-items-center"
+                    >
+                      {% if item is mapping %} {% set item_name =
+                      item.get('name', 'Unnamed Item') %}
+                      <span>
+                        {% if character.equipment and item_name in
+                        character.equipment.values() %}
+                        <strong>{{ item_name }}*</strong>
+                        <span class="badge bg-success ms-2">Equipado</span>
+                        {% else %} {{ item_name }} {% endif %} {% if
+                        item.get('durability') is not none %}
+                        <span class="badge bg-secondary ms-2"
+                          >Durability: {{ item.durability }}</span
+                        >
+                        {% endif %} {% if item.get('quantity') is not none and
+                        item.quantity > 1 %}
+                        <span class="badge bg-info ms-2"
+                          >x{{ item.quantity }}</span
+                        >
+                        {% endif %}
+                      </span>
+                      <button
+                        class="btn btn-sm btn-outline-primary use-item-btn"
+                        data-item-name="{{ item_name }}"
+                      >
+                        Usar
+                      </button>
+                      {% else %} {# Item is a simple string #}
+                      <span>{{ item }}</span>
+                      <button
+                        class="btn btn-sm btn-outline-primary use-item-btn"
+                        data-item-name="{{ item }}"
+                      >
+                        Usar
+                      </button>
+                      {% endif %}
+                    </div>
+                    {% endfor %}
+                  </div>
+                  {% else %}
+                  <div
+                    id="emptyInventoryMessage"
+                    class="text-center text-secondary p-3"
+                  >
+                    <i class="bi bi-inbox-fill fs-4"></i>
+                    <p class="mt-2">Inventário vazio.</p>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              <!-- Stats Tab -->
+              <div
+                class="tab-pane fade"
+                id="statsTab"
+                role="tabpanel"
+                aria-labelledby="stats-tab-button"
+              >
+                <div class="character-info mb-4">
+                  <h4 id="characterNameStats">
+                    {{ character.name if character else 'N/A' }}
+                  </h4>
+                  <div id="characterClassLevelStats">
+                    Nv. {{ character.level if character else 1 }}
+                  </div>
+                  <div id="experienceDisplayStats" class="text-secondary">
+                    Experiência: {{ character.experience if character else 0 }}
+                    / {{ (character.level if character else 1) * 100 }}
+                  </div>
+                  <div class="progress mt-2 mb-3">
+                    <div
+                      id="expBar"
+                      class="progress-bar bg-info"
+                      role="progressbar"
+                      style="width: {{ ((character.experience if character else 0) / ((character.level if character else 1) * 100 if (character.level if character else 1) * 100 > 0 else 1) * 100)|round }}%;"
+                      aria-valuenow="{{ character.experience if character else 0 }}"
+                      aria-valuemin="0"
+                      aria-valuemax="{{ (character.level if character else 1) * 100 }}"
+                    ></div>
+                  </div>
+                </div>
+                <div class="status-bars mb-4">
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                      <span>Saúde</span>
+                      <span id="hpDisplay">
+                        {{ character.stats.current_hp if character and
+                        character.stats else 0 }} / {{ character.stats.max_hp if
+                        character and character.stats else 0 }}
+                      </span>
+                    </div>
+                    <div class="progress">
+                      <div
+                        id="hpBar"
+                        class="progress-bar bg-danger"
+                        role="progressbar"
+                        style="width: {{ ((character.stats.current_hp if character and character.stats else 0) / (character.stats.max_hp if character and character.stats and character.stats.max_hp > 0 else 1) * 100)|round }}%;"
+                        aria-valuenow="{{ character.stats.current_hp if character and character.stats else 0 }}"
+                        aria-valuemin="0"
+                        aria-valuemax="{{ character.stats.max_hp if character and character.stats else 1 }}"
+                      ></div>
+                    </div>
+                  </div>
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                      <span>Vigor</span>
+                      <span id="staminaDisplay">
+                        {{ character.stats.current_stamina if character and
+                        character.stats else 0 }} / {{
+                        character.stats.max_stamina if character and
+                        character.stats else 0 }}
+                      </span>
+                    </div>
+                    <div class="progress mb-2">
+                      <div
+                        id="staminaBar"
+                        class="progress-bar bg-success"
+                        role="progressbar"
+                        style="width: {{ ((character.stats.current_stamina if character and character.stats else 0) / (character.stats.max_stamina if character and character.stats and character.stats.max_stamina > 0 else 1) * 100)|round }}%;"
+                        aria-valuenow="{{ character.stats.current_stamina if character and character.stats else 0 }}"
+                        aria-valuemin="0"
+                        aria-valuemax="{{ character.stats.max_stamina if character and character.stats else 1 }}"
+                      ></div>
+                    </div>
+                  </div>
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                      <span>Fome</span>
+                      <span id="hungerDisplay">
+                        {{ character.survival_stats.hunger if character and
+                        character.survival_stats else 0 }} / 100
+                      </span>
+                    </div>
+                    <div class="progress mb-2">
+                      <div
+                        id="hungerBar"
+                        class="progress-bar bg-warning"
+                        role="progressbar"
+                        style="width: {{ ((character.survival_stats.hunger if character and character.survival_stats else 0) / 100 * 100)|round }}%;"
+                        aria-valuenow="{{ character.survival_stats.hunger if character and character.survival_stats else 0 }}"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                      ></div>
+                    </div>
+                  </div>
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                      <span>Sede</span>
+                      <span id="thirstDisplay">
+                        {{ character.survival_stats.thirst if character and
+                        character.survival_stats else 0 }} / 100
+                      </span>
+                    </div>
+                    <div class="progress mb-2">
+                      <div
+                        id="thirstBar"
+                        class="progress-bar bg-info"
+                        role="progressbar"
+                        style="width: {{ ((character.survival_stats.thirst if character and character.survival_stats else 0) / 100 * 100)|round }}%;"
+                        aria-valuenow="{{ character.survival_stats.thirst if character and character.survival_stats else 0 }}"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="attributes">
+                  <h5 class="mb-3">Atributos</h5>
+                  <div class="row">
+                    <div class="col-6 mb-2">
+                      <div class="attribute">
+                        <span class="attribute-name"
+                          ><i class="bi bi-shield-fill me-1"></i>Força</span
+                        >
+                        <span class="attribute-value" id="strengthValue">
+                          {{ character.stats.strength if character and
+                          character.stats else 0 }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="col-6 mb-2">
+                      <div class="attribute">
+                        <span class="attribute-name"
+                          ><i class="bi bi-arrow-up-right me-1"></i
+                          >Destreza</span
+                        >
+                        <span class="attribute-value" id="dexterityValue">
+                          {{ character.stats.dexterity if character and
+                          character.stats else 0 }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="col-6 mb-2">
+                      <div class="attribute">
+                        <span class="attribute-name"
+                          ><i class="bi bi-heart me-1"></i>Constituição</span
+                        >
+                        <span class="attribute-value" id="constitutionValue">
+                          {{ character.stats.constitution if character and
+                          character.stats else 0 }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="col-6 mb-2">
+                      <div class="attribute">
+                        <span class="attribute-name"
+                          ><i class="bi bi-lightbulb me-1"></i
+                          >Inteligência</span
+                        >
+                        <span class="attribute-value" id="intelligenceValue">
+                          {{ character.stats.intelligence if character and
+                          character.stats else 0 }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="col-6 mb-2">
+                      <div class="attribute">
+                        <span class="attribute-name"
+                          ><i class="bi bi-book me-1"></i>Sabedoria</span
+                        >
+                        <span class="attribute-value" id="wisdomValue">
+                          {{ character.stats.wisdom if character and
+                          character.stats else 0 }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="col-6 mb-2">
+                      <div class="attribute">
+                        <span class="attribute-name"
+                          ><i class="bi bi-chat me-1"></i>Carisma</span
+                        >
+                        <span class="attribute-value" id="charismaValue">
+                          {{ character.stats.charisma if character and
+                          character.stats else 0 }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Quests Tab -->
+              <div
+                class="tab-pane fade"
+                id="questsTab"
+                role="tabpanel"
+                aria-labelledby="quests-tab-button"
+              >
+                <h5 class="mb-3">Missões</h5>
+                <ul class="list-group" id="questList">
+                  {% if character and character.quests %} {% for quest in
+                  character.quests %}
+                  <li class="list-group-item">
+                    <div>
+                      <strong>{{ quest.title }}</strong>
+                      <span
+                        class="badge rounded-pill ms-2 {% if quest.status == 'completed' %}bg-success{% elif quest.status == 'in_progress' %}bg-warning{% else %}bg-secondary{% endif %}"
+                        >{% if quest.status == 'completed' %}Completa {% elif
+                        quest.status == 'in_progress' %}Em Progresso {% elif
+                        quest.status == 'failed' %}Falhou {% else %}Pendente {%
+                        endif %}
+                      </span>
+                    </div>
+                    <div class="small text-muted">{{ quest.description }}</div>
+                  </li>
+                  {% endfor %} {% else %}
+                  <li
+                    id="noQuestsMessage"
+                    class="list-group-item text-secondary"
+                  >
+                    Nenhuma missão ativa.
+                  </li>
+                  {% endif %}
+                </ul>
+              </div>
+              <!-- Map Tab -->
+              <div
+                class="tab-pane fade"
+                id="mapTab"
+                role="tabpanel"
+                aria-labelledby="map-tab-button"
+              >
+                <h5 class="mb-3">Mapa</h5>
+                <pre
+                  id="gameMapDisplay"
+                  class="border p-2 bg-light text-dark"
+                  style="
+                    min-height: 200px;
+                    white-space: pre;
+                    font-family: monospace;
+                  "
+                >
+{{ game_state.world_map_ascii if game_state and game_state.world_map_ascii else 'Mapa não disponível.' }}</pre
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reset Game Confirmation Modal -->
+    <div
+      class="modal fade"
+      id="resetGameModal"
+      tabindex="-1"
+      aria-labelledby="resetGameModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="resetGameModalLabel">Resetar Jogo</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Fechar"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p>
+              Tem certeza que deseja resetar o progresso do jogo? Seu personagem
+              será mantido, mas o estado do mundo e missões serão reiniciados.
+            </p>
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle-fill me-2"></i>
+              Isso não pode ser desfeito. Você poderá editar seu personagem
+              antes de começar uma nova aventura.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button type="button" class="btn btn-danger" id="confirmResetBtn">
+              Resetar Jogo
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Pass initial data to JavaScript if needed, or fetch on load
+      const initialCharacterData = {{ character.to_dict()|tojson if character else '{}' }};
+      const initialGameStateData = {{ game_state.to_dict()|tojson if game_state else '{}' }};
+      const csrfToken = "{{ csrf_token() if csrf_token else '' }}"; // For Flask-WTF CSRF protection if you add it
+      const currentLanguage = "{{ session.get('language', 'pt-br') }}";
+
+      // URLs for JS
+      const API_ACTION_URL = "{{ url_for('routes.api_action') }}";
+      const API_RESET_URL = "{{ url_for('routes.api_reset') }}";
+      const CHARACTER_PAGE_URL = "{{ url_for('routes.character') }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+  </body>
+</html>
