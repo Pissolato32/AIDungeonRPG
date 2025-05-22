@@ -7,3 +7,4 @@ _pychace_/*
 .vscode/*
 uv.lock
 format_code.bat
+pyproject.toml
