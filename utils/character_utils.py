@@ -3,12 +3,12 @@ Character utility functions for consistent attribute, gold, and inventory calcul
 """
 
 import random
-from typing import (
+from typing import (  # Keep Any if item structure is truly variable
+    Any,
+    Dict,
     List,
     Union,
-    Dict,
-    Any,
-)  # Keep Any if item structure is truly variable
+)
 
 
 def calculate_initial_gold() -> int:  # Removido race
