@@ -21,7 +21,11 @@ from dotenv import load_dotenv  # Importar dotenv
 
 load_dotenv()  # Carregar variáveis de ambiente do arquivo .env
 
-from ai.openrouter import OpenRouterClient  # Corrigido o caminho de importação
+# Importar tanto o cliente de baixo nível quanto o wrapper/adaptador
+from ai.openrouter import OpenRouterClient
+from ai.game_ai_client import (
+    GameAIClient,
+)  # Importar o GameAIClient que o GameEngine espera
 from app.routes import bp as routes_bp
 from core.error_handler import ErrorHandler
 from core.game_engine import GameEngine
@@ -35,6 +39,33 @@ from web.config import Config
 from web.game_state_manager import GameStateManager
 from web.logger import GameLogger
 from web.session_manager import SessionManager
+
+# Define the expected message format (AIPrompt) and an adapter if needed
+# This definition should ideally be in a shared AI types file (e.g., ai/types.py)
+# or where GameAIClient expects it. Adding it here for demonstration based on user request.
+from typing import TypedDict, Protocol
+
+
+class AIPrompt(TypedDict):
+    role: str
+    content: str
+
+
+# Adapter class if OpenRouterClient doesn't directly match GameAIClient's expected interface
+# (e.g., if GameAIClient expects list[AIPrompt] and OpenRouterClient expects list[dict])
+class OpenRouterAdapter:
+    def __init__(self, client: OpenRouterClient):
+        self.client = client
+
+    def generate_response(
+        self, messages: list[AIPrompt], generation_params: dict | None = None
+    ) -> str:
+        # Convert AIPrompt list to dict list for the underlying client
+        messages_dict = [
+            {"role": msg["role"], "content": msg["content"]} for msg in messages
+        ]
+        return self.client.generate_response(messages_dict, generation_params)
+
 
 # Add the project root directory to the Python path
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -61,11 +92,17 @@ class GameApp:
             self._configure_app()
             # O blueprint será registrado após a criação da instância
             # _game_app_instance
-
             # Initialize clients and engines
-            self.ai_client = (
-                OpenRouterClient()
-            )  # Corrigida a instanciação e nome da variável
+            # Primeiro, crie a instância do cliente LLM de baixo nível
+            self.openrouter_client_instance = OpenRouterClient()
+            # Corrigido usando o adaptador:
+            self.openrouter_client_instance = OpenRouterClient()
+            self.openrouter_adapter_instance = OpenRouterAdapter(
+                self.openrouter_client_instance
+            )
+            self.ai_client = GameAIClient(
+                ai_client=self.openrouter_adapter_instance
+            )  # Usar o adaptador
             self.game_engine = GameEngine()  # GameEngine agora tem seu próprio data_dir
 
             # data_dir para GameApp, se necessário para outros fins (embora
@@ -74,6 +111,9 @@ class GameApp:
             if not os.path.exists(self.data_dir):
                 os.makedirs(self.data_dir)
         except Exception as e:
+            # Adicionado logging mais detalhado para erros de inicialização
+            logger.critical("--------------------------------------------------")
+            logger.critical("CRITICAL ERROR DURING APP INITIALIZATION")
             logger.error(f"Error during app initialization: {e}")
             logger.error(traceback.format_exc())
             raise
@@ -285,9 +325,7 @@ class GameApp:
             # game_state.messages is already updated by GameEngine.process_action
             # with the user's input (if non-empty) and the AI's response.
             # The calls below were redundant and used the old add_message signature.
-            if game_state:  # Ensure game_state is not None
-                # No longer need to add messages here; GameEngine handles it.
-                pass
+            # Removed redundant message additions as GameEngine handles them.
 
             self._save_character_and_state(active_character_id, character, game_state)
 
@@ -431,13 +469,14 @@ class GameApp:
 
     def _load_game_state(self, character_id: str) -> Optional[GameState]:
         # GameStateManager.load_game_state needs to accept character_id
-        gs = GameStateManager.load_game_state(
-            self.game_engine, character_id
-        )  # Assumes GameStateManager is updated
+        # Correção: Usar diretamente o método do GameEngine para carregar o estado do jogo.
+        # Correção: Usar diretamente o método do GameEngine para carregar o estado do jogo.
+        gs: Optional[GameState] = self.game_engine.load_game_state(character_id)  # type: ignore # Assuming GameEngine has this method
         if not gs:
             logger.info(
                 f"No game state found for character {character_id}, will create new if needed."
             )
+
         return gs
 
     def _load_character_and_state(
@@ -447,7 +486,7 @@ class GameApp:
             return None, None
 
         character = self.game_engine.load_character(
-            active_character_id
+            active_character_id  # type: ignore # Assuming GameEngine has this method
         )  # Assumed method
         game_state = self._load_game_state(active_character_id)
 
@@ -479,8 +518,8 @@ class GameApp:
             )
             return
 
-        self.game_engine.save_character(character)  # Assumed method
-        self.game_engine.save_game_state(
+        self.game_engine.save_character(character)  # type: ignore # Assuming GameEngine has this method
+        self.game_engine.save_game_state(  # type: ignore # Assuming GameEngine has this method
             active_character_id, game_state
         )  # Assumed method
 

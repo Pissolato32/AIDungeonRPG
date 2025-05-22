@@ -2,7 +2,7 @@
 """
 Module for constructing prompts for the AI model.
 """
-from typing import List, Optional
+from typing import TypedDict, NotRequired, List, Optional
 
 from core.npc import NPC  # Importar a classe NPC
 from core.models import Character  # Importar Character do models
@@ -20,16 +20,19 @@ class PromptBuilder:
         Formats NPC details for inclusion in a prompt.
         (Adaptado de prompt_manager.py)
         """
-        # Acessar atributos usando getattr para compatibilidade com objetos
-        # e fornecer valores padrão, similar ao dict.get().
-        profession = getattr(npc_data, "profession", "Profissão Desconhecida")
-        personality = getattr(npc_data, "personality", "Personalidade Variada")
+        # Acesso direto aos atributos do objeto NPC
+        profession = (
+            npc_data.profession if npc_data.profession else "Profissão Desconhecida"
+        )
+        personality = (
+            npc_data.personality if npc_data.personality else "Personalidade Variada"
+        )
 
         # Formato mais conciso, incluindo profissão e personalidade no cabeçalho.
         npc_info_str = f"\nDetalhes sobre {npc_name} (Profissão: {profession}, Personalidade: {personality}):\n"
-        knowledge_list = getattr(npc_data, "knowledge", [])
-        if isinstance(knowledge_list, list) and knowledge_list:
-            npc_info_str += f"- Conhecimento: {', '.join(knowledge_list)}\n"
+
+        if npc_data.knowledge:  # knowledge é uma lista de strings
+            npc_info_str += f"- Conhecimento: {', '.join(npc_data.knowledge)}\n"
         return npc_info_str
 
     @staticmethod
@@ -60,12 +63,14 @@ class PromptBuilder:
             npc_data: Optional[NPC] = game_state.known_npcs.get(npc)
 
             if npc_data:  # Verifica se npc_data é um objeto NPC
-                prof = getattr(npc_data, "profession", "Desconhecido")
-                pers = getattr(npc_data, "personality", "Indefinido")
+                prof = npc_data.profession if npc_data.profession else "Desconhecido"
+                pers = npc_data.personality if npc_data.personality else "Indefinido"
             else:  # Fallback se o NPC não for encontrado ou não for um objeto NPC
                 prof = "Desconhecido"
                 pers = "Indefinido"
-            npc_descriptions.append(f"{npc} (Profissão: {prof}, Personalidade: {pers})")
+            npc_descriptions.append(
+                f"{npc_data.name if npc_data else npc} (Profissão: {prof}, Personalidade: {pers})"
+            )  # Usar npc_data.name se disponível
         npcs_text = ", ".join(npc_descriptions) if npc_descriptions else "Nenhum"
 
         events_text = (
@@ -84,15 +89,17 @@ class PromptBuilder:
         character: Character,
     ) -> str:
         """Builds the player character context part of the prompt."""
-        # Use direct attributes from Character dataclass
-        current_hp = character.current_hp
-        max_hp = character.max_hp
-        current_hunger = character.current_hunger
-        max_hunger = character.max_hunger
-        current_thirst = character.current_thirst
-        max_thirst = character.max_thirst
+        # Correctly access nested attributes from Character's stats and survival_stats
+        current_hp = character.stats.current_hp
+        max_hp = character.stats.max_hp
+        current_hunger = character.survival_stats.hunger
+        # Assuming 100 is the default maximum for hunger, based on SurvivalStats default
+        max_hunger = 100
+        current_thirst = character.survival_stats.thirst
+        # Assuming 100 is the default maximum for thirst, based on SurvivalStats default
+        max_thirst = 100
 
-        health_status = "saudável"
+        # Determine health status
         if max_hp > 0:
             hp_percentage = (current_hp / max_hp) * 100
             if hp_percentage >= 98:
@@ -103,7 +110,14 @@ class PromptBuilder:
                 health_status = "ferido(a)"
             else:
                 health_status = "gravemente ferido(a)"
+        elif current_hp <= 0:  # Covers max_hp <= 0 and current_hp is also 0 or less
+            health_status = (
+                "incapacitado(a) ou morto(a)"  # More descriptive for 0 or less HP
+            )
+        else:  # max_hp is 0 or negative, but current_hp is positive (unusual state)
+            health_status = "estado de saúde indefinido"  # Handles edge case
 
+        # Determine hunger status (original logic for positive max_hunger is correct)
         hunger_status = "saciado(a)"
         if max_hunger > 0:
             hunger_percentage = (current_hunger / max_hunger) * 100
@@ -111,7 +125,10 @@ class PromptBuilder:
                 hunger_status = "faminto(a)"
             elif hunger_percentage <= 50:
                 hunger_status = "com fome"
+        else:  # max_hunger is 0 or negative
+            hunger_status = "estado de fome indefinido"  # Handles edge case
 
+        # Determine thirst status (original logic for positive max_thirst is correct)
         thirst_status = "hidratado(a)"
         if max_thirst > 0:
             thirst_percentage = (current_thirst / max_thirst) * 100
@@ -119,6 +136,8 @@ class PromptBuilder:
                 thirst_status = "desidratado(a)"
             elif thirst_percentage <= 50:
                 thirst_status = "com sede"
+        else:  # max_thirst is 0 or negative
+            thirst_status = "estado de sede indefinido"  # Handles edge case
 
         return (
             "Personagem do jogador:\n"
@@ -133,12 +152,21 @@ class PromptBuilder:
     def _build_combat_context(game_state: GameState, action: str, details: str) -> str:
         """Builds the combat context part of the prompt, if combat is active."""
         combat_context_str = ""
-        if game_state.combat and game_state.combat.get("enemy"):
-            enemy_data = game_state.combat.get("enemy")
-            if isinstance(enemy_data, dict):
-                enemy_name = enemy_data.get("name", "Inimigo Desconhecido")
-                enemy_health = enemy_data.get("health", 0)
-                enemy_max_health = enemy_data.get("max_health", enemy_health)
+        # game_state.combat["enemy"] deve ser um objeto Enemy
+        if (
+            game_state.combat  # Check if the combat dictionary itself exists
+            and game_state.combat.get("active")  # Check if combat is active
+        ):
+            # Safely get the enemy object from the combat state
+            # game_state.combat is known to be a CombatState (dict) here
+            # The value associated with "enemy" is expected to be an Enemy object or None
+            enemy_instance = game_state.combat.get("enemy")
+
+            if enemy_instance:  # Check if an enemy instance exists
+                # Now enemy_instance is confirmed to be an Enemy object
+                enemy_name = enemy_instance.name
+                enemy_health = enemy_instance.current_hp
+                enemy_max_health = enemy_instance.max_hp
                 combat_context_str += (
                     "Informações do Combate Atual:\n"
                     f"- Inimigo: {enemy_name}\n"
@@ -327,13 +355,11 @@ class InstructionsBuilder:
             and game_state.combat
             and game_state.combat.get("enemy")
         ):
-            enemy_combat_data = game_state.combat.get("enemy")
-            if isinstance(
-                enemy_combat_data, dict
-            ):  # Check if enemy_combat_data is a dict
-                enemy_name = enemy_combat_data.get("name", "Inimigo")
-                enemy_hp = enemy_combat_data.get("health", 0)
-                enemy_max_hp = enemy_combat_data.get("max_health", enemy_hp)
+            enemy = game_state.combat.get("enemy")  # Deve ser um objeto Enemy
+            if enemy:
+                enemy_name = enemy.name
+                enemy_hp = enemy.current_hp
+                enemy_max_hp = enemy.max_hp
 
                 action_instructions_parts.append(
                     f"O jogador está em combate com {enemy_name}.\n"
@@ -437,10 +463,11 @@ class InstructionsBuilder:
         )
 
         if details and isinstance(details, str) and details in game_state.known_npcs:
-            npc_data = game_state.known_npcs[details]
-            talk_prompt_parts.append(
-                PromptBuilder._format_npc_details_for_prompt(details, npc_data)
-            )
+            npc_data_obj = game_state.known_npcs.get(details)  # details é o nome do NPC
+            if npc_data_obj:  # Verifica se o NPC foi encontrado
+                talk_prompt_parts.append(
+                    PromptBuilder._format_npc_details_for_prompt(details, npc_data_obj)
+                )
 
         talk_prompt_parts.append(
             f"\nO jogador está tentando conversar com '{details if details else 'um NPC próximo'}'. "

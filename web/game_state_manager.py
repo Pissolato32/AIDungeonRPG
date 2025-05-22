@@ -64,41 +64,71 @@ class GameStateManager:
         game_state.world_map = {
             "bunker_main": {
                 "name": "Abrigo Subterrâneo - Principal",
+                "type": "bunker_hub",
+                "description": game_state.scene_description,  # Use the already set scene description
                 "coordinates": {"x": 0, "y": 0, "z": 0},
+                "visited": True,
                 "connections": {
                     "north": "bunker_exit_tunnel",  # Saída para a superfície
                     "east": "bunker_infirmary",
                     "west": "bunker_storage",
                 },
+                "events": game_state.events.copy(),  # Events for this specific location
+                "npcs": game_state.npcs_present.copy(),  # NPCs for this specific location
             },
             "bunker_exit_tunnel": {
                 "name": "Túnel de Saída do Abrigo",
+                "type": "bunker_tunnel",
+                "description": "Um túnel estreito e úmido que leva para fora do abrigo. Detritos bloqueiam parcialmente o caminho.",
                 "coordinates": {"x": 0, "y": 1, "z": 0},
+                "visited": False,
                 "connections": {
                     "south": "bunker_main",
                     "north": "ruined_street_01",
                 },  # Leva para a rua
+                "events": [],
+                "npcs": [],
             },
             "bunker_infirmary": {
                 "name": "Enfermaria do Abrigo",
+                "type": "bunker_room",
+                "description": "Uma pequena sala convertida em enfermaria. Há algumas camas improvisadas e suprimentos médicos escassos.",
                 "coordinates": {"x": 1, "y": 0, "z": 0},
+                "visited": False,
                 "connections": {"west": "bunker_main"},
+                "events": [],
+                "npcs": [
+                    "Médica de Campo Apavorada"
+                ],  # Example if this NPC is primarily here
             },
             "bunker_storage": {
                 "name": "Depósito do Abrigo",
+                "type": "bunker_room",
+                "description": "Uma área de armazenamento com prateleiras, a maioria vazias ou com itens inúteis. O ar está pesado com o cheiro de mofo.",
                 "coordinates": {"x": -1, "y": 0, "z": 0},
+                "visited": False,
                 "connections": {"east": "bunker_main"},
+                "events": [],
+                "npcs": [],
             },
             # Example of an outside location
             "ruined_street_01": {
                 "name": "Rua Devastada Próxima ao Abrigo",
+                "type": "urban_ruins",
+                "description": "Os restos de uma rua outrora movimentada. Carros destruídos e escombros de edifícios bloqueiam grande parte do caminho. O silêncio é perturbador.",
                 # Assuming surface is y=2
                 "coordinates": {"x": 0, "y": 2, "z": 0},
+                "visited": False,
                 "connections": {"south": "bunker_exit_tunnel"},
+                "events": ["Um corvo solitário grasna de cima de um poste torto."],
+                "npcs": [],
             },
         }
 
         # Mark the starting location as visited
+        # This section might be redundant if bunker_main in world_map already has visited=True
+        # and its description, npcs, events are correctly set there.
+        # However, ensuring visited_locations is correctly initialized is good.
         game_state.visited_locations = {
             "bunker_main": {
                 "name": "Abrigo Subterrâneo - Principal",

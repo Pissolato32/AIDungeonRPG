@@ -3,7 +3,7 @@ Character utility functions for consistent attribute, gold, and inventory calcul
 """
 
 import random
-from typing import List
+from typing import List, Union, Dict, Any
 
 
 def calculate_initial_gold() -> int:  # Removido race
@@ -21,18 +21,20 @@ def generate_initial_inventory(
     dexterity: int,
     intelligence: int,
     description: str = "",
-) -> List[str]:
+) -> List[Union[str, Dict[str, Any]]]:
     """
     Generate initial inventory for a survivor based on attributes and description.
     No longer depends on class or race.
     """
-    inventory = [  # Itens básicos para qualquer sobrevivente
-        "Faca de Cozinha Enferrujada",  # Já presente no CharacterManager, mas pode ser reforçado aqui
-        "Bandagem Suja",
-        "Lata de Comida Amassada",
-        "Garrafa de Água (metade)",
-        "Mochila Pequena e Gasta",
-    ]
+    inventory: List[Union[str, Dict[str, Any]]] = (
+        [  # Itens básicos para qualquer sobrevivente
+            "Faca de Cozinha Enferrujada",  # Já presente no CharacterManager, mas pode ser reforçado aqui
+            "Bandagem Suja",
+            "Lata de Comida Amassada",
+            "Garrafa de Água (metade)",
+            "Mochila Pequena e Gasta",
+        ]
+    )
 
     # Item padrão que antes poderia ser baseado na raça "Humano"
     inventory.append("Isqueiro (pouco gás)")

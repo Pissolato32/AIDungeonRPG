@@ -1,8 +1,8 @@
 import logging
 from typing import Any, Dict, List, Union  # Added List, Union
 
-# Import Character model
-from core.models import Character
+# Import Character model and CombatStats
+from core.models import Character, CombatStats
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +52,9 @@ class CharacterManager:
             "description", ""
         )  # Define description_val here
         level_val = 1  # New characters always start at level 1
-        # 2. Initialize core attributes dictionary (strength, dexterity, etc.)
-        # These will now be passed as direct arguments to Character constructor.
-        # The 'attributes' dict on Character can be used for other, more dynamic stats.
-        character_direct_attrs: Dict[str, Any] = {
-            "attributes": {}
-        }  # Initialize attributes dict
+
+        # 2. Initialize data for CombatStats
+        combat_stats_data: Dict[str, Any] = {}
 
         core_stat_names = [
             "strength",
@@ -68,30 +65,29 @@ class CharacterManager:
             "charisma",
         ]
         for stat_name in core_stat_names:
-            form_value_str = character_data.get(
-                stat_name
-            )  # Values from form are strings
-            if form_value_str is not None:
+            form_value_str = character_data.get(stat_name)
+            if (
+                form_value_str is not None and form_value_str.strip()
+            ):  # Check if not None and not empty string
                 try:
-                    character_direct_attrs[stat_name] = int(form_value_str)
+                    combat_stats_data[stat_name] = int(form_value_str)
                 except (ValueError, TypeError):
-                    # If the form value is invalid (e.g., not a number),
-                    # we don't add it to character_direct_attrs.
-                    # The Character model's default (e.g., 10) will then be used.
                     logger.warning(
                         f"Invalid value for {stat_name} from form: '{form_value_str}'. "
-                        f"Character model default will be used."
+                        f"CombatStats default will be used."
                     )
-            # If form_value_str is None (field not sent), Character model's default will be used.
+            # If form_value_str is None or invalid, CombatStats.from_dict will use its defaults.
 
-        # 3. Calculate derived attributes (HP, Stamina, Gold) and add them
-        constitution_for_hp_calc = character_direct_attrs.get("constitution", 10)
+        # 3. Calculate derived attributes (HP, Stamina) for CombatStats
+        constitution_for_hp_calc = combat_stats_data.get(
+            "constitution", 10
+        )  # Use value from form or default 10
         max_hp_val = cls.calculate_max_hp_survivor(constitution_for_hp_calc, level_val)
-        character_direct_attrs["max_hp"] = max_hp_val
-        character_direct_attrs["current_hp"] = max_hp_val
+        combat_stats_data["max_hp"] = max_hp_val
+        combat_stats_data["current_hp"] = max_hp_val
 
-        dexterity_for_stamina_calc = character_direct_attrs.get("dexterity", 10)
-        constitution_for_stamina_calc = character_direct_attrs.get("constitution", 10)
+        dexterity_for_stamina_calc = combat_stats_data.get("dexterity", 10)
+        constitution_for_stamina_calc = combat_stats_data.get("constitution", 10)
         stamina_base = 10
         dex_mod_stamina = (dexterity_for_stamina_calc - 10) // 2
         con_mod_stamina = (constitution_for_stamina_calc - 10) // 2
@@ -101,35 +97,44 @@ class CharacterManager:
             + (dex_mod_stamina * level_val)
             + (con_mod_stamina * level_val),
         )
-        character_direct_attrs["max_stamina"] = max_stamina_val
-        character_direct_attrs["current_stamina"] = max_stamina_val
+        combat_stats_data["max_stamina"] = max_stamina_val
+        combat_stats_data["current_stamina"] = max_stamina_val
+
+        # Create CombatStats instance
+        combat_stats_obj = CombatStats.from_dict(combat_stats_data)
 
         # Other direct fields
-        character_direct_attrs["description"] = (
-            description_val  # Ensure description from form is included
-        )
-        character_direct_attrs["experience"] = (
-            0  # New characters start with 0 experience
-        )
-        character_direct_attrs["gold"] = calculate_initial_gold()
+        # These will be passed directly to the Character constructor
+        description_val = description_val
+        experience_val = 0
+        gold_val = calculate_initial_gold()
 
         # 4. Generate initial inventory
-        strength_for_inv_calc = character_direct_attrs.get("strength", 10)
-        dexterity_for_inv_calc = character_direct_attrs.get("dexterity", 10)
-        intelligence_for_inv_calc = character_direct_attrs.get("intelligence", 10)
+        strength_for_inv_calc = combat_stats_data.get("strength", 10)
+        dexterity_for_inv_calc = combat_stats_data.get("dexterity", 10)
+        intelligence_for_inv_calc = combat_stats_data.get("intelligence", 10)
         generated_inventory_items = generate_initial_inventory(
             strength_for_inv_calc,
             dexterity_for_inv_calc,
             intelligence_for_inv_calc,
             description_val,
         )
-        character_direct_attrs["inventory"] = list(generated_inventory_items)
-        # equipment and skills default to empty lists/dicts in Character model
+        inventory_val: List[Union[str, Dict[str, Any]]] = list(
+            generated_inventory_items
+        )
 
-        # 5. Create the Character object, passing the collected attributes dictionary
+        # 5. Create the Character object
         return Character(
             name=name_val,
             level=level_val,
             owner_session_id=owner_session_id,  # Use the owner_session_id passed as an argument
-            **character_direct_attrs,  # Pass all other collected attributes
+            description=description_val,
+            experience=experience_val,
+            gold=gold_val,
+            inventory=inventory_val,
+            stats=combat_stats_obj,
+            # survival_stats will use default_factory from Character model
+            # attributes (dict) will use default_factory
+            # skills will use default_factory
+            # equipment will use default_factory
         )

@@ -355,10 +355,9 @@ class AttackActionHandler(ActionHandler):
             )
 
             # Lógica de ataque contra o inimigo atual
-            attacker_stats = (
-                character  # Usar o objeto Character diretamente para atributos
-            )
-            str_modifier = calculate_attribute_modifier(attacker_stats.strength)
+            # Corrigido: Acessar stats aninhados
+            str_modifier = calculate_attribute_modifier(character.stats.strength)
+
             # Acesso direto aos atributos do inimigo
             to_hit_dc = 10 + enemy.level
 
@@ -385,11 +384,11 @@ class AttackActionHandler(ActionHandler):
                     try:
                         from utils.item_generator import ItemGenerator
 
-                        item_gen = ItemGenerator(
-                            os.path.join(
-                                os.path.dirname(os.path.abspath(__file__)), "..", "data"
-                            )
-                        )  # Ajustar caminho se necessário
+                        # Padronizar caminho para o diretório de dados
+                        data_dir_path = os.path.join(
+                            os.path.dirname(os.path.abspath(__file__)), "..", "data"
+                        )
+                        item_gen = ItemGenerator(data_dir_path)
                         weapon_data = item_gen.get_item_by_name(equipped_weapon_name)
                     except ImportError:
                         logger.error("ItemGenerator not found for AttackActionHandler.")
@@ -418,14 +417,14 @@ class AttackActionHandler(ActionHandler):
                 )
 
                 # Aplicar dano ao inimigo
-                enemy.current_hp = max(
-                    0, enemy.current_hp - damage_dealt
-                )  # Alterado de health para current_hp
+                enemy.current_hp = max(0, enemy.current_hp - damage_dealt)
 
                 combat_log_entry = f"Você atacou {enemy.name} e causou {damage_dealt} de dano! ({attack_roll_string} vs DC {to_hit_dc})"
-                mechanical_outcome_message = f"Você acertou {enemy.name} causando {damage_dealt} de dano."  # Alterado de health para current_hp  # Alterado de health para current_hp  # Alterado de health para current_hp
+                mechanical_outcome_message = (
+                    f"Você acertou {enemy.name} causando {damage_dealt} de dano."
+                )
 
-                if enemy.current_hp <= 0:  # Alterado de health para current_hp
+                if enemy.current_hp <= 0:
                     # Inimigo derrotado
                     combat_log_entry += f" {enemy.name} foi derrotado!"
                     mechanical_outcome_message += f" {enemy.name} foi derrotado."
@@ -456,8 +455,8 @@ class AttackActionHandler(ActionHandler):
                     if game_state.combat
                     else False
                 ),
-                "enemy_hp": enemy.current_hp,  # Alterado de health para current_hp
-                "enemy_max_hp": enemy.max_hp,  # Alterado de max_health para max_hp
+                "enemy_hp": enemy.current_hp,
+                "enemy_max_hp": enemy.max_hp,
                 "combat_log_update": combat_log_entry,  # Enviar a última entrada do log para o frontend
             }
 
@@ -526,8 +525,8 @@ class AttackActionHandler(ActionHandler):
                     "action_performed": "combat_start_npc",
                     "combat_ongoing": True,
                     "enemy_name": enemy.name,  # type: ignore
-                    "enemy_hp": enemy.current_hp,  # Alterado de health para current_hp
-                    "enemy_max_hp": enemy.max_hp,  # Alterado de max_health para max_hp
+                    "enemy_hp": enemy.current_hp,
+                    "enemy_max_hp": enemy.max_hp,
                     "combat_log_update": game_state.combat["log"][-1],
                 }
 
@@ -560,7 +559,7 @@ class UseItemActionHandler(ActionHandler):
         from utils.item_generator import ItemGenerator
 
         # Precisamos do caminho para o diretório de dados para ItemGenerator
-        data_dir_path = os.path.join(
+        data_dir_path = os.path.join(  # Padronizado
             os.path.dirname(os.path.abspath(__file__)), "..", "data"
         )
         item_generator = ItemGenerator(data_dir_path)
@@ -639,34 +638,34 @@ class UseItemActionHandler(ActionHandler):
 
                 if effect_target == "self":
                     if effect_type == "heal_hp":
-                        old_hp = character.current_hp
-                        max_hp = character.max_hp
-                        character.current_hp = min(old_hp + effect_value, max_hp)
-                        healed_amount = character.current_hp - old_hp
+                        old_hp = character.stats.current_hp
+                        max_hp = character.stats.max_hp
+                        character.stats.current_hp = min(old_hp + effect_value, max_hp)
+                        healed_amount = character.stats.current_hp - old_hp
                         if healed_amount > 0:
                             effects_applied_messages.append(
                                 f"restaurou {healed_amount} pontos de vida"
                             )
                             character_stats_updated = True
                     elif effect_type == "restore_hunger":
-                        old_value = character.current_hunger
-                        max_value = character.max_hunger
-                        character.current_hunger = min(
+                        old_value = character.survival_stats.hunger
+                        max_value = 100  # Assumindo 100 como máximo de SurvivalStats
+                        character.survival_stats.hunger = min(
                             old_value + effect_value, max_value
                         )
-                        restored_amount = character.current_hunger - old_value
+                        restored_amount = character.survival_stats.hunger - old_value
                         if restored_amount > 0:
                             effects_applied_messages.append(
                                 f"reduziu a fome em {restored_amount}"
                             )
                             character_stats_updated = True
                     elif effect_type == "restore_thirst":
-                        old_value = character.current_thirst
-                        max_value = character.max_thirst
-                        character.current_thirst = min(
+                        old_value = character.survival_stats.thirst
+                        max_value = 100  # Assumindo 100 como máximo de SurvivalStats
+                        character.survival_stats.thirst = min(
                             old_value + effect_value, max_value
                         )
-                        restored_amount = character.current_thirst - old_value
+                        restored_amount = character.survival_stats.thirst - old_value
                         if restored_amount > 0:
                             effects_applied_messages.append(
                                 f"reduziu a sede em {restored_amount}"
@@ -816,7 +815,9 @@ class FleeActionHandler(ActionHandler):
             }
 
         enemy_name = game_state.combat["enemy"].name  # Assumindo que enemy tem nome
-        dex_modifier = calculate_attribute_modifier(character.dexterity)
+        dex_modifier = calculate_attribute_modifier(
+            character.stats.dexterity
+        )  # Corrigido
 
         # Chance de fuga baseada em Destreza (exemplo simples)
         flee_chance = 0.5 + (dex_modifier * 0.05)  # +5% chance por ponto de modificador
@@ -886,23 +887,22 @@ class RestActionHandler(ActionHandler):
         else:
             # Descanso bem-sucedido
             # Restaurar HP e Vigor (exemplo: 10% do máximo de HP, 20% do máximo de Vigor)
-            hp_to_restore = max(
-                1, int(character.max_hp * 0.1)
-            )  # Usar int() para garantir valor inteiro
-            stamina_to_restore = max(1, int(character.max_stamina * 0.2))  # Usar int()
+            hp_to_restore = max(1, int(character.stats.max_hp * 0.1))
+            stamina_to_restore = max(1, int(character.stats.max_stamina * 0.2))
 
-            old_hp = character.current_hp
-            old_stamina = character.current_stamina
+            old_hp = character.stats.current_hp
+            old_stamina = character.stats.current_stamina
 
-            character.current_hp = min(
-                character.max_hp, character.current_hp + hp_to_restore
+            character.stats.current_hp = min(
+                character.stats.max_hp, character.stats.current_hp + hp_to_restore
             )
-            character.current_stamina = min(
-                character.max_stamina, character.current_stamina + stamina_to_restore
+            character.stats.current_stamina = min(
+                character.stats.max_stamina,
+                character.stats.current_stamina + stamina_to_restore,
             )
 
-            hp_restored_amount = character.current_hp - old_hp
-            stamina_restored_amount = character.current_stamina - old_stamina
+            hp_restored_amount = character.stats.current_hp - old_hp
+            stamina_restored_amount = character.stats.current_stamina - old_stamina
 
             mechanical_outcome_message = f"Você encontra um momento de relativa calma para descansar. Você recupera {hp_restored_amount} HP e {stamina_restored_amount} de Vigor."
             action_performed_type = "rest_success"
@@ -1134,23 +1134,25 @@ class SkillActionHandler(ActionHandler):
                         game_state.combat["enemy"] = None  # Remover inimigo
 
                 elif effect_type == "heal" and effect_target_type == "self":
-                    old_hp = character.current_hp
-                    max_hp = character.max_hp
+                    old_hp = character.stats.current_hp
+                    max_hp = character.stats.max_hp
                     heal_amount_from_skill = amount
-                    character.current_hp = min(max_hp, old_hp + heal_amount_from_skill)
-                    healed_amount = character.current_hp - old_hp
+                    character.stats.current_hp = min(
+                        max_hp, old_hp + heal_amount_from_skill
+                    )
+                    healed_amount = character.stats.current_hp - old_hp
                     if healed_amount > 0:
                         combat_log_entries.append(
                             f"{character.name} curou {healed_amount} HP com a habilidade."  # Traduzido
                         )
                 elif effect_type == "restore_stamina" and effect_target_type == "self":
-                    old_stamina = character.current_stamina
-                    max_stamina = character.max_stamina
+                    old_stamina = character.stats.current_stamina
+                    max_stamina = character.stats.max_stamina
                     stamina_restored_amount = amount
-                    character.current_stamina = min(
+                    character.stats.current_stamina = min(
                         max_stamina, old_stamina + stamina_restored_amount
                     )
-                    restored_amount = character.current_stamina - old_stamina
+                    restored_amount = character.stats.current_stamina - old_stamina
                     if restored_amount > 0:
                         combat_log_entries.append(
                             f"{character.name} recuperou {restored_amount} Vigor com a habilidade."  # Traduzido
@@ -1172,7 +1174,7 @@ class CraftActionHandler(ActionHandler):
     def __init__(self):
         from utils.item_generator import ItemGenerator
 
-        # Precisamos do caminho para o diretório de dados para ItemGenerator
+        # Padronizar caminho para o diretório de dados
         data_dir_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "..", "data"
         )
