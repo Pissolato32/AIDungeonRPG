@@ -4,8 +4,10 @@ import logging
 import os
 import sys
 import traceback
+import uuid  # Import uuid at the top level
 from typing import Any, Dict, Optional, Tuple
 
+from dotenv import load_dotenv  # Importar dotenv
 from flask import (
     Flask,
     flash,
@@ -16,16 +18,20 @@ from flask import (
     session,
     url_for,
 )
-import uuid  # Import uuid at the top level
-from dotenv import load_dotenv  # Importar dotenv
 
 load_dotenv()  # Carregar variáveis de ambiente do arquivo .env
 
+# Define the expected message format (AIPrompt) and an adapter if needed
+# This definition should ideally be in a shared AI types file (e.g., ai/types.py)
+# or where GameAIClient expects it. Adding it here for demonstration based on user request.
+from typing import Protocol, TypedDict
+
+from ai.game_ai_client import (  # Importar o GameAIClient que o GameEngine espera
+    GameAIClient,
+)
+
 # Importar tanto o cliente de baixo nível quanto o wrapper/adaptador
 from ai.openrouter import OpenRouterClient
-from ai.game_ai_client import (
-    GameAIClient,
-)  # Importar o GameAIClient que o GameEngine espera
 from app.routes import bp as routes_bp
 from core.error_handler import ErrorHandler
 from core.game_engine import GameEngine
@@ -39,11 +45,6 @@ from web.config import Config
 from web.game_state_manager import GameStateManager
 from web.logger import GameLogger
 from web.session_manager import SessionManager
-
-# Define the expected message format (AIPrompt) and an adapter if needed
-# This definition should ideally be in a shared AI types file (e.g., ai/types.py)
-# or where GameAIClient expects it. Adding it here for demonstration based on user request.
-from typing import TypedDict, Protocol
 
 
 class AIPrompt(TypedDict):
@@ -462,7 +463,8 @@ class GameApp:
         # This manager should now also handle setting a unique character.id
         # and potentially character.owner_session_id if passed in character_data or as an arg.
         return CharacterManager.create_character_from_form(
-            character_data, owner_session_id  # Pass owner_session_id
+            character_data,
+            owner_session_id,  # Pass owner_session_id
         )
 
     def _load_game_state(self, character_id: str) -> Optional[GameState]:
