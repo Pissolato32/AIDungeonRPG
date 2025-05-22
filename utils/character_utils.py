@@ -3,7 +3,7 @@ Character utility functions for consistent attribute, gold, and inventory calcul
 """
 
 import random
-from typing import List, Union, Dict, Any
+from typing import Any, Dict, List, Union
 
 
 def calculate_initial_gold() -> int:  # Removido race

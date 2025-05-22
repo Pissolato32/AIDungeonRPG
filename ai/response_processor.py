@@ -10,7 +10,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from typing import Dict, Optional, TypedDict, cast, TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict, Optional, TypedDict, cast
 
 if TYPE_CHECKING:
     from .game_ai_client import AIResponse  # Import for type hinting only

@@ -418,9 +418,7 @@ class WorldGenerator:
 
         # Try to generate a unique event using AI - ADAPTED PROMPT
         try:
-            prompt = (
-                prompt
-            ) = f"""
+            prompt = prompt = f"""
             Gere uma breve descrição de um evento ou situação interessante e tensa
             acontecendo em '{location_name}', um(a) '{location_type}' durante um apocalipse zumbi.
             O evento deve aumentar a sensação de perigo, desolação, mistério ou uma rara oportunidade. Pode ser um som, um movimento, algo encontrado.
