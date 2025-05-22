@@ -3,26 +3,26 @@
 Game engine module for handling game state and actions."""
 
 import json
+import logging
 import os
 import random
-import logging
 from typing import Any, Dict, List, Optional, Tuple, cast  # Added Tuple
 
 # Assume GameAIClient is in ai.game_ai_client, adjust if necessary
-from ai.game_ai_client import GameAIClient, AIResponse  # Import AIResponse
+from ai.game_ai_client import AIResponse, GameAIClient  # Import AIResponse
 
 # Assume ActionHandler is in core.actions, adjust if necessary
 from core.actions import (
     CustomActionHandler,  # Importar para verificar se é uma instância
-    ActionHandler,
-    get_action_handler,
 )
+from core.actions import ActionHandler, get_action_handler
 from core.models import Character
+from utils.dice import calculate_attribute_modifier, roll_dice  # Importar para rolagens
+
 from .game_state_model import GameState, LocationCoords, LocationData
-from .location_generator import (
+from .location_generator import (  # Adicionado para geração de localização
     LocationGenerator,
-)  # Adicionado para geração de localização
-from utils.dice import roll_dice, calculate_attribute_modifier  # Importar para rolagens
+)
 
 logger = logging.getLogger(__name__)  # Configurar logger para este módulo
 
