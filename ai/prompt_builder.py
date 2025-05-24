@@ -2,15 +2,17 @@
 """
 Módulo para construir prompts para o modelo de IA.
 """
-from typing import (
-    TypedDict,
+
+from typing import (  # Adicionado Dict, removido NotRequired
+    Dict,
     List,
     Optional,
-    Dict,
-)  # Adicionado Dict, removido NotRequired
-from core.npc import NPC  # Importar a classe NPC
-from core.models import Character  # Importar Character do models
+    TypedDict,
+)
+
 from core.game_state_model import GameState, MessageDict
+from core.models import Character  # Importar Character do models
+from core.npc import NPC  # Importar a classe NPC
 
 
 class PromptBuilder:

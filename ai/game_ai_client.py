@@ -5,18 +5,17 @@ This module handles AI model interactions for generating game content
 and responses."""
 
 import logging
-from typing import Any, Dict, List, Optional, TypedDict
-from typing import Protocol
+from typing import Any, Dict, List, Optional, Protocol, TypedDict
 
 from pydantic import ValidationError
 
+from ai.prompt_builder import InstructionsBuilder, PromptBuilder
 from core.models import Character  # Import Character from core.models
-from ai.prompt_builder import PromptBuilder, InstructionsBuilder
 
 from .fallback_handler import (
-    generate_fallback_response,
     FallbackResponse as FallbackResponseType,  # Importar fallback
-)  # Importar fallback
+)
+from .fallback_handler import generate_fallback_response
 
 # Importar schemas Pydantic
 from .schemas import AIResponsePydantic
@@ -35,9 +34,9 @@ class AIPrompt(TypedDict):
 # Manterei a definição antiga comentada por um momento para referência durante a refatoração.
 # class AIResponse(TypedDict):
 #     ... (definição antiga)
-from core.game_state_model import (
+from core.game_state_model import (  # Movido para cá para resolver import cycle se GameState importar AIResponse
     GameState,
-)  # Movido para cá para resolver import cycle se GameState importar AIResponse
+)
 
 
 # Define Protocols for external dependencies

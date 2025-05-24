@@ -6,14 +6,8 @@ import logging
 
 logger = logging.getLogger(__name__)  # Define the logger
 
-from dataclasses import dataclass, field, asdict  # Import asdict
-from typing import (
-    Any,
-    Dict,
-    List,
-    Optional,
-    TypedDict,
-)
+from dataclasses import asdict, dataclass, field  # Import asdict
+from typing import Any, Dict, List, Optional, TypedDict
 
 # Import NPC here
 # If core.npc also imports GameState or related models, this might need further refactoring.

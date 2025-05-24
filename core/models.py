@@ -2,16 +2,17 @@
 """
 Central module for core game data models and type definitions.
 """
-from typing import (
-    Dict,
-    Any,
-    TypedDict,
-    Optional,
-    List,
-    Union,
-)  # Ensure List and Union are imported
+
 import uuid  # Importar uuid para gerar IDs
-from dataclasses import dataclass, field, asdict, fields  # Import fields
+from dataclasses import asdict, dataclass, field, fields  # Import fields
+from typing import (  # Ensure List and Union are imported
+    Any,
+    Dict,
+    List,
+    Optional,
+    TypedDict,
+    Union,
+)
 
 
 @dataclass
