@@ -72,12 +72,11 @@ def delete_character(character_id: str):
     return game_app.delete_character(character_id)
 
 
-# The /api/world_map route was not present in the GameApp class.
-# If needed, its logic should be implemented.
-# @bp.route("/api/world_map")
-# def api_world_map():
-#     """Get the world map data."""
-#     # Logic for getting world map needs to be implemented
-#     # This would likely involve _game_app_instance.game_engine and current game_state
-#     logger.warning("Route /api/world_map called but not fully implemented.")
-#     return jsonify({"success": False, "message": "Not Implemented"}), 501
+@bp.route("/api/world_map")
+def api_world_map():
+    """
+    API endpoint to get the world map data for the currently active character.
+    This will be called by map.js.
+    """
+    game_app = current_app.game_app_instance  # type: ignore
+    return game_app.get_world_map_data()  # Novo método a ser criado em GameApp

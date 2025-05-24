@@ -10,9 +10,8 @@ import os
 import random
 from typing import Any, Dict, Optional, List, Union, TypedDict
 
-# Assuming GroqClient is in a top-level 'ai' directory or 'core.ai'
+# Assuming OpenRouter is in a top-level 'ai' directory or 'core.ai'
 # Adjust the import path based on your project structure.
-# Or from core.ai.groq_client import GroqClient
 from ai.openrouter import OpenRouterClient  # Corrigido o caminho e nome da classe
 
 logger = logging.getLogger(__name__)

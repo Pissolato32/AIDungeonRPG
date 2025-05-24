@@ -1,0 +1,96 @@
+{
+  "bunker_main": {
+    "name": "Abrigo Subterrâneo - Principal",
+    "type": "bunker_hub",
+    "description": "Você está na sala principal de um abrigo subterrâneo improvisado. As paredes de concreto são úmidas e a única luz vem de algumas lâmpadas de emergência piscando. Há um portão de metal reforçado ao norte que leva à superfície, uma enfermaria improvisada a leste e um depósito de suprimentos a oeste.",
+    "coordinates": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "visited": true,
+    "connections": {
+      "north": "bunker_exit_tunnel",
+      "east": "bunker_infirmary",
+      "west": "bunker_storage",
+      "oeste": "bunker_main"
+    },
+    "events": [
+      "Ouve-se o gotejar constante de água em algum lugar próximo.",
+      "Um gerador falha e a luz pisca antes de voltar."
+    ],
+    "npcs": [
+      "Velho Sobrevivente Cansado",
+      "Médica de Campo Apavorada"
+    ]
+  },
+  "bunker_exit_tunnel": {
+    "name": "Túnel de Saída do Abrigo",
+    "type": "bunker_tunnel",
+    "description": "Um túnel estreito e úmido que leva para fora do abrigo. Detritos bloqueiam parcialmente o caminho.",
+    "coordinates": {
+      "x": 0,
+      "y": 1,
+      "z": 0
+    },
+    "visited": false,
+    "connections": {
+      "south": "bunker_main",
+      "north": "ruined_street_01"
+    },
+    "events": [],
+    "npcs": []
+  },
+  "bunker_infirmary": {
+    "name": "Enfermaria do Abrigo",
+    "type": "bunker_room",
+    "description": "Uma pequena sala convertida em enfermaria. Há algumas camas improvisadas e suprimentos médicos escassos.",
+    "coordinates": {
+      "x": 1,
+      "y": 0,
+      "z": 0
+    },
+    "visited": false,
+    "connections": {
+      "west": "bunker_main"
+    },
+    "events": [],
+    "npcs": [
+      "Médica de Campo Apavorada"
+    ]
+  },
+  "bunker_storage": {
+    "name": "Depósito do Abrigo",
+    "type": "bunker_room",
+    "description": "Uma área de armazenamento com prateleiras, a maioria vazias ou com itens inúteis. O ar está pesado com o cheiro de mofo.",
+    "coordinates": {
+      "x": -1,
+      "y": 0,
+      "z": 0
+    },
+    "visited": false,
+    "connections": {
+      "east": "bunker_main"
+    },
+    "events": [],
+    "npcs": []
+  },
+  "ruined_street_01": {
+    "name": "Rua Devastada Próxima ao Abrigo",
+    "type": "urban_ruins",
+    "description": "Os restos de uma rua outrora movimentada. Carros destruídos e escombros de edifícios bloqueiam grande parte do caminho. O silêncio é perturbador.",
+    "coordinates": {
+      "x": 0,
+      "y": 2,
+      "z": 0
+    },
+    "visited": false,
+    "connections": {
+      "south": "bunker_exit_tunnel"
+    },
+    "events": [
+      "Um corvo solitário grasna de cima de um poste torto."
+    ],
+    "npcs": []
+  }
+}

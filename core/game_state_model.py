@@ -48,6 +48,7 @@ class LocationData(TypedDict, total=False):
     # conexões com outras localizações (id: direção)
     connections: Dict[str, str]
     resources: Optional[Dict[str, int]]
+    points_of_interest: Optional[List[str]]  # Novo campo
     danger_level: Optional[int]
     events: List[str]
     welcome: Optional[str]
@@ -114,47 +115,94 @@ class GameState:
     npc_message_history: Dict[str, List[str]] = field(
         default_factory=dict
     )  # Histórico de mensagens por NPC para evitar repetição
+    summary: Optional[str] = None  # Resumo da memória de longo prazo
+    long_term_memory: Dict[str, Any] = field(
+        default_factory=dict
+    )  # Fatos chave da memória de longo prazo
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert game state to a dictionary."""
-        # Manually handle known_npcs to serialize NPC objects
-        data = asdict(self)
-        data["known_npcs"] = {
-            npc_id: npc.to_dict() if hasattr(npc, "to_dict") else npc
-            for npc_id, npc in self.known_npcs.items()
+        # Manual serialization to handle nested NPC objects correctly
+        # and ensure all fields are included as expected.
+        return {
+            "current_location": self.current_location,
+            "scene_description": self.scene_description,
+            "npcs_present": self.npcs_present,
+            "known_npcs": {
+                npc_id: npc.to_dict() for npc_id, npc in self.known_npcs.items()
+            },
+            "messages": self.messages,
+            "coordinates": self.coordinates,
+            "current_action": self.current_action,
+            "discovered_locations": self.discovered_locations,
+            "npcs_by_location": self.npcs_by_location,
+            "npc_relationships": self.npc_relationships,
+            "location_id": self.location_id,
+            "events": self.events,
+            "world_map": self.world_map,
+            "visited_locations": self.visited_locations,
+            "combat": self.combat,
+            "npc_message_history": self.npc_message_history,
+            "summary": self.summary,
+            "long_term_memory": self.long_term_memory,
         }
-        return data
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GameState":
         """Create GameState from dictionary data."""
-        return cls(
-            current_location=data.get("current_location", ""),
-            scene_description=data.get("scene_description", ""),
-            npcs_present=data.get("npcs_present", []),
-            # Attempt to load known_npcs as NPC objects, fallback to dicts
-            known_npcs={
-                npc_id: (
-                    NPC.from_dict(npc_data)  # NPC.from_dict deve retornar um objeto NPC
-                    if isinstance(npc_data, dict)
-                    else npc_data  # npc_data could already be an NPC instance if loaded from a previous state in memory
-                )  # Assuming NPC has a from_dict or can be instantiated from dict
-                for npc_id, npc_data in data.get("known_npcs", {}).items()
-            },
-            # known_npcs=data.get("known_npcs", {}), # Old line
-            messages=data.get("messages", []),
-            coordinates=data.get("coordinates", {"x": 0, "y": 0, "z": 0}),
-            current_action=data.get("current_action", ""),
-            discovered_locations=data.get("discovered_locations", {}),
-            npcs_by_location=data.get("npcs_by_location", {}),
-            npc_relationships=data.get("npc_relationships", {}),
-            location_id=data.get("location_id", ""),
-            events=data.get("events", []),
-            world_map=data.get("world_map", {}),
-            visited_locations=data.get("visited_locations", {}),
-            combat=data.get("combat", None),
-            npc_message_history=data.get("npc_message_history", {}),
+        # Explicitly map dictionary keys to dataclass fields
+        # This avoids issues with **data if data contains extra keys or misses some with defaults.
+
+        # Deserialize known_npcs from their dict representation
+        known_npcs_data = data.get("known_npcs", {})
+        loaded_known_npcs = {
+            npc_id: (
+                NPC.from_dict(npc_data)
+                if isinstance(npc_data, dict)
+                else npc_data  # Should ideally always be dict if coming from JSON
+            )
+            for npc_id, npc_data in known_npcs_data.items()
+        }
+
+        # Create an instance by explicitly passing arguments
+        # This ensures that only fields defined in GameState are passed to its constructor.
+        # Fields with default_factory will be initialized if not present in 'data'.
+        instance = cls()  # Initialize with defaults
+        instance.current_location = data.get(
+            "current_location", instance.current_location
         )
+        instance.scene_description = data.get(
+            "scene_description", instance.scene_description
+        )
+        instance.npcs_present = data.get("npcs_present", instance.npcs_present)
+        instance.known_npcs = loaded_known_npcs  # Use the deserialized NPCs
+        instance.messages = data.get("messages", instance.messages)
+        instance.coordinates = data.get("coordinates", instance.coordinates)
+        instance.current_action = data.get("current_action", instance.current_action)
+        instance.discovered_locations = data.get(
+            "discovered_locations", instance.discovered_locations
+        )
+        instance.npcs_by_location = data.get(
+            "npcs_by_location", instance.npcs_by_location
+        )
+        instance.npc_relationships = data.get(
+            "npc_relationships", instance.npc_relationships
+        )
+        instance.location_id = data.get("location_id", instance.location_id)
+        instance.events = data.get("events", instance.events)
+        instance.world_map = data.get("world_map", instance.world_map)
+        instance.visited_locations = data.get(
+            "visited_locations", instance.visited_locations
+        )
+        instance.combat = data.get("combat", instance.combat)
+        instance.npc_message_history = data.get(
+            "npc_message_history", instance.npc_message_history
+        )
+        instance.summary = data.get("summary", instance.summary)
+        instance.long_term_memory = data.get(
+            "long_term_memory", instance.long_term_memory
+        )
+        return instance
 
     def add_message(self, role: str, content: str) -> None:
         """Add a message to the game state's conversation history.

@@ -405,6 +405,16 @@ class GameUIManager {
                 this.updateCharacterStats(data.character_stats);
             }
 
+            // If the action performed was a successful move, refresh the map
+            if (data.action_performed === "move") {
+                if (window.gameMap && typeof window.gameMap.refreshMapData === 'function') {
+                    console.log("Game.js: Player moved, calling map refresh.");
+                    window.gameMap.refreshMapData();
+                } else {
+                    console.warn("Game.js: window.gameMap instance or refreshMapData method not found.");
+                }
+            }
+
 
         } else {
             // Display error message

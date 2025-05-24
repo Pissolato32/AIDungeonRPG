@@ -7,10 +7,12 @@ and responses."""
 import json
 import logging
 from typing import Any, Dict, List, Optional, TypedDict, Union, cast
-from typing import Protocol  # Added Protocol for AIModelClientType
+from typing import Protocol
+
+from pydantic import ValidationError
+
 from ai.openrouter import OpenRouterClient  # Import OpenRouterClient
 from core.models import Character  # Import Character from core.models
-from core.game_state_model import GameState, MessageDict
 from ai.prompt_builder import PromptBuilder, InstructionsBuilder
 
 from .fallback_handler import (
@@ -18,10 +20,10 @@ from .fallback_handler import (
     FallbackResponse as FallbackResponseType,  # Importar fallback
 )  # Importar fallback
 
+# Importar schemas Pydantic
+from .schemas import AIResponsePydantic
+
 logger = logging.getLogger(__name__)
-from core.game_state_model import (
-    GameState,
-)  # Mover importação para evitar potencial ciclo
 
 
 class AIPrompt(TypedDict):
@@ -31,23 +33,13 @@ class AIPrompt(TypedDict):
     content: str
 
 
-class AIResponse(TypedDict):
-    """Type definition for AI response data."""
-
-    success: bool
-    message: str
-    current_detailed_location: str
-    scene_description_update: str
-    details: Dict[str, Any]  # Detalhes gerais da IA ou do processamento
-    error: Optional[str]
-    interpreted_action_type: Optional[str]  # Novo: Ação interpretada pela IA
-    interpreted_action_details: Optional[
-        Dict[str, Any]
-    ]  # Novo: Detalhes da ação interpretada
-    suggested_roll: Optional[
-        Dict[str, Any]
-    ]  # Novo: Sugestão de rolagem de dados pela IA
-    interactable_elements: Optional[List[str]]  # Novo: Elementos interativos na cena
+# O TypedDict AIResponse é agora substituído por AIResponsePydantic
+# Manterei a definição antiga comentada por um momento para referência durante a refatoração.
+# class AIResponse(TypedDict):
+#     ... (definição antiga)
+from core.game_state_model import (
+    GameState,
+)  # Movido para cá para resolver import cycle se GameState importar AIResponse
 
 
 # Define Protocols for external dependencies
@@ -79,7 +71,10 @@ class GameAIClient:
 
     @staticmethod
     def _create_action_prompt(
-        action: str, details: str, character: Character, game_state: GameState
+        action: str,
+        details: str,
+        character: Character,
+        game_state: "GameState",  # Usar string literal para GameState
     ) -> List[AIPrompt]:
         """Create a formatted prompt for the AI model.
 
@@ -105,16 +100,28 @@ class GameAIClient:
 
     def _handle_ai_failure(
         self, action: str, details: str, game_state: GameState
-    ) -> AIResponse:
-        """
-        Handles failures from the primary AI by generating a fallback response.
+    ) -> AIResponsePydantic:  # Alterado para retornar AIResponsePydantic
+        """Handles failures from the primary AI.
+
+        Currently, it generates a scripted fallback response.
+        Future enhancements could include:
+        1. Re-prompting the AI with context about the failure.
+        2. Trying a different AI model.
+        3. Using more sophisticated fallback logic based on the type of failure.
+
+        Args:
+            action: The original action type.
+            details: The original action details.
+            game_state: The current game state.
+            original_bad_response: The problematic raw response from the AI, if available.
+            failure_reason: A description of why the AI response failed (e.g., "Invalid JSON", "Missing required fields").
+            attempt_reprompt: Whether to attempt a re-prompt to the AI.
         """
         logger.warning(
             f"AI failure for action '{action}'. Generating fallback response."
         )
-        # O prompt para o fallback pode ser simples, apenas para identificar o tipo de ação.
-        # Ou você pode passar o prompt do usuário completo se o fallback_handler for mais sofisticado.
-        # Para o fallback_handler atual, uma string simples com ação e detalhes é suficiente.
+
+        # O prompt para o fallback_handler atual é simples, focado em identificar o tipo de ação.
         fallback_prompt_for_identification = (
             f"{action}: {details if details else 'ação genérica'}"
         )
@@ -123,9 +130,9 @@ class GameAIClient:
             fallback_prompt_for_identification
         )
 
-        # Construir um AIResponse completo a partir do fallback_data
-        # Garantir que todos os campos obrigatórios de AIResponse tenham valores.
-        return AIResponse(
+        # Construir um AIResponsePydantic completo a partir do fallback_data
+        # Garantir que todos os campos obrigatórios de AIResponsePydantic tenham valores.
+        return AIResponsePydantic(
             success=fallback_data.get(
                 "success", True
             ),  # Fallback geralmente é um "sucesso" em termos de dar uma resposta
@@ -133,10 +140,14 @@ class GameAIClient:
                 "message", "Ocorreu um problema, mas a aventura continua..."
             ),
             current_detailed_location=fallback_data.get("new_location")
-            or game_state.current_location
+            or (game_state.current_location if game_state else "Local Desconhecido")
             or "Local Desconhecido",
             scene_description_update=fallback_data.get("description")
-            or game_state.scene_description
+            or (
+                game_state.scene_description
+                if game_state
+                else "A cena parece inalterada."
+            )
             or "A cena parece inalterada.",
             details={
                 "fallback_details": fallback_data
@@ -151,11 +162,12 @@ class GameAIClient:
             suggested_roll=None,  # Fallbacks simples geralmente não sugerem rolagens
             interactable_elements=fallback_data.get("items")
             or fallback_data.get("npcs"),  # Exemplo
+            suggested_location_data=None,  # Adicionar campo faltante
         )
 
     def process_action(
         self, action: str, details: str, character: Character, game_state: GameState
-    ) -> AIResponse:
+    ) -> AIResponsePydantic:  # Alterado para retornar AIResponsePydantic
         """Process a player action using AI.
 
         Args:
@@ -172,19 +184,28 @@ class GameAIClient:
             logger.error(
                 "AI client (e.g., GroqClient) not initialized in GameAIClient."
             )
-            return AIResponse(
+            return AIResponsePydantic(
                 success=False,
                 message="Erro de configuração: O cliente de IA não está disponível.",
                 error="No AI client available",
-                # Ensure all required fields of AIResponse are present
-                current_detailed_location=game_state.current_location
+                # Ensure all required fields of AIResponsePydantic are present
+                current_detailed_location=(
+                    game_state.current_location
+                    if game_state
+                    else "Indisponível (Erro de Config.)"
+                )
                 or "Indisponível (Erro de Config.)",
-                scene_description_update=game_state.scene_description
+                scene_description_update=(
+                    game_state.scene_description
+                    if game_state
+                    else "Indisponível (Erro de Config.)"
+                )
                 or "Indisponível (Erro de Config.)",
                 details={},
                 interpreted_action_type=None,
                 interpreted_action_details=None,
                 interactable_elements=None,
+                suggested_location_data=None,
                 suggested_roll=None,  # Adicionado para completar a definição
             )
 
@@ -219,92 +240,39 @@ class GameAIClient:
                 f"Raw response from AI service type: {type(response_from_ai_service)}, content: {str(response_from_ai_service)[:500]}"
             )  # Importar validate_ai_response_structure
 
-            from .response_processor import (
-                process_ai_response,
-                validate_ai_response_structure,
-            )
+            # Usar response_processor apenas para extrair o JSON bruto
+            from .response_processor import extract_json_from_text
 
-            parsed_ai_dict = process_ai_response(response_from_ai_service)
-            logger.info(f"Parsed AI response dictionary: {parsed_ai_dict}")
+            json_extraction_result = extract_json_from_text(response_from_ai_service)
 
-            # Validar a estrutura da resposta da IA
-            if not isinstance(
-                parsed_ai_dict, dict
-            ) or not validate_ai_response_structure(
-                cast(Dict[str, Any], parsed_ai_dict)
-            ):
+            if not json_extraction_result.data:
                 logger.warning(
-                    f"Resposta da IA com estrutura inválida ou campos essenciais faltando: {str(parsed_ai_dict)[:500]}. Usando fallback."
+                    f"Não foi possível extrair JSON da resposta da IA. Erro: {json_extraction_result.error}. Resposta bruta: {response_from_ai_service[:200]}. Usando fallback."
                 )
                 return self._handle_ai_failure(action, details, game_state)
 
-            # Extrair valores do parsed_ai_dict, preparando para fallbacks
-            is_successful = parsed_ai_dict.get("success", False)
-            ai_message_val = parsed_ai_dict.get("message")  # Pode ser str ou None
-            ai_error_val = parsed_ai_dict.get("error")  # Pode ser str ou None
-            ai_current_loc_val = parsed_ai_dict.get(
-                "current_detailed_location"
-            )  # Pode ser str ou None
-            ai_scene_update_val = parsed_ai_dict.get(
-                "scene_description_update"
-            )  # Pode ser str ou None
+            extracted_json_data = json_extraction_result.data
+            logger.info(f"Extracted JSON from AI: {extracted_json_data}")
 
-            # Determinar final_message garantindo que seja sempre uma string
-            if is_successful:
-                final_message_str = (
-                    ai_message_val
-                    or "A ação foi processada, mas a IA não forneceu uma narrativa detalhada."
+            try:
+                validated_response = AIResponsePydantic(**extracted_json_data)
+                logger.info(
+                    f"Validated AIResponsePydantic data: {validated_response.model_dump_json(indent=2)}"
                 )
-            else:
-                # Se não for bem-sucedido, a mensagem deve refletir o erro.
-                # Priorizar a mensagem da IA, depois o detalhe do erro da IA, depois um fallback.
-                final_message_str = (
-                    ai_message_val
-                    or ai_error_val
-                    or "Falha ao processar a resposta da IA."
+                return validated_response
+            except ValidationError as e:
+                logger.warning(
+                    f"Resposta da IA falhou na validação do schema Pydantic: {e}. JSON extraído: {extracted_json_data}. Usando fallback."
                 )
-
-            # Garantir que current_detailed_location seja sempre uma string
-            final_current_detailed_location_str = (
-                ai_current_loc_val
-                or game_state.current_location
-                or "Localização Indefinida"
-            )
-
-            # Garantir que scene_description_update seja sempre uma string
-            final_scene_description_update_str = (
-                ai_scene_update_val
-                or game_state.scene_description
-                or "A cena permanece como antes."
-            )
-
-            # Garantir que details seja um dict
-            details_data = parsed_ai_dict.get("details")
-            if not isinstance(details_data, dict):
-                details_data = {}
-
-            # Construir o AIResponse garantindo a conformidade dos tipos
-            response_data: AIResponse = {
-                "success": is_successful,
-                "message": final_message_str,
-                "current_detailed_location": final_current_detailed_location_str,
-                "scene_description_update": final_scene_description_update_str,
-                "details": details_data,
-                "error": ai_error_val if not is_successful else None,
-                "interpreted_action_type": parsed_ai_dict.get(
-                    "interpreted_action_type"
-                ),
-                "interactable_elements": parsed_ai_dict.get("interactable_elements"),
-                "interpreted_action_details": parsed_ai_dict.get(
-                    "interpreted_action_details"
-                ),
-                "suggested_roll": parsed_ai_dict.get(
-                    "suggested_roll"
-                ),  # Adicionar suggested_roll aqui também
-            }
-
-            logger.info(f"Final AIResponse data: {response_data}")
-            return response_data  # O cast pode não ser mais estritamente necessário se o mypy inferir corretamente
+                # Poderíamos tentar um re-prompt aqui no futuro, passando 'e' como failure_reason
+                return self._handle_ai_failure(action, details, game_state)
+            except (
+                TypeError
+            ) as te:  # Captura erros se extracted_json_data não for um dict (ex: None)
+                logger.warning(
+                    f"TypeError ao tentar validar resposta da IA (provavelmente JSON não era um dict): {te}. JSON extraído: {extracted_json_data}. Usando fallback."
+                )
+                return self._handle_ai_failure(action, details, game_state)
 
         except Exception as e:
             logger.error(

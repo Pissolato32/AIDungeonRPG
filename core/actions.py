@@ -41,6 +41,9 @@ class MoveActionHandler(ActionHandler):
     def handle(
         self, details: str, character: "Character", game_state: Any
     ) -> Dict[str, Any]:
+        logger.info(
+            f"MoveActionHandler: Recebido details='{details}', location_id='{game_state.location_id}'"
+        )
         # Init world generator
         data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
         world_generator = WorldGenerator(data_dir)
@@ -49,23 +52,22 @@ class MoveActionHandler(ActionHandler):
         current_location_id = game_state.location_id
         directions = ["norte", "sul", "leste", "oeste"]  # Traduzido
 
+        logger.debug(
+            f"MoveActionHandler: Current location ID: {current_location_id}, Destination input: '{destination}'"
+        )
         # Normalize input
         normalized_direction: Optional[str] = next(
             (d for d in directions if d in destination), None
         )
-
-        # Process world map
         if (
             not hasattr(game_state, "world_map")
-            or "locations" not in game_state.world_map
-            or not game_state.world_map.get(
-                "locations"
-            )  # Adiciona verificação se 'locations' está vazio
+            or not game_state.world_map  # Checa se o world_map em si está vazio ou é None
         ):
             logger.warning(
                 "MoveActionHandler: game_state.world_map não está configurado corretamente ou não contém 'locations'. "
                 f"world_map atual: {getattr(game_state, 'world_map', 'Não definido')}"
             )
+            logger.warning("MoveActionHandler: World map error condition met.")
             # Se o mapa não está pronto, a IA deve narrar a falha ou a tentativa.
             # Retornamos sucesso=True para que o GameEngine chame a IA com action="move"
             return {
@@ -74,29 +76,40 @@ class MoveActionHandler(ActionHandler):
                 "action_performed": "move_failed_map_error",  # Indica para a IA que a mecânica falhou
             }
 
-        current_location = game_state.world_map["locations"].get(
-            current_location_id, {}
+        # Acessar localizações diretamente do world_map
+        current_location_data = game_state.world_map.get(current_location_id, {})
+        connections = current_location_data.get("connections", {})
+        logger.debug(
+            f"MoveActionHandler: Connections for '{current_location_id}': {connections}. Normalized direction: '{normalized_direction}'"
         )
-        connections = current_location.get("connections", {})
 
         next_location_id: Optional[str] = None
 
         # Try existing connections
         for dir_key, loc_id in connections.items():
-            if dir_key.lower() == normalized_direction:
-                next_location_id = loc_id
-                break
             if (
                 normalized_direction is None
-                and loc_id in game_state.world_map["locations"]
-                and game_state.world_map["locations"][loc_id]["name"].lower()
+                and loc_id in game_state.world_map
+                and game_state.world_map.get(loc_id, {}).get("name", "").lower()
                 in destination
             ):
                 next_location_id = loc_id
                 break
+            elif (
+                dir_key.lower() == normalized_direction
+            ):  # Checar direção normalizada depois
+                next_location_id = loc_id
+                break
+
+        logger.debug(
+            f"MoveActionHandler: Found next_location_id by connection: '{next_location_id}'"
+        )
 
         # If not found, generate adjacent location
         if next_location_id is None and normalized_direction:
+            logger.info(
+                f"MoveActionHandler: No existing connection found for direction '{normalized_direction}'. Attempting to generate new location."
+            )
             new_location = world_generator.generate_adjacent_location(
                 current_location_id, normalized_direction, game_state.world_map
             )
@@ -104,16 +117,18 @@ class MoveActionHandler(ActionHandler):
             # Ensure new locations are properly added (incorporating user suggestion)
             # Add the new location to the world_map only if its ID isn't already present.
             # This adds robustness in case the generator could theoretically return an existing ID.
-            if new_location["id"] not in game_state.world_map["locations"]:
-                game_state.world_map["locations"][new_location["id"]] = new_location
+            if new_location["id"] not in game_state.world_map:
+                game_state.world_map[new_location["id"]] = new_location
 
             # Update the connections of the original current_location (defined earlier in the method).
-            # The user's suggestion included re-fetching current_location here,
+            # The user's suggestion included re-fetching current_location_data here,
             # which is generally not needed as the original reference is still valid.
-            current_location.setdefault("connections", {})[normalized_direction] = (
-                new_location["id"]
+            current_location_data.setdefault("connections", {})[
+                normalized_direction
+            ] = new_location["id"]
+            logger.info(
+                f"MoveActionHandler: Generated new location '{new_location['id']}' and updated connections for '{current_location_id}'."
             )
-            world_generator.save_world(game_state.world_map)
             next_location_id = new_location["id"]
 
         # Garantir que visited_locations exista no game_state
@@ -121,8 +136,11 @@ class MoveActionHandler(ActionHandler):
             game_state.visited_locations = {}
 
         # If found or generated
-        if next_location_id and next_location_id in game_state.world_map["locations"]:
-            next_location = game_state.world_map["locations"][next_location_id]
+        if next_location_id and next_location_id in game_state.world_map:
+            logger.info(
+                f"MoveActionHandler: Moving to location_id '{next_location_id}'."
+            )
+            next_location = game_state.world_map[next_location_id]
             game_state.location_id = next_location_id
             game_state.current_location = next_location["name"]
             game_state.coordinates = next_location["coordinates"].copy()
@@ -130,11 +148,15 @@ class MoveActionHandler(ActionHandler):
             # Agora é seguro acessar game_state.visited_locations diretamente
             visited_info = game_state.visited_locations.get(next_location_id)
 
-            if visited_info:
+            if visited_info and next_location.get(
+                "visited"
+            ):  # Checar se o local já foi visitado antes
                 visited_info["last_visited"] = "revisited"
                 game_state.scene_description = visited_info["description"]
                 game_state.npcs_present = visited_info["npcs_seen"]
-
+                # Marcar como visitado no world_map também, se não estiver
+                if not game_state.world_map[next_location_id].get("visited"):
+                    game_state.world_map[next_location_id]["visited"] = True
                 # Optional: add new events
                 if random.random() < 0.3:
                     game_state.events = world_generator.generate_events(
@@ -147,20 +169,27 @@ class MoveActionHandler(ActionHandler):
 
                 return {
                     "success": True,
-                    "message": f"Você se move para {next_location['name']}. {next_location['description']}",
-                    "new_location": next_location["name"],
-                    "description": next_location["description"],
-                    "npcs": game_state.npcs_present,
-                    "events": game_state.events,
+                    "message": f"Você se move para {next_location['name']}.",  # Mensagem para IA narrar a chegada
+                    "action_performed": "move",
+                    "current_detailed_location": next_location["name"],  # Novo local
+                    "scene_description_update": next_location["description"],
+                    "npcs_present": game_state.npcs_present,  # NPCs do novo local
+                    "events": game_state.events,  # Eventos do novo local
                 }
             # First visit
             game_state.scene_description = next_location["description"]
             game_state.npcs_present = next_location["npcs"]
-            game_state.events = next_location["events"]
+            game_state.events = next_location.get(
+                "events", []
+            )  # Adicionar get com fallback
+            game_state.world_map[next_location_id][
+                "visited"
+            ] = True  # Marcar como visitado
 
             # game_state.visited_locations é garantido existir aqui
             game_state.visited_locations[next_location_id] = {
-                "name": game_state.current_location,
+                # Usar o nome do next_location, pois game_state.current_location já foi atualizado
+                "name": next_location["name"],
                 "last_visited": "first_time",
                 "description": game_state.scene_description,
                 "npcs_seen": game_state.npcs_present.copy(),
@@ -171,10 +200,14 @@ class MoveActionHandler(ActionHandler):
             return {
                 "success": True,
                 "message": f"Você chega em {next_location['name']}. {next_location['description']}",
-                "new_location": next_location["name"],
-                "description": next_location["description"],
+                "action_performed": "move",  # Para a IA saber que foi um movimento
+                "current_detailed_location": next_location["name"],  # Novo local
+                "scene_description_update": next_location[
+                    "description"
+                ],  # Nova descrição
                 "npcs": game_state.npcs_present,
                 "events": game_state.events,
+                # Campos antigos 'new_location' e 'description' podem ser removidos se o frontend usar os novos
             }
 
         # Se o movimento falhou (direção inválida, etc.)
@@ -182,6 +215,8 @@ class MoveActionHandler(ActionHandler):
         return {
             "success": True,
             "action_performed": "move_failed_no_path",
+            "message": f"Você tenta se mover para '{details}', mas não encontra um caminho claro ou a direção é inválida.",
+            # Manter current_detailed_location e scene_description_update com os valores atuais do game_state
         }
 
 
@@ -198,6 +233,7 @@ class LookActionHandler(ActionHandler):
         return {
             "success": True,  # The action of "looking" is always mechanically possible
             "action_performed": "look_attempt",
+            "message": f"Você olha ao redor de '{details if details else game_state.current_location}'.",  # Mensagem para a IA
             # No 'message' here, GameEngine will use original 'details' for AI prompt
         }
 
@@ -225,6 +261,7 @@ class TalkActionHandler(ActionHandler):
                 return {
                     "success": True,
                     "action_performed": "talk_attempt_npc_present",
+                    "message": f"Você tenta falar com {npc_query_name}.",  # Mensagem para a IA
                     "target_npc_name": npc_query_name,  # Passa o nome do alvo para a IA
                 }
             else:
@@ -232,7 +269,7 @@ class TalkActionHandler(ActionHandler):
                 return {
                     "success": True,  # A ação de tentar falar foi processada
                     "action_performed": "talk_attempt_npc_not_found",
-                    "message": f"Você tenta falar com '{npc_query_name}', mas não parece haver ninguém com esse nome por perto, ou você não foi claro.",
+                    "message": f"Você tenta falar com '{npc_query_name}', mas não parece haver ninguém com esse nome por perto.",
                 }
 
         # Se 'details' estiver vazio (ex: jogador digitou apenas "falar")
@@ -318,6 +355,7 @@ class SearchActionHandler(ActionHandler):
         return {
             "success": True,
             "action_performed": "search_attempt",  # Indica para a IA que a mecânica foi processada
+            "message": f"Você começa a procurar por '{details if details else 'algo interessante'}'.",  # Mensagem para a IA
         }
 
 
@@ -536,6 +574,7 @@ class AttackActionHandler(ActionHandler):
             return {
                 "success": True,
                 "action_performed": "attack_attempt_target",
+                "message": f"Você se prepara para atacar '{details.strip()}'.",  # Mensagem para a IA
             }
 
         # Se a ação é "attack" sem detalhes (ex: "attack" ou "atacar")
@@ -544,6 +583,7 @@ class AttackActionHandler(ActionHandler):
         return {
             "success": True,
             "action_performed": "attack_attempt_generic",
+            "message": "Você se prepara para o combate, procurando por um alvo.",  # Mensagem para a IA
         }
 
 
@@ -1385,6 +1425,7 @@ class InterpretActionHandler(ActionHandler):
         return {
             "success": True,
             "action_performed": "interpret_needed",  # Sinaliza para o GameEngine que a IA precisa interpretar
+            # A 'message' para a IA será os 'details' originais passados pelo jogador.
             "skip_ai_narration": False,  # Queremos a narração da IA
         }
 

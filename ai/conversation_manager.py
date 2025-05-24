@@ -94,11 +94,11 @@ class ConversationManager:
         npc_current_mood = context.npc_details.get("current_mood", "normal")
 
         prompt = (
-            f"Você é {context.npc_name}, um personagem (NPC) em um jogo de RPG com tema de apocalipse zumbi. "
+            f"Você é {context.npc_name}, um Personagem Não Jogador (NPC) em um jogo de RPG com tema de apocalipse zumbi. "
             "Interaja com o jogador de forma natural e consistente com sua personalidade e o contexto do mundo devastado. "
             "Suas ações e falas devem refletir diretamente sua profissão e conhecimento listados abaixo. Aja de forma lógica. "
-            "RESPONDA SEMPRE EM PORTUGUÊS DO BRASIL (pt-br).\n\n"  # Instrução de idioma adicionada
-            "Sua personalidade:\n"
+            "RESPONDA SEMPRE EM PORTUGUÊS DO BRASIL (pt-br).\n\n"
+            "SEUS DETALHES COMO NPC:\n"
             f"- Raça: {context.npc_details.get('race', 'Humano')}\n"
             f"- Profissão/Papel: {npc_profession}\n"
             f"- Traços de Personalidade: {npc_personality}\n"
@@ -116,20 +116,19 @@ class ConversationManager:
             f"- Informações importantes compartilhadas: {info if info else 'Nenhuma'}\n"
             f"- Tarefas/Missões mencionadas: {quests if quests else 'Nenhuma'}\n"
             f"- Nível de confiança do jogador em você (de -100 a 100): {npc_memory['trust_level']}\n\n"
-            "Contexto recente da situação no jogo (eventos ou observações):\n"
+            "CONTEXTO RECENTE NO JOGO (EVENTOS OU OBSERVAÇÕES PERTINENTES):\n"
         )
 
         for ctx_item in context.recent_context:
             prompt += f"- {ctx_item}\n"
 
         if history:
-            prompt += "\nHistórico da conversa (mais recente primeiro, últimas 5 interações):\n"
+            prompt += "\nHISTÓRICO DA CONVERSA ATUAL (MAIS RECENTE PRIMEIRO, ÚLTIMAS 5 INTERAÇÕES):\n"
             for msg in reversed(history[-5:]):
                 role_prefix = (
                     "Jogador:" if msg["role"] == "user" else f"{context.npc_name}:"
                 )
                 prompt += f"{role_prefix} {msg['content']}\n"
-
         prompt += (
             f"\nAgora, como {context.npc_name}, responda à última mensagem do jogador de forma natural e consistente com sua personalidade e o que já foi dito. "
             "Mantenha a conversa interessante e imersiva no tema de apocalipse zumbi. "
@@ -137,7 +136,7 @@ class ConversationManager:
             "Seja breve e direto quando apropriado, mas também capaz de elaborar se o jogador demonstrar interesse. "
             "Lembre-se do perigo constante e da escassez de recursos. "
             "Responda sempre em Português do Brasil (pt-br)."  # Reforço da instrução de idioma
-        )
+        )  # Adicionado um \n para melhor formatação do prompt final
 
         return prompt
 

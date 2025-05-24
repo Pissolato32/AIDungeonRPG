@@ -5,6 +5,8 @@ import os
 import sys
 import traceback
 from typing import Any, Dict, Optional, Tuple
+from core.game_engine import GameEngine
+
 
 from flask import (
     Flask,
@@ -16,7 +18,6 @@ from flask import (
     session,
     url_for,
 )
-import uuid  # Import uuid at the top level
 from dotenv import load_dotenv  # Importar dotenv
 
 load_dotenv()  # Carregar variáveis de ambiente do arquivo .env
@@ -312,8 +313,49 @@ class GameApp:
                     "permission_denied", "Character ownership mismatch."
                 )
 
+            # DEBUGGING STEP:
+            logger.info(f"DEBUG: Type of self.game_engine: {type(self.game_engine)}")
+            logger.info(
+                f"DEBUG: Attributes of self.game_engine: {dir(self.game_engine)}"
+            )
+            if not hasattr(self.game_engine, "process_action"):
+                logger.error(
+                    "DEBUG: self.game_engine does NOT have process_action. Forcing re-import for test."
+                )
+                # Tenta forçar a reimportação e verificação da classe GameEngine
+                try:
+                    from core.game_engine import GameEngine as TestGameEngineFromCore
+
+                    test_engine_instance_debug = TestGameEngineFromCore()
+                    if hasattr(test_engine_instance_debug, "process_action"):
+                        logger.info(
+                            "DEBUG: A freshly imported TestGameEngineFromCore instance HAS process_action."
+                        )
+                    else:
+                        logger.error(
+                            "DEBUG: A freshly imported TestGameEngineFromCore instance ALSO LACKS process_action. Problem is likely in core/game_engine.py itself or its own imports."
+                        )
+
+                    # Verifique o conteúdo de core.game_engine.py que o Python está vendo
+                    import inspect
+
+                    game_engine_file_path = inspect.getfile(TestGameEngineFromCore)
+                    logger.info(
+                        f"DEBUG: TestGameEngineFromCore is loaded from: {game_engine_file_path}"
+                    )
+                    with open(game_engine_file_path, "r", encoding="utf-8") as f_debug:
+                        logger.info(
+                            f"DEBUG: Content of {game_engine_file_path} (first 500 chars):\n{f_debug.read(500)}"
+                        )
+
+                except ImportError as ie:
+                    logger.error(f"DEBUG: ImportError during test re-import: {ie}")
+                except Exception as ex:
+                    logger.error(f"DEBUG: Exception during test re-import: {ex}")
+            # END DEBUGGING STEP
+
             result = self.game_engine.process_action(
-                action=action_name_for_log,
+                action=action_name_for_log,  # action_name_for_log já é string
                 details=details,
                 character=character,
                 game_state=game_state,
@@ -524,6 +566,62 @@ class GameApp:
     @staticmethod
     def get_app_config() -> Dict[str, Any]:
         return Config.get_app_config()
+
+    def get_world_map_data(self) -> Any:
+        """
+        Provides world map data for the active character.
+        Formats the data as expected by map.js.
+        """
+        active_character_id = session.get("active_character_id")
+        owner_session_id = session.get("user_id")
+
+        if not active_character_id or not owner_session_id:
+            return jsonify({"success": False, "message": "Nenhuma sessão ativa."}), 401
+
+        character, game_state = self._load_character_and_state(active_character_id)
+
+        if not character or not game_state:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Personagem ou estado do jogo não encontrado.",
+                    }
+                ),
+                404,
+            )
+
+        if character.owner_session_id != owner_session_id:
+            return jsonify({"success": False, "message": "Erro de permissão."}), 403
+
+        # map.js espera:
+        # world_map: { locations: {id: LocationData}, discovered: {"x,y": locId} }
+        # player_position: {x: number, y: number}
+
+        # O GameState.world_map já é Dict[str, LocationData], que serve para 'locations'
+        # Precisamos construir 'discovered' a partir de GameState.discovered_locations
+        discovered_for_frontend: Dict[str, str] = {}
+        for loc_id, loc_data in game_state.discovered_locations.items():
+            coords = loc_data.get("coordinates")
+            if coords:
+                coord_key = f"{coords.get('x', 0)},{coords.get('y', 0)}"  # Z não é usado pelo map.js 2D
+                discovered_for_frontend[coord_key] = loc_id
+
+        map_data_for_frontend = {
+            "locations": game_state.world_map,  # game_state.world_map já é Dict[str, LocationData]
+            "discovered": discovered_for_frontend,
+        }
+
+        return jsonify(
+            {
+                "success": True,
+                "world_map": map_data_for_frontend,
+                "player_position": {
+                    "x": game_state.coordinates.get("x", 0),
+                    "y": game_state.coordinates.get("y", 0),
+                },
+            }
+        )
 
 
 # --- Application Setup ---

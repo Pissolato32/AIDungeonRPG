@@ -35,23 +35,23 @@ def validate_action_with_ai(
 
     try:
         prompt = f"""
-        Você é um validador de ações em um jogo RPG. Sua tarefa é verificar se a ação do jogador faz sentido no contexto.
+        Você é um validador de ações em um jogo de RPG. Sua tarefa é verificar se a ação do jogador faz sentido no contexto atual do jogo.
         RESPONDA SEMPRE EM PORTUGUÊS DO BRASIL (pt-br).
 
-        Detalhes:
+        Contexto da Ação do Jogador:
         - Ação: {action}
-        - Descrição: {details}
-        - Local atual: {location}
+        - Detalhes da Ação: {details}
+        - Local Atual do Jogador: {location}
 
         Verifique se esta ação:
-        1. Faz sentido logicamente
-        2. É fisicamente possível
-        3. Tem detalhes suficientes para ser executada
+        1. Faz sentido lógico dentro do universo do jogo.
+        2. É fisicamente possível para um humano em um apocalipse zumbi.
+        3. Possui detalhes suficientes para ser compreendida e executada (ou narrada).
 
         Responda APENAS com um JSON no seguinte formato:
         {{
-            "valid": true,  // ou false
-            "reason": "Explicação breve em Português do Brasil se não for válida, caso contrário, uma string vazia ou uma confirmação."
+            "valid": true,  // ou false se a ação for completamente sem sentido ou impossível
+            "reason": "Explicação breve em Português do Brasil se 'valid' for false. Se 'valid' for true, uma breve confirmação como 'Ação parece razoável.' ou uma string vazia."
         }}
         Exemplo de resposta válida: {{"valid": true, "reason": "Ação parece razoável."}}
         Exemplo de resposta inválida: {{"valid": false, "reason": "Não é possível voar sem asas."}}

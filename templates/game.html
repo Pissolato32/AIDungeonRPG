@@ -20,6 +20,11 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
+    <!-- Adicionar referência ao map.css (crie este arquivo se necessário) -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/map.css') }}"
+    />
   </head>
   <body>
     <div class="game-container">
@@ -265,13 +270,13 @@
               <ul class="nav nav-tabs card-header-tabs">
                 <li class="nav-item" role="presentation">
                   <a
-                    class="nav-link active"
+                    class="nav-link"
                     id="inventory-tab-button"
                     data-bs-toggle="tab"
                     href="#inventoryTab"
                     role="tab"
                     aria-controls="inventoryTab"
-                    aria-selected="true"
+                    aria-selected="false"
                     >Inventário</a
                   >
                 </li>
@@ -301,13 +306,13 @@
                 </li>
                 <li class="nav-item" role="presentation">
                   <a
-                    class="nav-link"
+                    class="nav-link active"
                     id="map-tab-button"
                     data-bs-toggle="tab"
                     href="#mapTab"
                     role="tab"
                     aria-controls="mapTab"
-                    aria-selected="false"
+                    aria-selected="true"
                     >Mapa</a
                   >
                 </li>
@@ -317,7 +322,7 @@
             <div class="card-body tab-content">
               <!-- Inventory Tab -->
               <div
-                class="tab-pane fade show active"
+                class="tab-pane fade"
                 id="inventoryTab"
                 role="tabpanel"
                 aria-labelledby="inventory-tab-button"
@@ -613,23 +618,18 @@
               </div>
               <!-- Map Tab -->
               <div
-                class="tab-pane fade"
+                class="tab-pane fade show active"
                 id="mapTab"
                 role="tabpanel"
                 aria-labelledby="map-tab-button"
               >
                 <h5 class="mb-3">Mapa</h5>
-                <pre
-                  id="gameMapDisplay"
-                  class="border p-2 bg-light text-dark"
-                  style="
-                    min-height: 200px;
-                    white-space: pre;
-                    font-family: monospace;
-                  "
-                >
-{{ game_state.world_map_ascii if game_state and game_state.world_map_ascii else 'Mapa não disponível.' }}</pre
-                >
+                <!-- Contêiner para o mapa interativo gerado por map.js -->
+                <!-- Estilos como width, height, background-color devem ser movidos para map.css ou style.css -->
+                <div id="gameMap"></div>
+
+                <!-- O <pre id="gameMapDisplay"> foi removido/comentado pois map.js agora cuida do mapa visual. -->
+                <!-- Se desejar um mapa ASCII no futuro, você precisará popular game_state.world_map_ascii no backend. -->
               </div>
             </div>
           </div>
@@ -696,6 +696,8 @@
       const API_RESET_URL = "{{ url_for('routes.api_reset') }}";
       const CHARACTER_PAGE_URL = "{{ url_for('routes.character') }}";
     </script>
+    <!-- Adicionar referência ao map.js ANTES de game.js se game.js depender de elementos criados por map.js, ou se não houver dependência, a ordem é menos crítica -->
+    <script src="{{ url_for('static', filename='js/map.js') }}"></script>
     <script src="{{ url_for('static', filename='js/game.js') }}"></script>
   </body>
 </html>

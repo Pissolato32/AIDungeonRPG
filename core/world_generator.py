@@ -248,21 +248,21 @@ class WorldGenerator:
             location_type: Type of location
 
         Returns:
-            Generated description
+            Descrição gerada em Português do Brasil.
         """
         prompt = f"""
-        Gere uma descrição detalhada e atmosférica para um local chamado '{location_name}',
-        que é um(a) '{location_type}' em um mundo pós-apocalíptico infestado por zumbis e onde a sobrevivência é uma luta diária.
+        Você é um Mestre de RPG criando a descrição de um local.
+        Gere uma descrição detalhada e atmosférica EM PORTUGUÊS DO BRASIL para um local chamado '{location_name}',
+        que é um(a) '{location_type}' em um mundo pós-apocalíptico infestado por zumbis, onde a sobrevivência é uma luta diária.
 
         A descrição deve ter 2-3 parágrafos e incluir:
-        - Aparência visual: Detalhes sobre destruição, abandono, sinais de luta recente ou antiga, pichações de sobreviventes (avisos, pedidos de ajuda, marcas de gangues), barricadas improvisadas (bem-sucedidas ou falhas).
-        - Atmosfera e sensações: O cheiro predominante (podridão, mofo, fumaça, sangue seco). O silêncio opressor que pode ser quebrado por sons repentinos e ameaçadores (o arrastar de pés de um zumbi, o choro distante, o estalar de um galho). A sensação de estar sendo observado.
-        - Pistas sobre o que aconteceu ali: Evidências de uma luta desesperada, sinais de uma evacuação apressada, barricadas que falharam ou que ainda resistem. Restos de suprimentos (embalagens vazias, fogueiras frias, munição deflagrada). Veículos abandonados, talvez com corpos dentro ou próximos.
-        - Perigos e Oportunidades Imediatas: Indique sutilmente se o local parece relativamente seguro por enquanto, se há sinais claros de infestação de zumbis, ou se parece ter sido recentemente pilhado por outros sobreviventes. Há alguma cobertura óbvia? Rotas de fuga visíveis?
-        - Alguma característica única que torne o local memorável: Um grafite específico e perturbador,
-          um veículo abandonado de forma peculiar, um perigo óbvio ou uma oportunidade sutil (como uma porta entreaberta que leva a um local desconhecido).
+        - APARÊNCIA VISUAL: Detalhes sobre destruição, abandono, sinais de luta (recente ou antiga), pichações de sobreviventes (avisos, pedidos de ajuda, marcas de gangues), barricadas improvisadas (bem-sucedidas ou falhas).
+        - ATMOSFERA E SENSAÇÕES: O cheiro predominante (podridão, mofo, fumaça, sangue seco). O silêncio opressor que pode ser quebrado por sons repentinos e ameaçadores (o arrastar de pés de um zumbi, um choro distante, o estalar de um galho). A sensação de estar sendo observado.
+        - PISTAS SOBRE O PASSADO: Evidências de uma luta desesperada, sinais de evacuação apressada, barricadas falhas ou resistentes. Restos de suprimentos (embalagens vazias, fogueiras frias, munição deflagrada). Veículos abandonados, talvez com corpos.
+        - PERIGOS E OPORTUNIDADES IMEDIATAS: Indique sutilmente se o local parece seguro por ora, se há sinais claros de zumbis, ou se foi pilhado. Há cobertura óbvia? Rotas de fuga visíveis?
+        - CARACTERÍSTICA ÚNICA: Um grafite perturbador, um veículo abandonado de forma peculiar, um perigo óbvio ou uma oportunidade sutil (porta entreaberta para o desconhecido).
 
-        Mantenha a descrição imersiva e focada no tema de sobrevivência e perigo.
+        Mantenha a descrição imersiva, focada na sobrevivência e perigo. RESPONDA APENAS COM A DESCRIÇÃO GERADA, SEM PREFÁCIOS OU OBSERVAÇÕES.
         """
 
         try:
@@ -279,8 +279,8 @@ class WorldGenerator:
 
         # Fallback description if AI fails
         return (
-            f"Um(a) {location_type} chamado(a) {location_name}. O ar é pesado e o silêncio "
-            "é perturbador. Há sinais de destruição por toda parte."
+            f"Este é um(a) {location_type} conhecido(a) como {location_name}. O ar é pesado e o silêncio "
+            "é opressor. Sinais de destruição e abandono são visíveis por toda parte, um testemunho sombrio dos eventos que devastaram este mundo."
         )
 
     def generate_npcs(self, location_name: str, location_type: str) -> List[str]:
@@ -292,7 +292,7 @@ class WorldGenerator:
             location_type: Type of location
 
         Returns:
-            List of NPC names
+            Lista de nomes de NPCs em Português do Brasil.
         """
         # Base NPCs by location type
         base_npcs = {  # ADAPTED FOR ZOMBIE APOCALYPSE
@@ -345,14 +345,14 @@ class WorldGenerator:
         # Try to generate a unique NPC using AI - ADAPTED PROMPT
         try:
             prompt = f"""
-            Gere o nome e uma breve descrição (1 frase) de um personagem NPC único e
-            interessante que poderia ser encontrado em '{location_name}', um(a) '{location_type}'
+            Você é um Mestre de RPG criando um NPC.
+            Gere o NOME e uma BREVE DESCRIÇÃO (1 frase concisa) EM PORTUGUÊS DO BRASIL para um personagem NPC único e
+            interessante que poderia ser encontrado em '{location_name}' (um(a) '{location_type}')
             durante um apocalipse zumbi.
-            O personagem deve ter alguma característica marcante, uma peculiaridade, uma necessidade urgente ou uma história implícita que o
-            torne memorável e potencialmente interativo (amigável, hostil, necessitado, desconfiado).
-            Responda apenas com o nome e a descrição.
-            Exemplo: "Corvo, um ex-militar que perdeu seu esquadrão e agora só confia em
-            seu rifle." ou "Lily, uma garotinha que carrega um ursinho de pelúcia manchado
+            O personagem deve ter uma característica marcante, peculiaridade, necessidade urgente ou história implícita
+            que o torne memorável e interativo (amigável, hostil, necessitado, desconfiado, etc.).
+            RESPONDA APENAS COM O NOME DO NPC, SEGUIDO DE UMA VÍRGULA E A DESCRIÇÃO.
+            Exemplo: "Corvo, um ex-militar taciturno que perdeu seu esquadrão e agora só confia em seu rifle enferrujado." ou "Lily, uma garotinha assustada que se agarra a um ursinho de pelúcia manchado de fuligem."
             """
 
             prompt_dict = {"role": "user", "content": prompt}
@@ -360,7 +360,13 @@ class WorldGenerator:
                 [prompt_dict]
             )  # Envolve em uma lista
             if isinstance(response, str) and response.strip():
-                unique_npc = response.strip().split("\n", maxsplit=1)[0]
+                # A resposta esperada é "Nome, Descrição". Pegamos apenas o nome para a lista.
+                # A descrição completa (nome + descrição) pode ser usada se o sistema de NPC for mais complexo.
+                # Por enquanto, o sistema parece esperar apenas nomes na lista game_state.npcs_present.
+                unique_npc_name_part = (
+                    response.strip().split(",", 1)[0].strip()
+                )  # Pega a parte antes da primeira vírgula
+                unique_npc = unique_npc_name_part  # Usar apenas o nome para a lista de npcs_present
                 if unique_npc not in npcs:  # Avoid duplicates if AI gives a base one
                     npcs.append(unique_npc)
         except Exception as e:
@@ -377,7 +383,7 @@ class WorldGenerator:
             location_type: Type of location
 
         Returns:
-            List of event descriptions
+            Lista de descrições de eventos em Português do Brasil.
         """
         # Base events by location type - ADAPTED FOR ZOMBIE APOCALYPSE
         base_events = {
@@ -418,13 +424,12 @@ class WorldGenerator:
 
         # Try to generate a unique event using AI - ADAPTED PROMPT
         try:
-            prompt = (
-                prompt
-            ) = f"""
-            Gere uma breve descrição de um evento ou situação interessante e tensa
-            acontecendo em '{location_name}', um(a) '{location_type}' durante um apocalipse zumbi.
+            prompt = f"""
+            Você é um Mestre de RPG criando um evento ambiental.
+            Gere uma BREVE DESCRIÇÃO (1 frase) EM PORTUGUÊS DO BRASIL para um evento ou situação interessante e tensa
+            ocorrendo em '{location_name}' (um(a) '{location_type}') durante um apocalipse zumbi.
             O evento deve aumentar a sensação de perigo, desolação, mistério ou uma rara oportunidade. Pode ser um som, um movimento, algo encontrado.
-            Responda com apenas uma frase descritiva, sem explicações adicionais.
+            RESPONDA APENAS COM A FRASE DESCRITIVA DO EVENTO, SEM PREFÁCIOS OU OBSERVAÇÕES.
             """
 
             prompt_dict = {"role": "user", "content": prompt}
@@ -457,14 +462,16 @@ class WorldGenerator:
             New location data
         """
         # Get current location data
-        current_location = world_data["locations"].get(current_location_id, {})
+        current_location = world_data.get(
+            current_location_id, {}
+        )  # Acessar diretamente
         current_coords = current_location.get("coordinates", {"x": 0, "y": 0, "z": 0})
 
         # Determine new coordinates based on direction
         new_coords = current_coords.copy()
         if direction == "north":
             new_coords["y"] += 1
-        elif direction == "south":
+        elif direction == "south":  # Traduzido
             new_coords["y"] -= 1
         elif direction == "east":
             new_coords["x"] += 1
@@ -472,15 +479,25 @@ class WorldGenerator:
             new_coords["x"] -= 1
 
         # Check if there's already a location at these coordinates
-        for _, loc_data in world_data["locations"].items():
+        for loc_id_iter, loc_data in world_data.items():  # Acessar diretamente
+            # Ensure loc_data is a dictionary before calling .get()
+            if not isinstance(loc_data, dict):
+                logger.warning(
+                    f"Skipping non-dict item in world_data: {loc_data} for ID {loc_id_iter}"
+                )
+                continue
             loc_coords = loc_data.get("coordinates", {})
             if (
                 loc_coords.get("x") == new_coords["x"]
                 and loc_coords.get("y") == new_coords["y"]
                 and loc_coords.get("z") == new_coords["z"]
             ):
-                # Return existing location
-                return loc_data
+                logger.info(f"Found existing location at {new_coords}: {loc_id_iter}")
+                loc_data_with_id = (
+                    loc_data.copy()
+                )  # Create a copy to avoid modifying the original in-memory world_data
+                loc_data_with_id["id"] = loc_id_iter  # Add the ID to the returned data
+                return loc_data_with_id
 
         # Determine location type based on distance from origin
         distance_from_origin = abs(new_coords["x"]) + abs(new_coords["y"])
@@ -554,7 +571,7 @@ class WorldGenerator:
         counter = 0
         # Ensure ID is unique within world_data, though coordinates should make
         # it mostly unique
-        while location_id in world_data["locations"]:
+        while location_id in world_data:  # Acessar diretamente
             counter += 1
             location_id = f"{base_location_id}_{counter}"
 
@@ -592,15 +609,18 @@ class WorldGenerator:
 
     def _get_opposite_direction(self, direction: str) -> str:
         """Get the opposite of a direction."""
-        opposites = {
-            "north": "south",
-            "south": "north",
-            "east": "west",
-            "west": "east",
-            "up": "down",
-            "down": "up",
+        # direction is expected to be in Portuguese
+        opposites_pt = {
+            "norte": "sul",
+            "sul": "norte",
+            "leste": "oeste",
+            "oeste": "leste",
+            # "cima": "baixo", # if you add z-axis movement
+            # "baixo": "cima",
         }
-        return opposites.get(direction, "unknown")
+        return opposites_pt.get(
+            direction.lower(), "desconhecida"
+        )  # .lower() for safety
 
     def get_available_directions(
         self, location_id: str, world_data: Dict[str, Any]
@@ -615,7 +635,7 @@ class WorldGenerator:
         Returns:
             Dictionary of directions and their destination IDs
         """
-        location = world_data["locations"].get(location_id, {})
+        location = world_data.get(location_id, {})  # Acessar diretamente
         return location.get("connections", {})
 
     def get_location_by_coordinates(
@@ -631,7 +651,7 @@ class WorldGenerator:
         Returns:
             Location data or None if not found
         """
-        for _, loc_data in world_data["locations"].items():
+        for _, loc_data in world_data.items():  # Acessar diretamente
             loc_coords = loc_data.get("coordinates", {})
             if (
                 loc_coords.get("x") == coords["x"]

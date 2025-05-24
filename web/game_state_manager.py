@@ -69,9 +69,9 @@ class GameStateManager:
                 "coordinates": {"x": 0, "y": 0, "z": 0},
                 "visited": True,
                 "connections": {
-                    "north": "bunker_exit_tunnel",  # Saída para a superfície
-                    "east": "bunker_infirmary",
-                    "west": "bunker_storage",
+                    "norte": "bunker_exit_tunnel",  # Saída para a superfície
+                    "leste": "bunker_infirmary",
+                    "oeste": "bunker_storage",
                 },
                 "events": game_state.events.copy(),  # Events for this specific location
                 "npcs": game_state.npcs_present.copy(),  # NPCs for this specific location
@@ -83,8 +83,8 @@ class GameStateManager:
                 "coordinates": {"x": 0, "y": 1, "z": 0},
                 "visited": False,
                 "connections": {
-                    "south": "bunker_main",
-                    "north": "ruined_street_01",
+                    "sul": "bunker_main",
+                    "norte": "ruined_street_01",
                 },  # Leva para a rua
                 "events": [],
                 "npcs": [],
@@ -95,7 +95,7 @@ class GameStateManager:
                 "description": "Uma pequena sala convertida em enfermaria. Há algumas camas improvisadas e suprimentos médicos escassos.",
                 "coordinates": {"x": 1, "y": 0, "z": 0},
                 "visited": False,
-                "connections": {"west": "bunker_main"},
+                "connections": {"oeste": "bunker_main"},
                 "events": [],
                 "npcs": [
                     "Médica de Campo Apavorada"
@@ -107,7 +107,7 @@ class GameStateManager:
                 "description": "Uma área de armazenamento com prateleiras, a maioria vazias ou com itens inúteis. O ar está pesado com o cheiro de mofo.",
                 "coordinates": {"x": -1, "y": 0, "z": 0},
                 "visited": False,
-                "connections": {"east": "bunker_main"},
+                "connections": {"leste": "bunker_main"},
                 "events": [],
                 "npcs": [],
             },
@@ -119,7 +119,7 @@ class GameStateManager:
                 # Assuming surface is y=2
                 "coordinates": {"x": 0, "y": 2, "z": 0},
                 "visited": False,
-                "connections": {"south": "bunker_exit_tunnel"},
+                "connections": {"sul": "bunker_exit_tunnel"},
                 "events": ["Um corvo solitário grasna de cima de um poste torto."],
                 "npcs": [],
             },

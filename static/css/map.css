@@ -1,93 +1,95 @@
-.map-container {
-    border: 1px solid #444;
-    background-color: #1a1a1a;
-    padding: 10px;
+/* static/css/map.css */
+
+/* Estilo para o contêiner principal do mapa interativo */
+#gameMap {
+    width: 100%;
+    height: 400px;
+    /* Você pode ajustar esta altura conforme necessário */
+    background-color: #272727;
+    /* Um fundo escuro para o mapa, combinando com o tema */
     margin-bottom: 15px;
-    border-radius: 5px;
-    height: 300px;
+    /* Espaço abaixo do mapa */
+    border: 1px solid #444;
+    /* Uma borda sutil */
+    position: relative;
+    /* Importante para posicionar elementos filhos (como ícones) absolutamente dentro dele */
     overflow: hidden;
+    /* Para garantir que o conteúdo do canvas não transborde se for maior */
 }
 
+/* Estilos para um possível wrapper do mapa, se você decidir usar um */
+/* .map-wrapper { */
+/* Exemplo:
+  border: 1px dashed #555;
+  padding: 5px;
+  */
+/* } */
+
+/* Estilos para o elemento canvas, se você estiver desenhando diretamente nele via map.js */
 .game-map-canvas {
     display: block;
-    margin: 0 auto;
-    background-color: #222;
-    image-rendering: pixelated;
+    /* Remove qualquer espaço extra abaixo do canvas */
+    /* width: 100%; */
+    /* O JavaScript geralmente controla o tamanho do canvas */
+    /* height: 100%; */
 }
 
+/* Estilos para a legenda do mapa */
 .map-legend {
-    display: flex;
-    justify-content: center;
+    font-size: 0.8em;
     margin-top: 10px;
-    font-size: 0.8rem;
+    padding: 5px;
+    color: #ccc;
+    /* Cor clara para o texto da legenda */
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-    margin: 0 10px;
+    margin-bottom: 5px;
 }
 
 .legend-color {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    margin-right: 5px;
-    border-radius: 2px;
-}
-
-.map-controls {
-    display: flex;
-    justify-content: center;
-    margin-top: 10px;
-}
-
-.map-controls button {
-    margin: 0 5px;
-    padding: 2px 8px;
-    background-color: #333;
+    width: 15px;
+    height: 15px;
+    margin-right: 8px;
+    /* Aumentar um pouco o espaço */
     border: 1px solid #555;
-    color: #fff;
-    border-radius: 3px;
-    cursor: pointer;
 }
 
-.map-controls button:hover {
-    background-color: #444;
+/* Estilos para os controles do mapa (zoom, etc.) */
+.map-controls button {
+    margin: 2px 5px;
+    /* Ajustar margens */
+    padding: 5px 10px;
+    /* Outros estilos de botão podem vir do Bootstrap ou do seu style.css principal */
 }
 
+/* Estilos básicos para ícones no mapa (se você os adicionar via HTML/JS sobre o canvas) */
 .map-icon {
     position: absolute;
+    /* Permite posicionamento preciso sobre o mapa */
     transform: translate(-50%, -50%);
-    font-size: 16px;
-    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);
-}
-
-.map-icon-city {
-    color: #FFD700;
-}
-
-.map-icon-village {
-    color: #90EE90;
-}
-
-.map-icon-dungeon {
-    color: #FF6347;
-}
-
-.map-icon-quest {
-    color: #1E90FF;
+    /* Centraliza o ícone em suas coordenadas */
+    font-size: 1.5em;
+    /* Tamanho do ícone, ajuste conforme necessário */
+    pointer-events: none;
+    /* Para que os ícones não interfiram com eventos de clique no mapa (se houver) */
+    color: #fff;
+    /* Cor padrão para ícones, ajuste conforme necessário */
+    text-shadow: 1px 1px 2px black;
+    /* Sombra para melhor visibilidade */
 }
 
 .map-icon-player {
-    color: #FF0000;
-    font-size: 18px;
+    /* Estilos específicos para o ícone do jogador, se necessário */
+    color: #ffdd57;
+    /* Exemplo: cor dourada para o jogador */
     z-index: 10;
-    animation: pulse 1.5s infinite;
+    /* Para garantir que o ícone do jogador fique sobre outros elementos do mapa */
 }
 
-@keyframes pulse {
-    0% { transform: translate(-50%, -50%) scale(1); }
-    50% { transform: translate(-50%, -50%) scale(1.2); }
-    100% { transform: translate(-50%, -50%) scale(1); }
-}
+/* Adicione classes para outros tipos de ícones conforme necessário */
+/* .map-icon-enemy { color: red; } */
+/* .map-icon-npc { color: lightblue; } */
+/* .map-icon-item { color: lightgreen; } */

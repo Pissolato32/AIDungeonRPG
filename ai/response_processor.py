@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional, TypedDict, cast, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .game_ai_client import AIResponse  # Import for type hinting only
+    from .schemas import AIResponsePydantic  # Usar o schema Pydantic para type hinting
 
 logger = logging.getLogger(__name__)
 
@@ -43,95 +43,56 @@ class JsonExtractionResult:
 
 def process_ai_response(
     response_text: str,
-) -> "AIResponse":  # Use string literal for forward reference
+) -> Dict[str, Any]:  # Retorna um Dict agora, Pydantic valida depois
     """Process AI response text, attempting to extract JSON if present.
+    This function now primarily focuses on extracting the JSON data.
+    The GameAIClient will handle parsing this data into a Pydantic model and providing defaults.
 
     Args:
         response_text: Raw response text from the AI
 
     Returns:
-        A structured response object
+        A dictionary representing the parsed JSON if successful.
+        If JSON extraction fails, it returns a dictionary indicating failure,
+        which the GameAIClient will then use to construct a fallback AIResponsePydantic.
     """
     try:
-        # Try to extract JSON from the response
         result = extract_json_from_text(response_text)
-
         if result.data:
-            response_data_raw: Dict[str, Any] = result.data
-
-            # Ensure required string fields are strings, not None, providing defaults.
-            message_val = response_data_raw.get("message")
-            current_loc_val = response_data_raw.get("current_detailed_location")
-            scene_update_val = response_data_raw.get("scene_description_update")
-
-            # Construct the AIResponse-compatible dictionary
-            final_response_data: Dict[str, Any] = {
-                "success": response_data_raw.get("success", True),
-                "message": (
-                    message_val
-                    if isinstance(message_val, str)
-                    else "Resposta da IA inválida ou ausente."
-                ),
-                "current_detailed_location": (
-                    current_loc_val
-                    if isinstance(current_loc_val, str)
-                    else "Localização não fornecida pela IA."
-                ),
-                "scene_description_update": (
-                    scene_update_val
-                    if isinstance(scene_update_val, str)
-                    else "Atualização de cena não fornecida pela IA."
-                ),
-                "details": response_data_raw.get("details", {}),
-                "error": response_data_raw.get(
-                    "error"
-                ),  # Optional, so None is fine if missing
-                "interpreted_action_type": response_data_raw.get(
-                    "interpreted_action_type"
-                ),  # Optional
-                "interpreted_action_details": response_data_raw.get(
-                    "interpreted_action_details"
-                ),  # Optional
-                "suggested_roll": response_data_raw.get("suggested_roll"),  # Optional
-                "interactable_elements": response_data_raw.get(
-                    "interactable_elements"
-                ),  # Optional
-            }
-            # Ensure 'details' is a dict
-            if not isinstance(final_response_data["details"], dict):
-                final_response_data["details"] = {}
-
-            return cast("AIResponse", final_response_data)
-
-        # If no JSON found, return as message
-        return cast(
-            "AIResponse",
-            {
-                "success": True,
-                "message": response_text,
-                "current_detailed_location": "Desconhecido (texto simples)",
-                "scene_description_update": "Cena inalterada (texto simples)",
+            return result.data  # Retorna o dict bruto
+        else:
+            # Se não conseguiu extrair JSON, retorna um dict indicando falha na extração
+            # para que o GameAIClient possa usar o _handle_ai_failure.
+            # Ou, podemos retornar uma estrutura básica que o Pydantic tentará validar (e provavelmente falhará de forma controlada).
+            # Melhor retornar um dict que o GameAIClient possa identificar como falha de extração.
+            # No entanto, o GameAIClient já verifica json_extraction_result.data.
+            # Se chegarmos aqui, é porque extract_json_from_text retornou data=None.
+            # O GameAIClient já lida com isso. Esta função não deveria ser chamada se data for None.
+            # Mas, para segurança, se for chamada com texto que não é JSON:
+            logger.warning(
+                f"process_ai_response: No JSON extracted, returning basic error structure. Text: {response_text[:100]}"
+            )
+            return {
+                "success": False,
+                "message": "Falha ao extrair JSON da resposta da IA.",
+                "error": "JSON_EXTRACTION_FAILED",
+                "current_detailed_location": "Desconhecido",  # Default para Pydantic
+                "scene_description_update": "Inalterada",  # Default para Pydantic
                 "details": {},
-                "error": None,
-            },
-        )
-
+            }
     except Exception as e:
         logger.error(
             "Error processing AI response",
             extra={"error": str(e), "response_length": len(response_text)},
         )
-        return cast(
-            "AIResponse",
-            {
-                "success": False,
-                "message": "Falha ao processar resposta",
-                "error": str(e),
-                "current_detailed_location": "Erro",
-                "scene_description_update": "Erro",
-                "details": {},
-            },
-        )
+        return {  # Estrutura de erro para Pydantic
+            "success": False,
+            "message": f"Erro ao processar resposta da IA: {e}",
+            "error": str(e),
+            "current_detailed_location": "Erro",
+            "scene_description_update": "Erro",
+            "details": {},
+        }
 
 
 def extract_json_from_text(text: str) -> JsonExtractionResult:
@@ -247,14 +208,17 @@ def _extract_with_brace_matching(text: str) -> JsonExtractionResult:
     )
 
 
-def validate_response_content(response: "AIResponse") -> "AIResponse":
+def validate_response_content(
+    response: "AIResponsePydantic",
+) -> "AIResponsePydantic":  # Agora espera Pydantic
     """Validate if the response content is meaningful.
+    NOTA: Com Pydantic, grande parte desta validação pode ser feita no próprio modelo.
+    Esta função pode ser simplificada ou focada em validações semânticas que Pydantic não cobre.
 
     Args:
-        response: The response dictionary to validate
-
+        response: The AIResponsePydantic object
     Returns:
-        Validated response or error response
+        The same response if valid, or a modified one if an issue is auto-corrected or flagged.
     """
     patterns = [
         r"Você realizou a ação \w+: \w+",
@@ -262,60 +226,19 @@ def validate_response_content(response: "AIResponse") -> "AIResponse":
         r"Action \w+ performed: \w+",
     ]
 
-    if "message" in response and isinstance(response["message"], str):
-        message = response["message"]
+    # Assumindo que 'response' é um AIResponsePydantic ou um dict que será validado por ele.
+    message_content = response.message
 
-        if any(re.search(pattern, message) for pattern in patterns):
-            # Return a dictionary that conforms to AIResponse
-            return cast(
-                "AIResponse",
-                {
-                    "success": False,
-                    "message": (
-                        "Não foi possível processar sua ação. "
-                        "Por favor, tente novamente com mais detalhes."
-                    ),
-                    "current_detailed_location": response.get(
-                        "current_detailed_location", "Erro de validação de conteúdo"
-                    ),
-                    "scene_description_update": response.get(
-                        "scene_description_update", "Erro de validação de conteúdo"
-                    ),
-                    "details": response.get("details", {}),
-                    "error": "Conteúdo de mensagem inválido detectado pelo validador.",
-                    "interpreted_action_type": response.get("interpreted_action_type"),
-                    "interpreted_action_details": response.get(
-                        "interpreted_action_details"
-                    ),
-                    "suggested_roll": response.get("suggested_roll"),
-                    "interactable_elements": response.get("interactable_elements"),
-                },
+    if isinstance(message_content, str):
+        if any(re.search(pattern, message_content) for pattern in patterns):
+            logger.warning(
+                f"Conteúdo de mensagem inválido detectado: {message_content[:100]}"
+            )
+            new_message = "Não foi possível processar sua ação. Por favor, tente novamente com mais detalhes."
+            error_msg = "Conteúdo de mensagem inválido detectado pelo validador."
+            # Retorna uma nova instância de AIResponsePydantic com os campos atualizados
+            return response.model_copy(
+                update={"success": False, "message": new_message, "error": error_msg}
             )
 
     return response
-
-
-def validate_ai_response_structure(response_dict: Dict[str, Any]) -> bool:
-    """
-    Validates if the AI response dictionary contains essential fields.
-
-    Args:
-        response_dict: The dictionary parsed from the AI's JSON response.
-
-    Returns:
-        True if the response contains the required fields, False otherwise.
-    """
-    # Estes são os campos que consideramos absolutamente essenciais para o jogo prosseguir
-    # com a resposta da IA. 'success' é verificado separadamente no GameAIClient.
-    required_fields = [
-        "message",
-        "current_detailed_location",
-        "scene_description_update",
-    ]
-    missing_fields = [field for field in required_fields if field not in response_dict]
-    if missing_fields:
-        logger.warning(
-            f"Resposta da IA inválida. Campos faltando: {', '.join(missing_fields)}. Resposta: {str(response_dict)[:200]}"
-        )
-        return False
-    return True
