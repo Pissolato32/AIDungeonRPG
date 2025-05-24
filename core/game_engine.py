@@ -6,7 +6,7 @@ import json
 import os
 import random
 import logging
-from typing import Any, Dict, List, Optional, Tuple, cast  # Added Tuple
+from typing import Any, Dict, List, Optional, Tuple  # Added Tuple, removed cast
 
 # Assume GameAIClient is in ai.game_ai_client, adjust if necessary
 from ai.game_ai_client import GameAIClient
@@ -31,6 +31,13 @@ logger = logging.getLogger(__name__)  # Configurar logger para este módulo
 # para evitar repetição.
 
 MAX_NPC_HISTORY = 3
+
+ACTION_DETAIL_KEYS_FOR_INTERPRETATION = {
+    "move": "direction",
+    "talk": "target_npc",
+    "use_item": "item_name",
+    # Adicione outras ações e suas chaves de detalhes específicas aqui
+}
 
 
 class GameEngine:
@@ -66,7 +73,7 @@ class GameEngine:
         except (
             IOError,
             TypeError,
-            ValueError,
+            ValueError,  # type: ignore
         ) as e:  # Captura erros de I/O e serialização JSON
             logger.error(f"Error saving character {character.id} to {path}: {e}")
             if character_data_to_save is not None:
@@ -95,9 +102,23 @@ class GameEngine:
                         return None
                     data = json.loads(content)
                     character = Character.from_dict(data)
+                    logger.info(f"Character {character_id} loaded successfully.")
                     return character
-            except (IOError, json.JSONDecodeError) as e:
-                logger.error(f"Error loading character {character_id}: {e}")
+            except (
+                IOError,
+                json.JSONDecodeError,
+                TypeError,
+                ValueError,
+            ) as e:  # Added TypeError, ValueError
+                logger.error(
+                    f"Error loading or parsing character {character_id}: {e}",
+                    exc_info=True,
+                )
+            except Exception as e:  # Captura quaisquer outros erros inesperados
+                logger.error(
+                    f"Unexpected error loading character {character_id}: {e}",
+                    exc_info=True,
+                )
         return None
 
     def delete_character(self, character_id: str) -> None:
@@ -107,7 +128,9 @@ class GameEngine:
             try:
                 os.remove(path)
             except OSError as e:
-                logger.error(f"Error deleting character file {character_id}: {e}")
+                logger.error(
+                    f"Error deleting character file {character_id}: {e}", exc_info=True
+                )
 
     def get_characters_by_owner(self, owner_session_id: str) -> List[Character]:
         """Load all characters belonging to a specific owner_session_id."""
@@ -126,11 +149,33 @@ class GameEngine:
     def save_game_state(self, character_id: str, game_state: GameState) -> None:
         """Save game state data to a file."""
         path = self._get_gamestate_save_path(character_id)
+        game_state_data_to_save = None  # For logging in case of error
         try:
+            game_state_data_to_save = game_state.to_dict()
             with open(path, "w", encoding="utf-8") as f:
-                json.dump(game_state.to_dict(), f, indent=2)
-        except IOError as e:
-            logger.error(f"Error saving game state for character {character_id}: {e}")
+                json.dump(game_state_data_to_save, f, indent=2)
+            logger.info(f"Game state for {character_id} saved successfully to {path}")
+        except (
+            IOError,
+            TypeError,
+            ValueError,  # type: ignore
+        ) as e:  # Captura erros de I/O e serialização JSON
+            logger.error(
+                f"Error saving game state for character {character_id} to {path}: {e}"
+            )
+            if game_state_data_to_save is not None:
+                logger.error(
+                    f"Game state data that failed to save: {str(game_state_data_to_save)[:500]}..."
+                )
+        except Exception as e:  # Captura quaisquer outros erros inesperados
+            logger.error(
+                f"Unexpected error saving game state for {character_id} to {path}: {e}",
+                exc_info=True,
+            )
+            if game_state_data_to_save is not None:
+                logger.error(
+                    f"Game state data that failed to save (unexpected error): {str(game_state_data_to_save)[:500]}..."
+                )
 
     def load_game_state(self, character_id: str) -> Optional[GameState]:
         """Load game state data from a file."""
@@ -139,10 +184,25 @@ class GameEngine:
             try:
                 with open(path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    return GameState.from_dict(data)
-            except (IOError, json.JSONDecodeError) as e:
+                    gs = GameState.from_dict(data)
+                    logger.info(
+                        f"Game state for character {character_id} loaded successfully."
+                    )
+                    return gs
+            except (
+                IOError,
+                json.JSONDecodeError,
+                TypeError,
+                ValueError,
+            ) as e:  # Added TypeError, ValueError
                 logger.error(
-                    f"Error loading game state for character {character_id}: {e}"
+                    f"Error loading or parsing game state for character {character_id}: {e}",
+                    exc_info=True,
+                )
+            except Exception as e:  # Captura quaisquer outros erros inesperados
+                logger.error(
+                    f"Unexpected error loading game state for {character_id}: {e}",
+                    exc_info=True,
                 )
         return None
 
@@ -154,7 +214,8 @@ class GameEngine:
                 os.remove(path)
             except OSError as e:
                 logger.error(
-                    f"Error deleting game state file for character {character_id}: {e}"
+                    f"Error deleting game state file for {character_id}: {e}",
+                    exc_info=True,
                 )
 
     def _handle_survival_updates(
@@ -229,17 +290,27 @@ class GameEngine:
         return ai_message_content, is_repetition
 
     def _determine_npc_for_repetition_check(
-        self, action_for_ai: str, message_for_ai_narration: str, game_state: GameState
+        self,
+        action_for_ai: str,
+        handler_result_dict: Dict[str, Any],
+        game_state: GameState,
     ) -> Optional[str]:
         """Determines the NPC name for message repetition history based on action and context."""
-        if action_for_ai.lower() == "talk":
-            potential_npc_name = message_for_ai_narration.strip()
-            if (
-                potential_npc_name in game_state.known_npcs
-                or potential_npc_name in game_state.npcs_present
-            ):
-                return potential_npc_name
-        return None
+        # Se a ação envolveu um NPC falando, o mechanical_handler_result deve indicar o NPC.
+        # Isso depende dos ActionHandlers (como TalkHandler) fornecerem "npc_name" em seu resultado.
+        # This method is called *after* the mechanical handler, so its result is available. # type: ignore
+        npc_name = handler_result_dict.get("npc_name", None)  # type: ignore
+        if npc_name and isinstance(npc_name, str):
+            # Validação adicional: este NPC é conhecido ou está presente?
+            logger.debug(
+                f"NPC identified for repetition check: {npc_name} from handler result for action {action_for_ai}"  # type: ignore # type: ignore
+            )
+            return npc_name
+        else:
+            logger.debug(
+                f"NPC '{npc_name}' from handler result for action {action_for_ai} not in known_npcs or npcs_present."  # type: ignore # type: ignore
+            )
+        return None  # NPC name provided but not recognized in current context
 
     def _process_suggested_roll(
         self,
@@ -353,15 +424,8 @@ class GameEngine:
         # Validar e aplicar interactable_elements
         ai_interactables = ai_response.interactable_elements
         if isinstance(ai_interactables, list):
-            # Aqui você poderia adicionar lógica para validar se os elementos são plausíveis
-            # para o local atual, ou filtrar/modificá-los.
-            # Por enquanto, vamos apenas logar e aceitar o que a IA fornecer.
-            # No futuro, poderia comparar com uma lista de elementos conhecidos para game_state.location_id
-            # ou com elementos que podem ser gerados dinamicamente.
             logger.info(f"AI suggested interactable elements: {ai_interactables}")
-            # Se o GameState tiver um campo para armazenar os interativos da cena atual, atualize-o.
-            # Ex: game_state.current_scene_interactables = ai_interactables
-            # Por ora, essa informação é mais para o frontend via a resposta da API.
+            game_state.current_scene_interactables = ai_interactables
         elif ai_interactables is not None:  # Se não for lista mas também não for None
             logger.warning(
                 f"AI provided interactable_elements in an unexpected format: {type(ai_interactables)}. Expected list."
@@ -386,24 +450,51 @@ class GameEngine:
                 f"AI provided new facts for long term memory: {new_facts_from_ai}"
             )
 
-    def _update_location(self, game_state: GameState, new_location: str) -> None:
-        if new_location in game_state.discovered_locations:
-            loc_data = game_state.discovered_locations[new_location]
-            game_state.location_id = new_location
+    def _update_location(self, game_state: GameState, new_location_id: str) -> None:
+        """
+        Updates the game state to reflect moving to a new location.
+        This method assumes new_location_id is a valid key in game_state.world_map
+        or game_state.discovered_locations.
+        It also updates game_state.occupied_coordinates if the location is newly "discovered"
+        or if its data implies a new coordinate.
+        """
+        loc_data = game_state.world_map.get(new_location_id)
+        if not loc_data:
+            loc_data = game_state.discovered_locations.get(new_location_id)
+
+        if loc_data:
+            game_state.location_id = new_location_id
             game_state.current_location = loc_data.get("name", "Local Desconhecido")
             game_state.scene_description = loc_data.get(
                 "description", "Uma área misteriosa."
             )
-            game_state.coordinates = loc_data.get(
-                "coordinates", {"x": 0, "y": 0, "z": 0}
-            )
+            new_coords_dict = loc_data.get("coordinates")
+            if new_coords_dict:
+                game_state.coordinates = new_coords_dict
+                # Atualizar occupied_coordinates se esta localização não estava lá ou se as coordenadas mudaram
+                # (embora as coordenadas de uma localização existente não devam mudar frequentemente)
+                coord_tuple = (
+                    new_coords_dict.get("x", 0),
+                    new_coords_dict.get("y", 0),
+                    new_coords_dict.get("z", 0),
+                )
+                if coord_tuple not in game_state.occupied_coordinates:
+                    game_state.occupied_coordinates.add(coord_tuple)
+                    logger.debug(
+                        f"Added {coord_tuple} to occupied_coordinates via _update_location."
+                    )
+
             game_state.npcs_present = loc_data.get("npcs", [])
             game_state.events = loc_data.get("events", [])
+
             if not loc_data.get("visited"):
                 loc_data["visited"] = True
+                # Se for a primeira visita, garantir que esteja em discovered_locations
+                if new_location_id not in game_state.discovered_locations:
+                    game_state.discover_location(new_location_id, loc_data)
         else:
             logger.warning(
-                f"Tentativa de atualizar para localização desconhecida (ID): {new_location}"
+                f"Tentativa de atualizar para localização desconhecida (ID): {new_location_id}"
             )
 
     def _get_new_coordinates(self, game_state: GameState) -> LocationCoords:
@@ -413,34 +504,37 @@ class GameEngine:
             current.get("y", 0),
             current.get("z", 0),
         )
-        directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+        directions = [(0, 1, 0), (1, 0, 0), (0, -1, 0), (-1, 0, 0)]  # dx, dy, dz
         random.shuffle(directions)
-        for dx, dy in directions:
-            new_x, new_y = x + dx, y + dy
-            if self._is_valid_location(new_x, new_y, z, game_state):
-                return {"x": new_x, "y": new_y, "z": z}
-        for _ in range(10):
+        for dx, dy, dz_offset in directions:  # dz_offset é sempre 0 por enquanto
+            new_x, new_y, new_z = x + dx, y + dy, z + dz_offset
+            if self._is_valid_location(new_x, new_y, new_z, game_state):
+                return {"x": new_x, "y": new_y, "z": new_z}
+
+        # Fallback: Tentar coordenadas mais distantes se as adjacentes estiverem ocupadas
+        for _ in range(10):  # Tentar algumas vezes
             rand_dx = random.choice([-2, -1, 1, 2])
             rand_dy = random.choice([-2, -1, 1, 2])
-            if rand_dx == 0 and rand_dy == 0:
+            # rand_dz = random.choice([-1, 0, 1]) # Se movimento 3D for mais complexo
+            if rand_dx == 0 and rand_dy == 0:  # Evitar ficar no mesmo lugar
                 continue
-            new_x, new_y = x + rand_dx, y + rand_dy
-            if self._is_valid_location(new_x, new_y, z, game_state):
-                return {"x": new_x, "y": new_y, "z": z}
+            new_x, new_y, new_z = x + rand_dx, y + rand_dy, z  # Mantendo z por enquanto
+            if self._is_valid_location(new_x, new_y, new_z, game_state):
+                return {"x": new_x, "y": new_y, "z": new_z}
+
+        # Último fallback: apenas mover para uma direção padrão se tudo falhar
+        # (isso pode indicar um mapa muito cheio ou lógica de _is_valid_location precisando de ajuste)
+        logger.warning(
+            f"Could not find a valid new coordinate near ({x},{y},{z}) after several attempts. Defaulting to x+1."
+        )
         return {"x": x + 1, "y": y, "z": z}
 
     @staticmethod
     def _is_valid_location(x: int, y: int, z: int, game_state: GameState) -> bool:
-        for loc_data in game_state.discovered_locations.values():
-            coords = loc_data.get("coordinates")
-            if (
-                coords
-                and coords.get("x") == x
-                and coords.get("y") == y
-                and coords.get("z") == z
-            ):
-                return False
-        return True
+        """Checks if the given coordinates are already occupied."""
+        # A verificação agora usa o conjunto otimizado em GameState.
+        # logger.debug(f"Checking validity for ({x},{y},{z}). Occupied: {game_state.occupied_coordinates}")
+        return (x, y, z) not in game_state.occupied_coordinates
 
     @staticmethod
     def _get_direction(
@@ -448,10 +542,16 @@ class GameEngine:
     ) -> Optional[str]:
         dx = to_coords.get("x", 0) - from_coords.get("x", 0)
         dy = to_coords.get("y", 0) - from_coords.get("y", 0)
+        # dz = to_coords.get("z", 0) - from_coords.get("z", 0) # Para movimento 3D
+
+        # Priorizar movimento no plano XY por enquanto
         if abs(dx) > abs(dy):
             return "leste" if dx > 0 else "oeste"
-        if dy != 0:
+        if dy != 0:  # dy pode ser 0 se o movimento for apenas em x
             return "norte" if dy > 0 else "sul"
+        # Adicionar lógica para 'cima'/'baixo' se dz for significativo
+        # if abs(dz) > abs(dx) and abs(dz) > abs(dy):
+        # return "cima" if dz > 0 else "baixo"
         return None
 
     @staticmethod
@@ -461,19 +561,43 @@ class GameEngine:
             "sul": "norte",
             "leste": "oeste",
             "oeste": "leste",
+            "cima": "baixo",
+            "baixo": "cima",
         }
-        return opposites.get(direction, direction)
+        return opposites.get(direction.lower(), direction)  # .lower() para robustez
 
     def _generate_location(
         self, game_state: GameState, result_from_handler: Dict[str, Any]
     ) -> None:
-        new_location_id = game_state.location_id
-        if (
-            not new_location_id or new_location_id in game_state.discovered_locations
-        ):  # ID deve ser novo
-            logger.warning(
-                f"Attempt to generate location with invalid or existing ID: {new_location_id}"
+        """
+        Generates a new location, adds it to the game state, and updates occupied coordinates.
+        The new location_id is expected to be set in game_state.location_id by the caller
+        or determined here if not provided.
+        """
+        new_location_id = (
+            game_state.location_id
+        )  # Assumindo que o handler de movimento definiu isso
+        if not new_location_id:
+            # Gerar um ID único se não foi fornecido (improvável para 'move', mas para segurança)
+            new_location_id = f"loc_{random.randint(10000, 99999)}"
+            while (
+                new_location_id in game_state.world_map
+                or new_location_id in game_state.discovered_locations
+            ):
+                new_location_id = f"loc_{random.randint(10000, 99999)}"
+            game_state.location_id = (
+                new_location_id  # Definir no game_state para consistência
             )
+
+        if (
+            new_location_id in game_state.discovered_locations
+            or new_location_id in game_state.world_map
+        ):
+            logger.warning(
+                f"Attempt to generate location with existing ID: {new_location_id}. This should be a new, undiscovered location."
+            )
+            # Se já existe, _update_location deveria ter sido chamado pelo handler.
+            # Não deveríamos estar aqui para um ID existente.
             return
 
         location_type_suggestion = result_from_handler.get(
@@ -483,22 +607,26 @@ class GameEngine:
         description_suggestion = result_from_handler.get("new_location_description")
 
         # Usa LocationGenerator para criar os dados da localização.
-        # game_state é passado para que LocationGenerator possa adicionar NPCs a game_state.known_npcs.
         location_data = LocationGenerator.generate_new_location_data(
             location_id=new_location_id,
-            game_state=game_state,
+            game_state=game_state,  # Passado para que NPCs possam ser adicionados a known_npcs
             location_type_suggestion=location_type_suggestion,
             name_suggestion=name_suggestion,
             description_suggestion=description_suggestion,
         )
 
         # GameEngine define coordenadas e lida com conexões
-        new_coords = self._get_new_coordinates(game_state)
+        new_coords = self._get_new_coordinates(
+            game_state
+        )  # Encontra coordenadas válidas
         location_data["coordinates"] = new_coords
+        location_data["visited"] = True  # Ao gerar, o jogador está visitando
 
-        game_state.discovered_locations[new_location_id] = location_data
+        # Adicionar a nova localização ao GameState usando o método que atualiza occupied_coordinates
+        game_state.discover_location(new_location_id, location_data)
+        # discover_location já adiciona a discovered_locations, world_map (se não existir) e occupied_coordinates.
 
-        # Safely access 'name' and 'description' from location_data
+        # Atualizar o estado atual do jogo para refletir a nova localização
         game_state.current_location = location_data.get("name", "Local Desconhecido")
         game_state.scene_description = location_data.get(
             "description", "Uma área misteriosa."
@@ -507,7 +635,38 @@ class GameEngine:
         game_state.npcs_present = location_data.get("npcs", [])
         game_state.events = location_data.get("events", [])
 
-        self._handle_connections(game_state, new_location_id, new_coords)
+        # Lidar com conexões (ex: conectar esta nova localização à anterior)
+        # O handler de movimento (MoveActionHandler) deve ter o ID da localização anterior.
+        previous_location_id = result_from_handler.get("previous_location_id")
+        direction_of_travel = result_from_handler.get("direction_moved")
+
+        if previous_location_id and direction_of_travel:
+            # Conectar nova localização de volta à anterior
+            opposite_dir = self._opposite_direction(direction_of_travel)
+            if "connections" not in location_data:
+                location_data["connections"] = {}
+            location_data["connections"][opposite_dir] = previous_location_id
+
+            # Conectar localização anterior à nova
+            prev_loc_data = game_state.world_map.get(
+                previous_location_id
+            ) or game_state.discovered_locations.get(previous_location_id)
+            if prev_loc_data:
+                if "connections" not in prev_loc_data:
+                    prev_loc_data["connections"] = {}
+                prev_loc_data["connections"][direction_of_travel] = new_location_id
+            else:
+                logger.warning(
+                    f"Could not find previous location data for ID: {previous_location_id} to update connections."
+                )
+        else:
+            logger.warning(
+                f"Missing previous_location_id or direction_of_travel in handler result for _generate_location. Connections might be incomplete."
+            )
+
+        logger.info(
+            f"Generated new location '{location_data.get('name')}' (ID: {new_location_id}) at {new_coords}"
+        )
 
     def _handle_connections(
         self, game_state: GameState, location_id: str, coords: LocationCoords
@@ -526,15 +685,14 @@ class GameEngine:
 
     def _handle_ai_interaction(
         self,
-        action_for_ai: str,
-        message_for_ai_narration: str,
+        action_type_for_ai: str,  # Ex: "talk_result", "examine_npc_response", "interpret_needed"
+        text_input_for_ai: str,  # The text/message for the AI to process/narrate
         character: Character,
         game_state: GameState,
         ai_client: Optional[GameAIClient],
-        result_from_handler: Dict[str, Any],
-        actual_handler: Optional[
-            ActionHandler
-        ] = None,  # Pode ser None se a ação for direta da IA (ex: narrate_roll)
+        # Full dictionary result from the preceding mechanical action handler or a dummy dict for initial interpretation.
+        source_mechanical_handler_result: Dict[str, Any],
+        actual_handler: Optional[ActionHandler] = None,
     ) -> AIResponsePydantic:
         """
         Handles the interaction with the AI client, processes its response,
@@ -547,11 +705,13 @@ class GameEngine:
             # Retornar uma resposta Pydantic básica indicando sucesso mecânico, mas sem narração da IA.
             return AIResponsePydantic(
                 success=True,
-                message=message_for_ai_narration,  # Mensagem do handler mecânico
+                message=source_mechanical_handler_result.get(
+                    "message", "Ação processada."
+                ),  # Mensagem do handler mecânico
                 current_detailed_location=game_state.current_location,
                 scene_description_update=game_state.scene_description,
                 details={"warning": "AI client not available for narration"},
-                interpreted_action_type=action_for_ai,
+                interpreted_action_type=action_type_for_ai,
             )
 
         # Lógica de sobrevivência (se aplicável antes da chamada da IA)
@@ -563,15 +723,15 @@ class GameEngine:
 
         # Chamar a IA para narrar o resultado da ação mecânica
         current_ai_response: AIResponsePydantic = ai_client.process_action(
-            action=action_for_ai,
-            details=message_for_ai_narration,  # A mensagem do handler é o 'details' para a IA narrar
+            action=action_type_for_ai,
+            details=text_input_for_ai,  # Pass the string directly
             character=character,
             game_state=game_state,
         )
 
         if not current_ai_response.success:
             logger.warning(
-                f"AI narration failed for action '{action_for_ai}'. AI Response: {current_ai_response.message}"
+                f"AI narration failed for action '{action_type_for_ai}'. AI Response: {current_ai_response.message}"
             )
             # Mesmo que a narração da IA falhe, a ação mecânica pode ter sido um sucesso.
             # Retornamos a resposta da IA que indica a falha na narração.
@@ -579,7 +739,7 @@ class GameEngine:
             # Adicionamos a mensagem do handler mecânico aos detalhes se não estiver lá.
             if "original_handler_message" not in current_ai_response.details:
                 current_ai_response.details["original_handler_message"] = (
-                    message_for_ai_narration
+                    text_input_for_ai  # Or more contextually, the message from source_mechanical_handler_result if available
                 )
             return current_ai_response
 
@@ -595,14 +755,16 @@ class GameEngine:
         # Aplicar atualizações da IA ao GameState (localização, descrição da cena, fatos, etc.)
         # Isso deve acontecer *depois* de qualquer rolagem, pois a rolagem pode influenciar o que a IA descreve.
         self._apply_ai_updates_to_gamestate(
-            final_ai_response, game_state, action_for_ai
+            final_ai_response, game_state, action_type_for_ai
         )
 
         # Adicionar mensagem da IA ao histórico do GameState
         if final_ai_response.message:
             # Verificar repetição de NPC antes de adicionar a mensagem
             npc_for_repetition_check = self._determine_npc_for_repetition_check(
-                action_for_ai, final_ai_response.message, game_state
+                action_type_for_ai,  # Ação que a IA narrou (ex: "talk_result")
+                source_mechanical_handler_result,  # Resultado do handler mecânico
+                game_state,
             )
             processed_message_content, _ = self._process_npc_repetition(
                 final_ai_response.message, npc_for_repetition_check, game_state
@@ -620,7 +782,7 @@ class GameEngine:
         # Isso pode ser mais apropriado se o status de sobrevivência deve ser comunicado ao jogador
         # como uma mensagem de sistema separada, após a narração da IA.
         survival_message_part = self._handle_survival_updates(
-            character, action_for_ai, game_state
+            character, action_type_for_ai, game_state
         )
         if survival_message_part and "survival_info" not in final_ai_response.details:
             # Adiciona informação de sobrevivência aos detalhes da resposta da IA
@@ -652,12 +814,12 @@ class GameEngine:
             # Usar _handle_ai_interaction para obter a interpretação da IA
             # O prompt para "interpret_needed" já pede à IA para interpretar a ação.
             initial_ai_response = self._handle_ai_interaction(
-                action_for_ai="interpret_needed",  # Instrução para a IA interpretar
-                message_for_ai_narration=details,  # O texto bruto do jogador
+                action_type_for_ai="interpret_needed",  # Instrução para a IA interpretar
+                text_input_for_ai=details,  # O texto bruto do jogador
                 character=character,
                 game_state=game_state,
                 ai_client=ai_client,
-                result_from_handler={
+                source_mechanical_handler_result={
                     "success": True
                 },  # Handler inicial é como um "pass-through"
                 actual_handler=get_action_handler(
@@ -685,26 +847,16 @@ class GameEngine:
                 action_to_handle_mechanically = interpreted_action_type
 
                 # Os 'details' para o handler mecânico podem vir de 'interpreted_action_details'
-                if action_to_handle_mechanically.lower() == "move" and isinstance(
-                    interpreted_action_details_dict, dict
-                ):
-                    details_for_handler = interpreted_action_details_dict.get(
-                        "direction", details
+                details_for_handler = details  # Fallback para os detalhes originais
+                if isinstance(interpreted_action_details_dict, dict):
+                    action_key = action_to_handle_mechanically.lower()
+                    detail_key_for_action = ACTION_DETAIL_KEYS_FOR_INTERPRETATION.get(
+                        action_key
                     )
-                elif action_to_handle_mechanically.lower() == "talk" and isinstance(
-                    interpreted_action_details_dict, dict
-                ):
-                    details_for_handler = interpreted_action_details_dict.get(
-                        "target_npc", details
-                    )
-                elif action_to_handle_mechanically.lower() == "use_item" and isinstance(
-                    interpreted_action_details_dict, dict
-                ):
-                    details_for_handler = interpreted_action_details_dict.get(
-                        "item_name", details
-                    )
-                else:
-                    details_for_handler = details  # Fallback para os detalhes originais
+                    if detail_key_for_action:
+                        details_for_handler = interpreted_action_details_dict.get(
+                            detail_key_for_action, details
+                        )
 
                 actual_handler = get_action_handler(action_to_handle_mechanically)
                 logger.debug(
@@ -746,12 +898,12 @@ class GameEngine:
                     )
 
                     final_narration_result = self._handle_ai_interaction(
-                        action_for_ai=action_for_narration,
-                        message_for_ai_narration=message_for_narration,
+                        action_type_for_ai=action_for_narration,
+                        text_input_for_ai=message_for_narration,
                         character=character,
                         game_state=game_state,  # game_state já está atualizado
                         ai_client=ai_client,
-                        result_from_handler=result_from_mechanical_handler,
+                        source_mechanical_handler_result=result_from_mechanical_handler,
                         actual_handler=actual_handler,
                     )
                     # Adicionar a mensagem da interpretação inicial ao resultado final
@@ -770,12 +922,12 @@ class GameEngine:
                     )
 
                     final_narration_failure = self._handle_ai_interaction(
-                        action_for_ai=action_for_narration_failure,
-                        message_for_ai_narration=message_for_narration_failure,
+                        action_type_for_ai=action_for_narration_failure,
+                        text_input_for_ai=message_for_narration_failure,
                         character=character,
                         game_state=game_state,
                         ai_client=ai_client,
-                        result_from_handler=result_from_mechanical_handler,
+                        source_mechanical_handler_result=result_from_mechanical_handler,
                         actual_handler=actual_handler,
                     )
                     # Adicionar a mensagem da interpretação inicial ao resultado final
@@ -824,12 +976,12 @@ class GameEngine:
                 message_for_ai_narration = result_from_handler.get("message", details)
 
                 final_result = self._handle_ai_interaction(
-                    action_for_ai=action_for_ai,
-                    message_for_ai_narration=message_for_ai_narration,
+                    action_type_for_ai=action_for_ai,
+                    text_input_for_ai=message_for_ai_narration,
                     character=character,
                     game_state=game_state,
                     ai_client=ai_client,
-                    result_from_handler=result_from_handler,
+                    source_mechanical_handler_result=result_from_handler,
                     actual_handler=actual_handler,
                 )
                 return final_result
@@ -846,12 +998,12 @@ class GameEngine:
                 )
 
                 final_narration_failure = self._handle_ai_interaction(
-                    action_for_ai=action_for_narration_failure,
-                    message_for_ai_narration=message_for_narration_failure,
+                    action_type_for_ai=action_for_narration_failure,
+                    text_input_for_ai=message_for_narration_failure,
                     character=character,
                     game_state=game_state,
                     ai_client=ai_client,
-                    result_from_handler=result_from_handler,
+                    source_mechanical_handler_result=result_from_handler,
                     actual_handler=actual_handler,
                 )
                 return final_narration_failure

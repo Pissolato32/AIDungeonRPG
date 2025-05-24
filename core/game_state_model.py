@@ -119,6 +119,9 @@ class GameState:
     long_term_memory: Dict[str, Any] = field(
         default_factory=dict
     )  # Fatos chave da memória de longo prazo
+    current_scene_interactables: List[str] = field(
+        default_factory=list
+    )  # Elementos interativos na cena atual
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert game state to a dictionary."""
@@ -145,6 +148,7 @@ class GameState:
             "npc_message_history": self.npc_message_history,
             "summary": self.summary,
             "long_term_memory": self.long_term_memory,
+            "current_scene_interactables": self.current_scene_interactables,
         }
 
     @classmethod
@@ -201,6 +205,9 @@ class GameState:
         instance.summary = data.get("summary", instance.summary)
         instance.long_term_memory = data.get(
             "long_term_memory", instance.long_term_memory
+        )
+        instance.current_scene_interactables = data.get(
+            "current_scene_interactables", instance.current_scene_interactables
         )
         return instance
 

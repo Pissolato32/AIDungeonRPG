@@ -5,7 +5,6 @@ import os
 import sys
 import traceback
 from typing import Any, Dict, Optional, Tuple
-from core.game_engine import GameEngine
 
 
 from flask import (
@@ -29,7 +28,9 @@ from ai.game_ai_client import (
 )  # Importar o GameAIClient que o GameEngine espera
 from app.routes import bp as routes_bp
 from core.error_handler import ErrorHandler
-from core.game_engine import GameEngine
+from core.game_engine import (
+    GameEngine,
+)  # Mantida esta importação, removida a duplicada acima
 
 # Import GameState from its new location
 from core.game_state_model import GameState
@@ -313,47 +314,6 @@ class GameApp:
                     "permission_denied", "Character ownership mismatch."
                 )
 
-            # DEBUGGING STEP:
-            logger.info(f"DEBUG: Type of self.game_engine: {type(self.game_engine)}")
-            logger.info(
-                f"DEBUG: Attributes of self.game_engine: {dir(self.game_engine)}"
-            )
-            if not hasattr(self.game_engine, "process_action"):
-                logger.error(
-                    "DEBUG: self.game_engine does NOT have process_action. Forcing re-import for test."
-                )
-                # Tenta forçar a reimportação e verificação da classe GameEngine
-                try:
-                    from core.game_engine import GameEngine as TestGameEngineFromCore
-
-                    test_engine_instance_debug = TestGameEngineFromCore()
-                    if hasattr(test_engine_instance_debug, "process_action"):
-                        logger.info(
-                            "DEBUG: A freshly imported TestGameEngineFromCore instance HAS process_action."
-                        )
-                    else:
-                        logger.error(
-                            "DEBUG: A freshly imported TestGameEngineFromCore instance ALSO LACKS process_action. Problem is likely in core/game_engine.py itself or its own imports."
-                        )
-
-                    # Verifique o conteúdo de core.game_engine.py que o Python está vendo
-                    import inspect
-
-                    game_engine_file_path = inspect.getfile(TestGameEngineFromCore)
-                    logger.info(
-                        f"DEBUG: TestGameEngineFromCore is loaded from: {game_engine_file_path}"
-                    )
-                    with open(game_engine_file_path, "r", encoding="utf-8") as f_debug:
-                        logger.info(
-                            f"DEBUG: Content of {game_engine_file_path} (first 500 chars):\n{f_debug.read(500)}"
-                        )
-
-                except ImportError as ie:
-                    logger.error(f"DEBUG: ImportError during test re-import: {ie}")
-                except Exception as ex:
-                    logger.error(f"DEBUG: Exception during test re-import: {ex}")
-            # END DEBUGGING STEP
-
             result = self.game_engine.process_action(
                 action=action_name_for_log,  # action_name_for_log já é string
                 details=details,
@@ -510,7 +470,6 @@ class GameApp:
     def _load_game_state(self, character_id: str) -> Optional[GameState]:
         # GameStateManager.load_game_state needs to accept character_id
         # Correção: Usar diretamente o método do GameEngine para carregar o estado do jogo.
-        # Correção: Usar diretamente o método do GameEngine para carregar o estado do jogo.
         gs: Optional[GameState] = self.game_engine.load_game_state(character_id)
         if not gs:
             logger.info(
@@ -600,12 +559,11 @@ class GameApp:
 
         # O GameState.world_map já é Dict[str, LocationData], que serve para 'locations'
         # Precisamos construir 'discovered' a partir de GameState.discovered_locations
-        discovered_for_frontend: Dict[str, str] = {}
-        for loc_id, loc_data in game_state.discovered_locations.items():
-            coords = loc_data.get("coordinates")
-            if coords:
-                coord_key = f"{coords.get('x', 0)},{coords.get('y', 0)}"  # Z não é usado pelo map.js 2D
-                discovered_for_frontend[coord_key] = loc_id
+        discovered_for_frontend: Dict[str, str] = {
+            f"{loc_data.get('coordinates', {}).get('x', 0)},{loc_data.get('coordinates', {}).get('y', 0)}": loc_id
+            for loc_id, loc_data in game_state.discovered_locations.items()
+            if loc_data.get("coordinates")
+        }
 
         map_data_for_frontend = {
             "locations": game_state.world_map,  # game_state.world_map já é Dict[str, LocationData]

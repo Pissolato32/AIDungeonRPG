@@ -106,7 +106,7 @@ class Character:
 
     def to_dict(self) -> Dict[str, Any]:
         """Converts the Character object to a dictionary."""
-        return asdict(self)
+        return asdict(self)  # type: ignore[arg-type]
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Character":

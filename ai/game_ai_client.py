@@ -4,14 +4,12 @@
 This module handles AI model interactions for generating game content
 and responses."""
 
-import json
 import logging
-from typing import Any, Dict, List, Optional, TypedDict, Union, cast
+from typing import Any, Dict, List, Optional, TypedDict
 from typing import Protocol
 
 from pydantic import ValidationError
 
-from ai.openrouter import OpenRouterClient  # Import OpenRouterClient
 from core.models import Character  # Import Character from core.models
 from ai.prompt_builder import PromptBuilder, InstructionsBuilder
 

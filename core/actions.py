@@ -262,7 +262,7 @@ class TalkActionHandler(ActionHandler):
                     "success": True,
                     "action_performed": "talk_attempt_npc_present",
                     "message": f"Você tenta falar com {npc_query_name}.",  # Mensagem para a IA
-                    "target_npc_name": npc_query_name,  # Passa o nome do alvo para a IA
+                    "npc_name": npc_query_name,  # Passa o nome do NPC para uso interno e da IA
                 }
             else:
                 # NPC não encontrado ou não especificado claramente
@@ -1143,25 +1143,35 @@ class SkillActionHandler(ActionHandler):
                     "attribute"
                 )  # Para efeitos de modificação de atributo
                 duration = effect_data.get(
-                    "duration", 0
+                    "duration"
                 )  # Para efeitos de status/buff/debuff
 
-                if effect_type == "damage" and hasattr(target_entity, "health"):
+                if effect_type == "damage":
                     # Calcular dano da habilidade (exemplo: rola um dado de 'amount' faces)
                     skill_damage_roll = roll_dice(1, amount, 0)  # Ex: amount=6 para 1d6
                     actual_damage = skill_damage_roll["total"]
+
                     # Aplicar defesa do alvo
-                    actual_damage = max(
-                        1, actual_damage - getattr(target_entity, "defense", 0)
-                    )
-                    # Aplicar dano # Alterado de health para current_hp
-                    target_entity.current_hp = (
-                        max(  # Alterado de health para current_hp
-                            0,
-                            getattr(target_entity, "current_hp", 0)
-                            - actual_damage,  # Alterado de health para current_hp
+                    target_defense = 0
+                    if isinstance(target_entity, Character):
+                        target_defense = target_entity.stats.defense
+                    elif isinstance(
+                        target_entity, Enemy
+                    ):  # Assuming Enemy has a defense attribute
+                        target_defense = target_entity.defense
+
+                    actual_damage = max(1, actual_damage - target_defense)
+
+                    # Aplicar defesa do alvo
+                    if isinstance(target_entity, Character):
+                        target_entity.stats.current_hp = max(
+                            0, target_entity.stats.current_hp - actual_damage
                         )
-                    )  # Alterado de health para current_hp
+                    elif isinstance(target_entity, Enemy):
+                        target_entity.current_hp = max(
+                            0, target_entity.current_hp - actual_damage
+                        )
+
                     # Atualizar o objeto inimigo no game_state se o alvo for o inimigo
                     if effect_target_type == "enemy":
                         game_state.combat["enemy"] = target_entity
@@ -1169,9 +1179,13 @@ class SkillActionHandler(ActionHandler):
                     combat_log_entries.append(
                         f"{target_name} sofreu {actual_damage} de dano da habilidade!"  # Traduzido
                     )  # Alterado de health para current_hp
-                    if (
-                        effect_target_type == "enemy" and target_entity.current_hp <= 0
-                    ):  # Alterado de health para current_hp
+
+                    current_hp_after_damage = (
+                        target_entity.stats.current_hp
+                        if isinstance(target_entity, Character)
+                        else target_entity.current_hp
+                    )
+                    if effect_target_type == "enemy" and current_hp_after_damage <= 0:
                         combat_log_entries.append(
                             f"{target_name} foi derrotado(a)!"  # Alterado de health para current_hp
                         )  # Traduzido

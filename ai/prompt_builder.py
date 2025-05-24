@@ -2,9 +2,12 @@
 """
 Módulo para construir prompts para o modelo de IA.
 """
-from ai.game_ai_client import GameAIClient
-from ai.schemas import AIResponsePydantic
-from typing import TypedDict, NotRequired, List, Optional, Dict  # Adicionado Dict
+from typing import (
+    TypedDict,
+    List,
+    Optional,
+    Dict,
+)  # Adicionado Dict, removido NotRequired
 from core.npc import NPC  # Importar a classe NPC
 from core.models import Character  # Importar Character do models
 from core.game_state_model import GameState, MessageDict
@@ -539,7 +542,7 @@ class InstructionsBuilder:
         extracted_npc_name: Optional[str] = None
         if isinstance(details, str) and details.strip():
             details_lower = details.lower()
-            # Iterar sobre os NPCs conhecidos para encontrar uma correspondência de nome
+            npc_data_obj_for_prompt: Optional[NPC] = None
             for npc_obj_known in game_state.known_npcs.values():
                 if not isinstance(npc_obj_known, NPC) or not hasattr(
                     npc_obj_known, "name"
@@ -547,28 +550,18 @@ class InstructionsBuilder:
                     continue
                 if npc_obj_known.name.lower() in details_lower:
                     extracted_npc_name = npc_obj_known.name  # Usar o nome canônico
-                    break
-
-        if extracted_npc_name:
-            npc_data_obj_for_prompt: Optional[NPC] = None
-            for (
-                npc_obj_iter
-            ) in (
-                game_state.known_npcs.values()
-            ):  # Iterar sobre os valores (objetos NPC)
-                if npc_obj_iter.name == extracted_npc_name:
-                    npc_data_obj_for_prompt = npc_obj_iter
-                    break
-            if npc_data_obj_for_prompt:
-                talk_prompt_parts.append(
-                    PromptBuilder._format_npc_details_for_prompt(
-                        extracted_npc_name, npc_data_obj_for_prompt
+                    npc_data_obj_for_prompt = (
+                        npc_obj_known  # Usar o objeto NPC encontrado
                     )
-                )
+                    break
 
-        talk_prompt_parts.append(
-            "    - Senão, se a AÇÃO DO JOGADOR for uma 'vocal_action' (ex: 'Gritar', 'Sussurrar', 'Chamar por ajuda') e NÃO uma conversa ou pergunta direta:\n"
-        )
+        # Se um NPC foi extraído e seu objeto encontrado
+        if extracted_npc_name and npc_data_obj_for_prompt:
+            talk_prompt_parts.append(
+                PromptBuilder._format_npc_details_for_prompt(
+                    extracted_npc_name, npc_data_obj_for_prompt
+                )
+            )
 
         talk_prompt_parts.append(
             "    - Senão, se a AÇÃO DO JOGADOR for uma 'vocal_action' (ex: 'Gritar', 'Sussurrar', 'Chamar por ajuda') e NÃO uma conversa ou pergunta direta:\n"
