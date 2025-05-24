@@ -6,19 +6,18 @@ and responses."""
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, TypedDict, Union, cast
-from typing import Protocol
+from typing import Any, Dict, List, Optional, Protocol, TypedDict, Union, cast
 
 from pydantic import ValidationError
 
 from ai.openrouter import OpenRouterClient  # Import OpenRouterClient
+from ai.prompt_builder import InstructionsBuilder, PromptBuilder
 from core.models import Character  # Import Character from core.models
-from ai.prompt_builder import PromptBuilder, InstructionsBuilder
 
 from .fallback_handler import (
-    generate_fallback_response,
     FallbackResponse as FallbackResponseType,  # Importar fallback
-)  # Importar fallback
+)
+from .fallback_handler import generate_fallback_response
 
 # Importar schemas Pydantic
 from .schemas import AIResponsePydantic
@@ -37,9 +36,9 @@ class AIPrompt(TypedDict):
 # Manterei a definição antiga comentada por um momento para referência durante a refatoração.
 # class AIResponse(TypedDict):
 #     ... (definição antiga)
-from core.game_state_model import (
+from core.game_state_model import (  # Movido para cá para resolver import cycle se GameState importar AIResponse
     GameState,
-)  # Movido para cá para resolver import cycle se GameState importar AIResponse
+)
 
 
 # Define Protocols for external dependencies
